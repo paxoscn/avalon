@@ -4,6 +4,7 @@ use sea_orm::{
     Set, TransactionTrait, PaginatorTrait,
 };
 use sea_orm::prelude::Expr;
+use std::sync::Arc;
 use std::collections::HashMap;
 
 use crate::domain::entities::VectorConfigEntity;
@@ -15,11 +16,11 @@ use crate::infrastructure::vector::VectorProvider;
 
 /// SeaORM implementation of VectorConfigRepository
 pub struct VectorConfigRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl VectorConfigRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
     
@@ -62,7 +63,7 @@ impl VectorConfigRepositoryImpl {
 impl VectorConfigRepository for VectorConfigRepositoryImpl {
     async fn find_by_id(&self, id: ConfigId) -> Result<Option<VectorConfigEntity>, PlatformError> {
         let entity = vector_config::Entity::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -80,7 +81,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         let entity = vector_config::Entity::find()
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
             .filter(vector_config::Column::Name.eq(name))
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -94,7 +95,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         let entities = vector_config::Entity::find()
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
             .order_by_asc(vector_config::Column::Name)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -110,7 +111,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         let entity = vector_config::Entity::find()
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
             .filter(vector_config::Column::IsDefault.eq(true))
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -125,17 +126,17 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         
         // Check if the record exists
         let existing = vector_config::Entity::find_by_id(config.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
         if existing.is_some() {
             // Update existing record
-            active_model.update(&self.db).await
+            active_model.update(self.db.as_ref()).await
                 .map_err(|e| PlatformError::DatabaseError(e))?;
         } else {
             // Insert new record
-            active_model.insert(&self.db).await
+            active_model.insert(self.db.as_ref()).await
                 .map_err(|e| PlatformError::DatabaseError(e))?;
         }
         
@@ -144,7 +145,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
     
     async fn delete(&self, id: ConfigId) -> Result<(), PlatformError> {
         vector_config::Entity::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -188,7 +189,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         let count = vector_config::Entity::find()
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
             .filter(vector_config::Column::Name.eq(name))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -198,7 +199,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
     async fn count_by_tenant(&self, tenant_id: TenantId) -> Result<u64, PlatformError> {
         let count = vector_config::Entity::find()
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         
@@ -214,7 +215,7 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
             .filter(vector_config::Column::TenantId.eq(tenant_id.0))
             .filter(vector_config::Column::Provider.eq(provider))
             .order_by_asc(vector_config::Column::Name)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(|e| PlatformError::DatabaseError(e))?;
         

@@ -420,6 +420,8 @@ curl http://localhost:8080/metrics/prometheus
 - [API Documentation](docs/api_documentation.md) - REST API reference
 - [Deployment Guide](docs/deployment_guide.md) - Deployment instructions
 - [CORS Configuration](docs/cors_configuration.md) - CORS setup and troubleshooting
+- [Routes Integration](docs/routes_integration_summary.md) - Route modules status and integration guide
+- [Adding Routes](docs/adding_routes.md) - How to integrate route modules
 - [Testing Guide](docs/testing_guide.md) - Testing strategies
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 

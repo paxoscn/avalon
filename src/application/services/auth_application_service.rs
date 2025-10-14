@@ -110,20 +110,17 @@ impl AuthApplicationService for AuthApplicationServiceImpl {
         )
         .map_err(|e| PlatformError::ValidationError(e))?;
 
-        println!("tenant_id {}", request.tenant_id);
         // Check if tenant exists
         let tenant = self.tenant_repository
             .find_by_id(request.tenant_id.into())
             .await?
             .ok_or_else(|| PlatformError::AuthenticationFailed("Invalid tenant".to_string()))?;
-        println!("tenant {:?}", tenant);
 
         // Find user by tenant and username
         let user = self.user_repository
             .find_by_tenant_and_username(request.tenant_id.into(), &request.username)
             .await?
             .ok_or_else(|| PlatformError::AuthenticationFailed("Invalid credentials".to_string()))?;
-        println!("user {:?}", user);
 
         // Authenticate user using domain service
         let (session_info, auth_event) = self.auth_domain_service
@@ -360,6 +357,7 @@ mod tests {
 
     fn create_test_user() -> User {
         User::new(
+            UserId::new(),
             TenantId::new(),
             Username::new("testuser".to_string()).unwrap(),
             "hashed_password".to_string(),

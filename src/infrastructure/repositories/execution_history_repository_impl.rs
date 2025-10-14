@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::*;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::entities::{
@@ -11,11 +12,11 @@ use crate::error::{PlatformError, Result};
 use crate::infrastructure::database::entities::{execution_step, flow_execution};
 
 pub struct ExecutionHistoryRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl ExecutionHistoryRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -135,7 +136,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
     async fn create_execution(&self, execution: &FlowExecutionHistory) -> Result<()> {
         let active_model = self.execution_to_active_model(execution);
         flow_execution::Entity::insert(active_model)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
         Ok(())
@@ -144,7 +145,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
     async fn update_execution(&self, execution: &FlowExecutionHistory) -> Result<()> {
         let active_model = self.execution_to_active_model(execution);
         flow_execution::Entity::update(active_model)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
         Ok(())
@@ -152,7 +153,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
 
     async fn find_execution_by_id(&self, id: Uuid) -> Result<Option<FlowExecutionHistory>> {
         let model = flow_execution::Entity::find_by_id(id)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -198,7 +199,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
         }
 
         let models = query
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -234,7 +235,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
         }
 
         query
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(PlatformError::from)
     }
@@ -242,7 +243,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
     async fn create_step(&self, step: &ExecutionStep) -> Result<()> {
         let active_model = self.step_to_active_model(step);
         execution_step::Entity::insert(active_model)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
         Ok(())
@@ -251,7 +252,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
     async fn update_step(&self, step: &ExecutionStep) -> Result<()> {
         let active_model = self.step_to_active_model(step);
         execution_step::Entity::update(active_model)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
         Ok(())
@@ -261,7 +262,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
         let models = execution_step::Entity::find()
             .filter(execution_step::Column::ExecutionId.eq(execution_id))
             .order_by_asc(execution_step::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -276,7 +277,7 @@ impl ExecutionHistoryRepository for ExecutionHistoryRepositoryImpl {
     async fn delete_executions_older_than(&self, date: DateTime<Utc>) -> Result<u64> {
         let result = flow_execution::Entity::delete_many()
             .filter(flow_execution::Column::StartedAt.lt(date))
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 

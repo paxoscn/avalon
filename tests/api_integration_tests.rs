@@ -100,8 +100,8 @@ mod test_helpers {
 
         pub async fn cleanup(&self) {
             // Clean up test data
-            let _ = user::Entity::delete_many().exec(&self.db).await;
-            let _ = tenant::Entity::delete_many().exec(&self.db).await;
+            let _ = user::Entity::delete_many().exec(self.db.as_ref()).await;
+            let _ = tenant::Entity::delete_many().exec(self.db.as_ref()).await;
         }
     }
 

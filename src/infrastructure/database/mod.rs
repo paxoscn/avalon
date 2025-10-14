@@ -17,7 +17,6 @@ pub struct Database {
 
 impl Database {
     pub async fn new(database_url: &str) -> Result<Self> {
-        println!("database_url = {}", database_url);
         let connection = SeaDatabase::connect(database_url).await?;
         
         // Run migrations

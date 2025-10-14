@@ -53,6 +53,14 @@ pub struct LLMConfigResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct LLMConfigListResponse {
+    pub configs: Vec<LLMConfigResponse>,
+    pub total: u64,
+    pub page: u64,
+    pub limit: u64,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ConnectionTestResponse {
     pub success: bool,
     pub response_time_ms: u64,

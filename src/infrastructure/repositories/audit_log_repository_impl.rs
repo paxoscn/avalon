@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::*;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::entities::{AuditAction, AuditLog, ResourceType};
@@ -9,11 +10,11 @@ use crate::error::{PlatformError, Result};
 use crate::infrastructure::database::entities::audit_log;
 
 pub struct AuditLogRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl AuditLogRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -53,7 +54,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
     async fn create(&self, audit_log: &AuditLog) -> Result<()> {
         let active_model = self.to_active_model(audit_log);
         audit_log::Entity::insert(active_model)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
         Ok(())
@@ -61,7 +62,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLog>> {
         let model = audit_log::Entity::find_by_id(id)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -107,7 +108,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
         }
 
         let models = query
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -143,7 +144,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
         }
 
         query
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(PlatformError::from)
     }
@@ -168,7 +169,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
         // Get total count
         let total_count = base_query
             .clone()
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 
@@ -281,7 +282,7 @@ impl AuditLogRepository for AuditLogRepositoryImpl {
     async fn delete_older_than(&self, date: DateTime<Utc>) -> Result<u64> {
         let result = audit_log::Entity::delete_many()
             .filter(audit_log::Column::CreatedAt.lt(date))
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::from)?;
 

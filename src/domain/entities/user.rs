@@ -15,6 +15,7 @@ pub struct User {
 
 impl User {
     pub fn new(
+        user_id: UserId,
         tenant_id: TenantId,
         username: Username,
         password_hash: String,
@@ -35,7 +36,7 @@ impl User {
         }
 
         Ok(User {
-            id: UserId::new(),
+            id: user_id,
             tenant_id,
             username,
             nickname,

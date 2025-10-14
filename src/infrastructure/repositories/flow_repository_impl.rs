@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, QuerySelect, PaginatorTrait, QueryOrder};
+use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use crate::domain::entities::{Flow, FlowVersion, FlowExecution, FlowStatus, FlowExecutionStatus};
 use crate::domain::repositories::{FlowRepository, FlowVersionRepository, FlowExecutionRepository};
@@ -8,11 +9,11 @@ use crate::infrastructure::database::entities;
 use crate::error::{Result, PlatformError};
 
 pub struct FlowRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl FlowRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -66,7 +67,7 @@ impl FlowRepositoryImpl {
 impl FlowRepository for FlowRepositoryImpl {
     async fn find_by_id(&self, id: &FlowId) -> Result<Option<Flow>> {
         let flow = entities::Flow::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match flow {
@@ -78,7 +79,7 @@ impl FlowRepository for FlowRepositoryImpl {
     async fn find_by_tenant(&self, tenant_id: &TenantId) -> Result<Vec<Flow>> {
         let flows = entities::Flow::find()
             .filter(entities::flow::Column::TenantId.eq(tenant_id.0))
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -98,7 +99,7 @@ impl FlowRepository for FlowRepositoryImpl {
         let flows = entities::Flow::find()
             .filter(entities::flow::Column::TenantId.eq(tenant_id.0))
             .filter(entities::flow::Column::Status.eq(db_status))
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -111,7 +112,7 @@ impl FlowRepository for FlowRepositoryImpl {
     async fn find_by_creator(&self, created_by: &UserId) -> Result<Vec<Flow>> {
         let flows = entities::Flow::find()
             .filter(entities::flow::Column::CreatedBy.eq(created_by.0))
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -126,18 +127,18 @@ impl FlowRepository for FlowRepositoryImpl {
         
         // Check if flow exists
         let existing = entities::Flow::find_by_id(flow.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         if existing.is_some() {
             // Update existing flow
             entities::Flow::update(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         } else {
             // Insert new flow
             entities::Flow::insert(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         }
 
@@ -146,7 +147,7 @@ impl FlowRepository for FlowRepositoryImpl {
 
     async fn delete(&self, id: &FlowId) -> Result<()> {
         entities::Flow::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -154,7 +155,7 @@ impl FlowRepository for FlowRepositoryImpl {
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> Result<u64> {
         let count = entities::Flow::find()
             .filter(entities::flow::Column::TenantId.eq(tenant_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -170,7 +171,7 @@ impl FlowRepository for FlowRepositoryImpl {
             .filter(entities::flow::Column::TenantId.eq(tenant_id.0))
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -184,7 +185,7 @@ impl FlowRepository for FlowRepositoryImpl {
         let count = entities::Flow::find()
             .filter(entities::flow::Column::TenantId.eq(tenant_id.0))
             .filter(entities::flow::Column::Name.eq(name))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count > 0)
@@ -192,11 +193,11 @@ impl FlowRepository for FlowRepositoryImpl {
 }
 
 pub struct FlowVersionRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl FlowVersionRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -237,7 +238,7 @@ impl FlowVersionRepositoryImpl {
 impl FlowVersionRepository for FlowVersionRepositoryImpl {
     async fn find_by_id(&self, id: &FlowId) -> Result<Option<FlowVersion>> {
         let version = entities::FlowVersion::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match version {
@@ -250,7 +251,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         let flow_version = entities::FlowVersion::find()
             .filter(entities::flow_version::Column::FlowId.eq(flow_id.0))
             .filter(entities::flow_version::Column::Version.eq(version.0))
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match flow_version {
@@ -263,7 +264,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         let versions = entities::FlowVersion::find()
             .filter(entities::flow_version::Column::FlowId.eq(flow_id.0))
             .order_by_desc(entities::flow_version::Column::Version)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -277,7 +278,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         let version = entities::FlowVersion::find()
             .filter(entities::flow_version::Column::FlowId.eq(flow_id.0))
             .order_by_desc(entities::flow_version::Column::Version)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match version {
@@ -291,18 +292,18 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         
         // Check if version exists
         let existing = entities::FlowVersion::find_by_id(version.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         if existing.is_some() {
             // Update existing version
             entities::FlowVersion::update(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         } else {
             // Insert new version
             entities::FlowVersion::insert(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         }
 
@@ -311,7 +312,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
 
     async fn delete(&self, id: &FlowId) -> Result<()> {
         entities::FlowVersion::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -319,7 +320,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
     async fn delete_by_flow(&self, flow_id: &FlowId) -> Result<()> {
         entities::FlowVersion::delete_many()
             .filter(entities::flow_version::Column::FlowId.eq(flow_id.0))
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -327,7 +328,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
     async fn count_by_flow(&self, flow_id: &FlowId) -> Result<u64> {
         let count = entities::FlowVersion::find()
             .filter(entities::flow_version::Column::FlowId.eq(flow_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -344,7 +345,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
             .order_by_desc(entities::flow_version::Column::Version)
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -356,11 +357,11 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
 }
 pub struct
  FlowExecutionRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl FlowExecutionRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -423,7 +424,7 @@ impl FlowExecutionRepositoryImpl {
 impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
     async fn find_by_id(&self, id: &FlowExecutionId) -> Result<Option<FlowExecution>> {
         let execution = entities::FlowExecution::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match execution {
@@ -436,7 +437,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
         let executions = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::FlowId.eq(flow_id.0))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -450,7 +451,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
         let executions = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::TenantId.eq(tenant_id.0))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -464,7 +465,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
         let executions = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::UserId.eq(user_id.0))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -478,7 +479,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
         let executions = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::SessionId.eq(session_id.0))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -501,7 +502,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
             .filter(entities::flow_execution::Column::TenantId.eq(tenant_id.0))
             .filter(entities::flow_execution::Column::Status.eq(db_status))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -522,7 +523,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
             .filter(entities::flow_execution::Column::StartedAt.gte(start))
             .filter(entities::flow_execution::Column::StartedAt.lte(end))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -537,18 +538,18 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
         
         // Check if execution exists
         let existing = entities::FlowExecution::find_by_id(execution.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         if existing.is_some() {
             // Update existing execution
             entities::FlowExecution::update(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         } else {
             // Insert new execution
             entities::FlowExecution::insert(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         }
 
@@ -557,7 +558,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
 
     async fn delete(&self, id: &FlowExecutionId) -> Result<()> {
         entities::FlowExecution::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -565,7 +566,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
     async fn count_by_flow(&self, flow_id: &FlowId) -> Result<u64> {
         let count = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::FlowId.eq(flow_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -574,7 +575,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> Result<u64> {
         let count = entities::FlowExecution::find()
             .filter(entities::flow_execution::Column::TenantId.eq(tenant_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -591,7 +592,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
             .order_by_desc(entities::flow_execution::Column::StartedAt)
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -610,7 +611,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
             .filter(entities::flow_execution::Column::FlowId.eq(flow_id.0))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -630,7 +631,7 @@ impl FlowExecutionRepository for FlowExecutionRepositoryImpl {
             .filter(entities::flow_execution::Column::Status.eq(entities::flow_execution::ExecutionStatus::Failed))
             .order_by_desc(entities::flow_execution::Column::StartedAt)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde_json::Value;
 use uuid::Uuid;
+use std::sync::Arc;
 
 use crate::domain::entities::{ExecutionMetrics, ExecutionStep, FlowExecutionHistory};
 use crate::domain::repositories::{ExecutionFilter, ExecutionHistoryRepository};
@@ -59,11 +60,11 @@ pub trait ExecutionHistoryService: Send + Sync {
 
 /// Implementation of execution history service
 pub struct ExecutionHistoryServiceImpl {
-    execution_history_repository: Box<dyn ExecutionHistoryRepository>,
+    execution_history_repository: Arc<dyn ExecutionHistoryRepository>,
 }
 
 impl ExecutionHistoryServiceImpl {
-    pub fn new(execution_history_repository: Box<dyn ExecutionHistoryRepository>) -> Self {
+    pub fn new(execution_history_repository: Arc<dyn ExecutionHistoryRepository>) -> Self {
         Self {
             execution_history_repository,
         }

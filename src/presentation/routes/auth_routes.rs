@@ -13,7 +13,6 @@ use crate::{
             change_password_handler, me_handler, health_handler,
         },
         middleware::auth_middleware,
-        routes::*
     },
 };
 

@@ -15,30 +15,27 @@ pub fn create_mcp_routes() -> Router<Arc<dyn MCPApplicationService>> {
         // 工具CRUD操作
         .route("/tools", post(create_mcp_tool))
         .route("/tools", get(list_mcp_tools))
-        .route("/tools/:tool_id", get(get_mcp_tool))
-        .route("/tools/:tool_id", put(update_mcp_tool))
-        .route("/tools/:tool_id", delete(delete_mcp_tool))
+        .route("/tools/{tool_id}", get(get_mcp_tool))
+        .route("/tools/{tool_id}", put(update_mcp_tool))
+        .route("/tools/{tool_id}", delete(delete_mcp_tool))
         
         // 工具操作
-        .route("/tools/:tool_id/call", post(call_mcp_tool))
-        .route("/tools/:tool_id/test", post(test_mcp_tool))
-        .route("/tools/:tool_id/activate", post(activate_mcp_tool))
-        .route("/tools/:tool_id/deactivate", post(deactivate_mcp_tool))
+        .route("/tools/{tool_id}/call", post(call_mcp_tool))
+        .route("/tools/{tool_id}/test", post(test_mcp_tool))
+        .route("/tools/{tool_id}/activate", post(activate_mcp_tool))
+        .route("/tools/{tool_id}/deactivate", post(deactivate_mcp_tool))
         
         // 版本管理
-        .route("/tools/:tool_id/versions", get(list_tool_versions))
-        .route("/tools/:tool_id/rollback", post(rollback_tool_version))
+        .route("/tools/{tool_id}/versions", get(list_tool_versions))
+        .route("/tools/{tool_id}/rollback", post(rollback_tool_version))
         
         // 统计和配置
         .route("/stats", get(get_tool_stats))
         .route("/config/validate", post(validate_tool_config))
-        .route("/config/template/:tool_type", get(get_tool_config_template))
+        .route("/config/template/{tool_type}", get(get_tool_config_template))
         .route("/types", get(get_supported_tool_types))
         
         // 健康检查
-        .route("/health", get(health_check))
-        
-        // 健康检查不需要认证，所以单独处理
         .route("/health", get(health_check))
 }
 
@@ -47,7 +44,7 @@ pub fn create_mcp_api_routes(
     mcp_service: Arc<dyn MCPApplicationService>,
 ) -> Router {
     Router::new()
-        .nest("/api/mcp", create_mcp_routes())
+        .nest("/mcp", create_mcp_routes())
         .with_state(mcp_service)
 }
 

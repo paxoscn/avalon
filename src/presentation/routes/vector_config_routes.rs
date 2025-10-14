@@ -13,16 +13,16 @@ pub fn create_vector_config_routes() -> Router<Arc<VectorApplicationService>> {
         // Configuration CRUD operations
         .route("/configs", post(create_vector_config))
         .route("/configs", get(list_vector_configs))
-        .route("/configs/:id", get(get_vector_config))
-        .route("/configs/:id", put(update_vector_config))
-        .route("/configs/:id", delete(delete_vector_config))
+        .route("/configs/{id}", get(get_vector_config))
+        .route("/configs/{id}", put(update_vector_config))
+        .route("/configs/{id}", delete(delete_vector_config))
         
         // Default configuration management
         .route("/configs/default", get(get_default_vector_config))
         .route("/configs/default", post(set_default_vector_config))
         
         // Connection testing and health
-        .route("/configs/:id/test", post(test_vector_config_connection))
+        .route("/configs/{id}/test", post(test_vector_config_connection))
         .route("/configs/health", get(get_vector_configs_health))
         
         // Provider information and validation

@@ -21,6 +21,7 @@ impl UserRepositoryImpl {
             .map_err(|e| PlatformError::ValidationError(e))?;
         
         User::new(
+            UserId::from_uuid(entity.id),
             TenantId::from_uuid(entity.tenant_id),
             username,
             entity.password_hash,

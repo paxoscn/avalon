@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, QuerySelect, PaginatorTrait, QueryOrder};
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use crate::domain::entities::{ChatSession, Message};
 use crate::domain::repositories::{ChatSessionRepository, MessageRepository};
@@ -8,11 +10,11 @@ use crate::infrastructure::database::entities;
 use crate::error::{Result, PlatformError};
 
 pub struct ChatSessionRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl ChatSessionRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -56,7 +58,7 @@ impl ChatSessionRepositoryImpl {
 impl ChatSessionRepository for ChatSessionRepositoryImpl {
     async fn find_by_id(&self, id: &SessionId) -> Result<Option<ChatSession>> {
         let session = entities::ChatSession::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match session {
@@ -69,7 +71,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
         let sessions = entities::ChatSession::find()
             .filter(entities::chat_session::Column::UserId.eq(user_id.0))
             .order_by_desc(entities::chat_session::Column::UpdatedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -83,7 +85,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
         let sessions = entities::ChatSession::find()
             .filter(entities::chat_session::Column::TenantId.eq(tenant_id.0))
             .order_by_desc(entities::chat_session::Column::UpdatedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -98,7 +100,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
             .filter(entities::chat_session::Column::TenantId.eq(tenant_id.0))
             .filter(entities::chat_session::Column::UserId.eq(user_id.0))
             .order_by_desc(entities::chat_session::Column::UpdatedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -115,7 +117,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
             .filter(entities::chat_session::Column::UserId.eq(user_id.0))
             .filter(entities::chat_session::Column::UpdatedAt.gt(cutoff_time))
             .order_by_desc(entities::chat_session::Column::UpdatedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -130,18 +132,18 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
         
         // Check if session exists
         let existing = entities::ChatSession::find_by_id(session.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         if existing.is_some() {
             // Update existing session
             entities::ChatSession::update(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         } else {
             // Insert new session
             entities::ChatSession::insert(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         }
 
@@ -150,7 +152,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
 
     async fn delete(&self, id: &SessionId) -> Result<()> {
         entities::ChatSession::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -158,7 +160,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
     async fn delete_expired(&self, before: DateTime<Utc>) -> Result<u64> {
         let result = entities::ChatSession::delete_many()
             .filter(entities::chat_session::Column::UpdatedAt.lt(before))
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
 
         Ok(result.rows_affected)
@@ -167,7 +169,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
     async fn count_by_user(&self, user_id: &UserId) -> Result<u64> {
         let count = entities::ChatSession::find()
             .filter(entities::chat_session::Column::UserId.eq(user_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -184,7 +186,7 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
             .order_by_desc(entities::chat_session::Column::UpdatedAt)
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -196,11 +198,11 @@ impl ChatSessionRepository for ChatSessionRepositoryImpl {
 }
 
 pub struct MessageRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl MessageRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -262,7 +264,7 @@ impl MessageRepositoryImpl {
 impl MessageRepository for MessageRepositoryImpl {
     async fn find_by_id(&self, id: &MessageId) -> Result<Option<Message>> {
         let message = entities::ChatMessage::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         match message {
@@ -275,7 +277,7 @@ impl MessageRepository for MessageRepositoryImpl {
         let messages = entities::ChatMessage::find()
             .filter(entities::chat_message::Column::SessionId.eq(session_id.0))
             .order_by_asc(entities::chat_message::Column::CreatedAt)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -290,7 +292,7 @@ impl MessageRepository for MessageRepositoryImpl {
             .filter(entities::chat_message::Column::SessionId.eq(session_id.0))
             .order_by_desc(entities::chat_message::Column::CreatedAt)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -313,7 +315,7 @@ impl MessageRepository for MessageRepositoryImpl {
             .order_by_asc(entities::chat_message::Column::CreatedAt)
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();
@@ -328,18 +330,18 @@ impl MessageRepository for MessageRepositoryImpl {
         
         // Check if message exists
         let existing = entities::ChatMessage::find_by_id(message.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await?;
 
         if existing.is_some() {
             // Update existing message
             entities::ChatMessage::update(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         } else {
             // Insert new message
             entities::ChatMessage::insert(active_model)
-                .exec(&self.db)
+                .exec(self.db.as_ref())
                 .await?;
         }
 
@@ -348,7 +350,7 @@ impl MessageRepository for MessageRepositoryImpl {
 
     async fn delete(&self, id: &MessageId) -> Result<()> {
         entities::ChatMessage::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -356,7 +358,7 @@ impl MessageRepository for MessageRepositoryImpl {
     async fn delete_by_session(&self, session_id: &SessionId) -> Result<()> {
         entities::ChatMessage::delete_many()
             .filter(entities::chat_message::Column::SessionId.eq(session_id.0))
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await?;
         Ok(())
     }
@@ -364,7 +366,7 @@ impl MessageRepository for MessageRepositoryImpl {
     async fn count_by_session(&self, session_id: &SessionId) -> Result<u64> {
         let count = entities::ChatMessage::find()
             .filter(entities::chat_message::Column::SessionId.eq(session_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await?;
 
         Ok(count)
@@ -381,7 +383,7 @@ impl MessageRepository for MessageRepositoryImpl {
             .filter(entities::chat_message::Column::Content.contains(query))
             .order_by_desc(entities::chat_message::Column::CreatedAt)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await?;
 
         let mut result = Vec::new();

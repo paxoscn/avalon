@@ -13,6 +13,7 @@ mod tests {
 
     fn create_test_user() -> User {
         User::new(
+            UserId::new(),
             TenantId::from_uuid(Uuid::new_v4()),
             Username::new("testuser".to_string()).unwrap(),
             "hashed_password".to_string(),

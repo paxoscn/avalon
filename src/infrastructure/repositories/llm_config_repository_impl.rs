@@ -8,16 +8,17 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
     QueryOrder, QuerySelect, Set, PaginatorTrait, TransactionTrait,
 };
+use std::sync::Arc;
 use sea_orm::prelude::Expr;
 use serde_json;
 
 
 pub struct LLMConfigRepositoryImpl {
-    db: DatabaseConnection,
+    db: Arc<DatabaseConnection>,
 }
 
 impl LLMConfigRepositoryImpl {
-    pub fn new(db: DatabaseConnection) -> Self {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
 
@@ -59,7 +60,7 @@ impl LLMConfigRepositoryImpl {
 impl LLMConfigRepository for LLMConfigRepositoryImpl {
     async fn find_by_id(&self, id: ConfigId) -> Result<Option<LLMConfig>> {
         let entity = entities::llm_config::Entity::find_by_id(id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -73,7 +74,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
         let entities = entities::llm_config::Entity::find()
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
             .order_by_asc(entities::llm_config::Column::Name)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -94,7 +95,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
         let entity = entities::llm_config::Entity::find()
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
             .filter(entities::llm_config::Column::IsDefault.eq(true))
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -108,7 +109,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
         let entity = entities::llm_config::Entity::find()
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
             .filter(entities::llm_config::Column::Name.eq(name))
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -123,20 +124,20 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
         
         // Check if the config already exists
         let existing = entities::llm_config::Entity::find_by_id(config.id.0)
-            .one(&self.db)
+            .one(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
         if existing.is_some() {
             // Update existing
             active_model
-                .update(&self.db)
+                .update(self.db.as_ref())
                 .await
                 .map_err(PlatformError::DatabaseError)?;
         } else {
             // Insert new
             active_model
-                .insert(&self.db)
+                .insert(self.db.as_ref())
                 .await
                 .map_err(PlatformError::DatabaseError)?;
         }
@@ -146,7 +147,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
 
     async fn delete(&self, id: ConfigId) -> Result<()> {
         entities::llm_config::Entity::delete_by_id(id.0)
-            .exec(&self.db)
+            .exec(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -157,7 +158,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
         let count = entities::llm_config::Entity::find()
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
             .filter(entities::llm_config::Column::Name.eq(name))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -167,7 +168,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
     async fn count_by_tenant(&self, tenant_id: TenantId) -> Result<u64> {
         let count = entities::llm_config::Entity::find()
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
-            .count(&self.db)
+            .count(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -179,7 +180,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
             .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
             .filter(entities::llm_config::Column::Provider.eq(provider))
             .order_by_asc(entities::llm_config::Column::Name)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 
@@ -229,7 +230,7 @@ impl LLMConfigRepository for LLMConfigRepositoryImpl {
             .order_by_asc(entities::llm_config::Column::Name)
             .offset(offset)
             .limit(limit)
-            .all(&self.db)
+            .all(self.db.as_ref())
             .await
             .map_err(PlatformError::DatabaseError)?;
 

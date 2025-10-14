@@ -116,10 +116,10 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
         password: &Password,
         hash: &HashedPassword,
     ) -> Result<bool, PlatformError> {
-        println!(
-            "hashed {}",
-            bcrypt::hash(password.as_str(), 12).unwrap().as_str()
-        );
+        // println!(
+        //     "hashed {}",
+        //     bcrypt::hash(password.as_str(), 12).unwrap().as_str()
+        // );
         bcrypt::verify(password.as_str(), hash.as_str())
             .map_err(|e| PlatformError::InternalError(format!("Failed to verify password: {}", e)))
     }
@@ -228,7 +228,6 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
         ip_address: Option<String>,
         user_agent: Option<String>,
     ) -> Result<(SessionInfo, UserAuthenticatedEvent), PlatformError> {
-        println!("user.tenant_id.0 = {}, credentials.tenant_id = {}", user.tenant_id.0, credentials.tenant_id);
         // Verify tenant matches
         if user.tenant_id.0 != credentials.tenant_id {
             return Err(PlatformError::AuthenticationFailed(
@@ -236,7 +235,6 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
             ));
         }
 
-        println!("user.username.0 = {}, credentials.username = {}", user.username.0, credentials.username);
         // Verify username matches
         if user.username.0 != credentials.username {
             return Err(PlatformError::AuthenticationFailed(
@@ -251,7 +249,6 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
         let hashed_password = HashedPassword::new(user.password_hash.clone())
             .map_err(|e| PlatformError::ValidationError(e))?;
 
-        println!("password = {:?}, hashed_password = {:?}", password, hashed_password);
         if !self.verify_password(&password, &hashed_password).await? {
             return Err(PlatformError::AuthenticationFailed(
                 "Invalid password".to_string(),
@@ -377,6 +374,7 @@ mod tests {
         let service = AuthenticationDomainServiceImpl::new("test_secret".to_string(), Some(4));
 
         let user = User::new(
+            UserId::new(),
             TenantId::new(),
             Username::new("testuser".to_string()).unwrap(),
             "hashed_password".to_string(),
@@ -405,6 +403,7 @@ mod tests {
 
         let tenant_id = TenantId::new();
         let user = User::new(
+            UserId::new(),
             tenant_id,
             Username::new("testuser".to_string()).unwrap(),
             hash.0,
@@ -443,6 +442,7 @@ mod tests {
 
         let tenant_id = TenantId::new();
         let user = User::new(
+            UserId::new(),
             tenant_id,
             Username::new("testuser".to_string()).unwrap(),
             hash.0,

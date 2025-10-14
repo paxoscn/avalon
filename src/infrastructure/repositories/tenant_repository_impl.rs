@@ -46,7 +46,6 @@ impl TenantRepository for TenantRepositoryImpl {
         let tenant = entities::tenant::Entity::find_by_id(id.0)
             .one(self.db.as_ref())
             .await?;
-        println!("id: {}, tenant: {:?}", id.0, tenant);
 
         match tenant {
             Some(entity) => Ok(Some(Self::entity_to_domain(entity)?)),

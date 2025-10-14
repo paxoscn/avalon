@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde_json::Value;
 use uuid::Uuid;
+use std::sync::Arc;
 
 use crate::domain::entities::{AuditAction, AuditContext, AuditLog, ResourceType};
 use crate::domain::repositories::{AuditLogFilter, AuditLogRepository, AuditStatistics};
@@ -39,11 +40,11 @@ pub trait AuditService: Send + Sync {
 
 /// Implementation of audit service
 pub struct AuditServiceImpl {
-    audit_log_repository: Box<dyn AuditLogRepository>,
+    audit_log_repository: Arc<dyn AuditLogRepository>,
 }
 
 impl AuditServiceImpl {
-    pub fn new(audit_log_repository: Box<dyn AuditLogRepository>) -> Self {
+    pub fn new(audit_log_repository: Arc<dyn AuditLogRepository>) -> Self {
         Self {
             audit_log_repository,
         }
