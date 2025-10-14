@@ -21,7 +21,8 @@ pub async fn query_executions(
     user: AuthenticatedUser,
     Query(request): Query<QueryExecutionsRequest>,
 ) -> Result<impl IntoResponse> {
-    let page = request.page.unwrap_or(1);
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = request.page.unwrap_or(1).saturating_sub(1);
     let page_size = request.page_size.unwrap_or(20);
 
     let (executions, total) = service
@@ -56,11 +57,19 @@ pub async fn query_executions(
         })
         .collect();
 
+    // Calculate total pages
+    let total_pages = if page_size > 0 {
+        (total + page_size - 1) / page_size
+    } else {
+        0
+    };
+
     let response = QueryExecutionsResponse {
         executions: execution_dtos,
         total,
-        page,
+        page: page + 1, // Convert back to 1-based for API response
         page_size,
+        total_pages,
     };
 
     Ok((StatusCode::OK, Json(response)))

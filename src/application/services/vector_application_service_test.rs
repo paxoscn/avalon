@@ -100,6 +100,21 @@ impl VectorConfigRepository for MockVectorConfigRepository {
             .cloned()
             .collect())
     }
+    
+    async fn find_by_tenant_paginated(
+        &self,
+        tenant_id: TenantId,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<VectorConfigEntity>, PlatformError> {
+        let configs = self.configs.lock().unwrap();
+        Ok(configs.values()
+            .filter(|c| c.tenant_id == tenant_id)
+            .skip(offset as usize)
+            .take(limit as usize)
+            .cloned()
+            .collect())
+    }
 }
 
 fn create_test_service() -> VectorApplicationService {

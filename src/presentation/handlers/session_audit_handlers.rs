@@ -31,6 +31,18 @@ pub struct UpdateSessionRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ListSessionsQuery {
+    #[serde(default = "default_page")]
+    pub page: u64,
+    #[serde(default = "default_page_size")]
+    pub page_size: u64,
+}
+
+fn default_page() -> u64 {
+    1
+}
+
+#[derive(Debug, Deserialize)]
 pub struct AddMessageRequest {
     pub role: String,
     pub content: String,
@@ -195,17 +207,29 @@ pub async fn get_session(
 pub async fn list_sessions(
     State(service): State<Arc<SessionApplicationService>>,
     user: AuthenticatedUser,
-    Query(query): Query<QueryAuditLogsRequest>,
+    Query(query): Query<ListSessionsQuery>,
 ) -> Result<impl IntoResponse> {
-    let offset = query.page * query.page_size;
-    let sessions = service.list_user_sessions(&user.user_id, offset, query.page_size).await?;
-    let total = service.count_user_sessions(&user.user_id).await?;
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = query.page.saturating_sub(1);
+    let limit = query.page_size;
+    
+    let (sessions, total) = service
+        .list_user_sessions(user.tenant_id, &user.user_id, page, limit)
+        .await?;
+    
+    // Calculate total_pages
+    let total_pages = if limit > 0 {
+        (total + limit - 1) / limit
+    } else {
+        0
+    };
     
     let response = serde_json::json!({
         "sessions": sessions.iter().map(session_to_response).collect::<Vec<_>>(),
         "total": total,
-        "page": query.page,
-        "page_size": query.page_size,
+        "page": page + 1,  // Convert back to 1-based
+        "page_size": limit,
+        "total_pages": total_pages,
     });
 
     Ok(Json(response))

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
-    Set, TransactionTrait, PaginatorTrait,
+    QuerySelect, Set, TransactionTrait, PaginatorTrait,
 };
 use sea_orm::prelude::Expr;
 use std::sync::Arc;
@@ -226,6 +226,29 @@ impl VectorConfigRepository for VectorConfigRepositoryImpl {
         
         Ok(configs)
     }
+    
+    async fn find_by_tenant_paginated(
+        &self,
+        tenant_id: TenantId,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<VectorConfigEntity>, PlatformError> {
+        let entities = vector_config::Entity::find()
+            .filter(vector_config::Column::TenantId.eq(tenant_id.0))
+            .order_by_asc(vector_config::Column::Name)
+            .offset(offset)
+            .limit(limit)
+            .all(self.db.as_ref())
+            .await
+            .map_err(|e| PlatformError::DatabaseError(e))?;
+        
+        let mut configs = Vec::new();
+        for entity in entities {
+            configs.push(Self::entity_to_domain(entity)?);
+        }
+        
+        Ok(configs)
+    }
 }
 
 #[cfg(test)]
@@ -233,7 +256,6 @@ mod tests {
     use super::*;
     
     use std::collections::HashMap;
-    use uuid::Uuid;
 
     fn create_test_config() -> VectorConfigEntity {
         let mut params = HashMap::new();

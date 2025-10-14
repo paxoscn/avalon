@@ -47,4 +47,12 @@ pub trait VectorConfigRepository: Send + Sync {
         tenant_id: TenantId, 
         provider: &str
     ) -> Result<Vec<VectorConfigEntity>, PlatformError>;
+    
+    /// Find configurations for a tenant with pagination
+    async fn find_by_tenant_paginated(
+        &self,
+        tenant_id: TenantId,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<VectorConfigEntity>, PlatformError>;
 }

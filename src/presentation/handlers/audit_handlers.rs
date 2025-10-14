@@ -34,7 +34,8 @@ pub async fn query_audit_logs(
     user: AuthenticatedUser,
     Query(request): Query<QueryAuditLogsRequest>,
 ) -> Result<impl IntoResponse> {
-    let page = request.page.unwrap_or(1);
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = request.page.unwrap_or(1).saturating_sub(1);
     let page_size = request.page_size.unwrap_or(20);
 
     let action = request.action.map(|a| AuditAction::from(a));
@@ -69,11 +70,19 @@ pub async fn query_audit_logs(
         })
         .collect();
 
+    // Calculate total_pages
+    let total_pages = if page_size > 0 {
+        (total + page_size - 1) / page_size
+    } else {
+        0
+    };
+
     let response = QueryAuditLogsResponse {
         logs: log_dtos,
         total,
-        page,
+        page: page + 1,  // Convert back to 1-based for API response
         page_size,
+        total_pages,
     };
 
     Ok((StatusCode::OK, Json(response)))

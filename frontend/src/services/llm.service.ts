@@ -34,8 +34,8 @@ export interface TestLLMRequest {
 
 class LLMService {
   async listConfigs(): Promise<LLMConfig[]> {
-    const response = await apiClient.get<{ configs: LLMConfig[] }>('/config/llm');
-    return response.data.configs;
+    const response = await apiClient.get<{ data: LLMConfig[] }>('/config/llm');
+    return response.data.data;
   }
 
   async getConfig(id: string): Promise<LLMConfig> {

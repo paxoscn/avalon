@@ -54,10 +54,14 @@ pub struct RollbackRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct ListFlowsQuery {
-    #[serde(default)]
+    #[serde(default = "default_page")]
     pub page: u64,
     #[serde(default = "default_limit")]
     pub limit: u64,
+}
+
+fn default_page() -> u64 {
+    1
 }
 
 fn default_limit() -> u64 {
@@ -67,7 +71,7 @@ fn default_limit() -> u64 {
 #[derive(Debug, Deserialize)]
 pub struct ListExecutionsQuery {
     pub flow_id: Option<Uuid>,
-    #[serde(default)]
+    #[serde(default = "default_page")]
     pub page: u64,
     #[serde(default = "default_limit")]
     pub limit: u64,
@@ -92,6 +96,7 @@ pub struct FlowListResponse {
     pub total: u64,
     pub page: u64,
     pub limit: u64,
+    pub total_pages: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -128,6 +133,7 @@ pub struct ExecutionListResponse {
     pub total: u64,
     pub page: u64,
     pub limit: u64,
+    pub total_pages: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -173,13 +179,25 @@ pub async fn list_flows(
     user: AuthenticatedUser,
     Query(query): Query<ListFlowsQuery>,
 ) -> Result<impl IntoResponse> {
-    let (flows, total) = service.list_flows(user.tenant_id, query.page, query.limit).await?;
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = query.page.saturating_sub(1);
+    let limit = query.limit;
+    
+    let (flows, total) = service.list_flows(user.tenant_id, page, limit).await?;
+    
+    // Calculate total_pages
+    let total_pages = if limit > 0 {
+        (total + limit - 1) / limit
+    } else {
+        0
+    };
     
     let response = FlowListResponse {
         flows: flows.iter().map(flow_to_response).collect(),
         total,
-        page: query.page,
-        limit: query.limit,
+        page: page + 1,  // Convert back to 1-based for API response
+        limit,
+        total_pages,
     };
 
     Ok(Json(response))
@@ -304,19 +322,31 @@ pub async fn list_executions(
     user: AuthenticatedUser,
     Query(query): Query<ListExecutionsQuery>,
 ) -> Result<impl IntoResponse> {
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = query.page.saturating_sub(1);
+    let limit = query.limit;
+    
     let flow_id = query.flow_id.map(FlowId);
     let (executions, total) = service.list_executions(
         user.tenant_id,
         flow_id,
-        query.page,
-        query.limit,
+        page,
+        limit,
     ).await?;
+
+    // Calculate total_pages
+    let total_pages = if limit > 0 {
+        (total + limit - 1) / limit
+    } else {
+        0
+    };
 
     let response = ExecutionListResponse {
         executions: executions.iter().map(execution_to_response).collect(),
         total,
-        page: query.page,
-        limit: query.limit,
+        page: page + 1,  // Convert back to 1-based for API response
+        limit,
+        total_pages,
     };
 
     Ok(Json(response))

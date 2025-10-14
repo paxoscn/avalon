@@ -22,6 +22,7 @@ pub struct QueryExecutionsResponse {
     pub total: u64,
     pub page: u64,
     pub page_size: u64,
+    pub total_pages: u64,
 }
 
 /// Execution DTO

@@ -102,16 +102,16 @@ impl ExecutionHistoryApplicationService {
         &self,
         tenant_id: Uuid,
         page: u64,
-        page_size: u64,
+        limit: u64,
         flow_id: Option<Uuid>,
         user_id: Option<Uuid>,
         status: Option<String>,
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
     ) -> Result<(Vec<FlowExecutionHistory>, u64)> {
-        let offset = (page - 1) * page_size;
+        let offset = page * limit;
 
-        let mut filter = ExecutionFilter::new(tenant_id).with_pagination(page_size, offset);
+        let mut filter = ExecutionFilter::new(tenant_id).with_pagination(limit, offset);
 
         if let Some(fid) = flow_id {
             filter = filter.with_flow_id(fid);
@@ -151,5 +151,138 @@ impl ExecutionHistoryApplicationService {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::services::ExecutionHistoryService;
+    use crate::domain::repositories::ExecutionFilter;
+    use async_trait::async_trait;
+    use mockall::mock;
+    use std::sync::Arc;
+
+    mock! {
+        ExecutionHistoryServiceImpl {}
+
+        #[async_trait]
+        impl ExecutionHistoryService for ExecutionHistoryServiceImpl {
+            async fn start_execution(
+                &self,
+                flow_id: Uuid,
+                flow_version: i32,
+                tenant_id: Uuid,
+                user_id: Uuid,
+                session_id: Option<Uuid>,
+                input_data: Option<Value>,
+            ) -> Result<Uuid>;
+
+            async fn complete_execution(&self, execution_id: Uuid, output_data: Option<Value>) -> Result<()>;
+            async fn fail_execution(&self, execution_id: Uuid, error_message: String) -> Result<()>;
+            async fn start_step(
+                &self,
+                execution_id: Uuid,
+                step_name: String,
+                step_type: String,
+                input_data: Option<Value>,
+            ) -> Result<Uuid>;
+            async fn complete_step(&self, step_id: Uuid, output_data: Option<Value>) -> Result<()>;
+            async fn fail_step(&self, step_id: Uuid, error_message: String) -> Result<()>;
+            async fn get_execution(&self, execution_id: Uuid) -> Result<Option<FlowExecutionHistory>>;
+            async fn get_execution_steps(&self, execution_id: Uuid) -> Result<Vec<ExecutionStep>>;
+            async fn get_execution_metrics(&self, execution_id: Uuid) -> Result<ExecutionMetrics>;
+            async fn query_executions(&self, filter: &ExecutionFilter) -> Result<Vec<FlowExecutionHistory>>;
+            async fn count_executions(&self, filter: &ExecutionFilter) -> Result<u64>;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_query_executions_paginated_zero_based() {
+        let mut mock_service = MockExecutionHistoryServiceImpl::new();
+        let tenant_id = Uuid::new_v4();
+
+        // Mock query_executions to return empty vec
+        mock_service
+            .expect_query_executions()
+            .times(1)
+            .returning(|_| Ok(vec![]));
+
+        // Mock count_executions to return total count
+        mock_service
+            .expect_count_executions()
+            .times(1)
+            .returning(|_| Ok(30));
+
+        let service = ExecutionHistoryApplicationService::new(Arc::new(mock_service));
+
+        // Test page 0 (first page) with limit 10
+        let result = service
+            .query_executions_paginated(tenant_id, 0, 10, None, None, None, None, None)
+            .await;
+
+        assert!(result.is_ok());
+        let (executions, total) = result.unwrap();
+        assert_eq!(executions.len(), 0);
+        assert_eq!(total, 30);
+    }
+
+    #[tokio::test]
+    async fn test_query_executions_paginated_offset_calculation() {
+        let mut mock_service = MockExecutionHistoryServiceImpl::new();
+        let tenant_id = Uuid::new_v4();
+
+        // Verify that offset is calculated as page * limit
+        mock_service
+            .expect_query_executions()
+            .times(1)
+            .withf(|filter: &ExecutionFilter| {
+                // For page=3, limit=10, offset should be 30
+                filter.limit == Some(10) && filter.offset == Some(30)
+            })
+            .returning(|_| Ok(vec![]));
+
+        mock_service
+            .expect_count_executions()
+            .times(1)
+            .returning(|_| Ok(100));
+
+        let service = ExecutionHistoryApplicationService::new(Arc::new(mock_service));
+
+        // Test page 3 with limit 10 (offset should be 3 * 10 = 30)
+        let result = service
+            .query_executions_paginated(tenant_id, 3, 10, None, None, None, None, None)
+            .await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 100);
+    }
+
+    #[tokio::test]
+    async fn test_query_executions_paginated_total_count_accuracy() {
+        let mut mock_service = MockExecutionHistoryServiceImpl::new();
+        let tenant_id = Uuid::new_v4();
+
+        mock_service
+            .expect_query_executions()
+            .times(1)
+            .returning(|_| Ok(vec![]));
+
+        // Verify total count is returned accurately
+        mock_service
+            .expect_count_executions()
+            .times(1)
+            .returning(|_| Ok(42));
+
+        let service = ExecutionHistoryApplicationService::new(Arc::new(mock_service));
+
+        let result = service
+            .query_executions_paginated(tenant_id, 0, 20, None, None, None, None, None)
+            .await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 42);
     }
 }

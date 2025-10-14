@@ -135,6 +135,23 @@ impl VectorApplicationService {
         self.vector_config_repository.find_by_tenant(tenant_id).await
     }
     
+    /// List vector configurations for a tenant with pagination
+    pub async fn list_configs(
+        &self,
+        tenant_id: TenantId,
+        page: u64,
+        limit: u64,
+    ) -> Result<(Vec<VectorConfigEntity>, u64), PlatformError> {
+        let offset = page * limit;
+        let configs = self.vector_config_repository
+            .find_by_tenant_paginated(tenant_id, offset, limit)
+            .await?;
+        let total = self.vector_config_repository
+            .count_by_tenant(tenant_id)
+            .await?;
+        Ok((configs, total))
+    }
+    
     /// Get default vector configuration for a tenant
     pub async fn get_default_config(&self, tenant_id: TenantId) -> Result<VectorConfigEntity, PlatformError> {
         self.vector_config_repository
@@ -364,6 +381,21 @@ mod tests {
                 .cloned()
                 .collect())
         }
+        
+        async fn find_by_tenant_paginated(
+            &self,
+            tenant_id: TenantId,
+            offset: u64,
+            limit: u64,
+        ) -> Result<Vec<VectorConfigEntity>, PlatformError> {
+            let configs = self.configs.lock().unwrap();
+            Ok(configs.values()
+                .filter(|c| c.tenant_id == tenant_id)
+                .skip(offset as usize)
+                .take(limit as usize)
+                .cloned()
+                .collect())
+        }
     }
 
     fn create_test_service() -> VectorApplicationService {
@@ -397,5 +429,78 @@ mod tests {
         
         let result = VectorApplicationService::validate_provider_params(VectorProvider::Pinecone, &params);
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_configs_pagination() {
+        let service = create_test_service();
+        let tenant_id = TenantId::new();
+        
+        // Create some test configs
+        let mut params = HashMap::new();
+        params.insert("api_key".to_string(), "test-key".to_string());
+        params.insert("environment".to_string(), "test-env".to_string());
+        params.insert("index_name".to_string(), "test-index".to_string());
+        
+        // Create 5 configs
+        for i in 0..5 {
+            let config = VectorConfigEntity::new(
+                tenant_id,
+                format!("Config {}", i),
+                VectorProvider::Pinecone,
+                params.clone(),
+            );
+            service.vector_config_repository.save(&config).await.unwrap();
+        }
+        
+        // Test first page with limit 2
+        let (configs, total) = service.list_configs(tenant_id, 0, 2).await.unwrap();
+        assert_eq!(configs.len(), 2);
+        assert_eq!(total, 5);
+        
+        // Test second page with limit 2
+        let (configs, total) = service.list_configs(tenant_id, 1, 2).await.unwrap();
+        assert_eq!(configs.len(), 2);
+        assert_eq!(total, 5);
+        
+        // Test third page with limit 2 (should have 1 item)
+        let (configs, total) = service.list_configs(tenant_id, 2, 2).await.unwrap();
+        assert_eq!(configs.len(), 1);
+        assert_eq!(total, 5);
+        
+        // Test page beyond available data
+        let (configs, total) = service.list_configs(tenant_id, 3, 2).await.unwrap();
+        assert_eq!(configs.len(), 0);
+        assert_eq!(total, 5);
+    }
+    
+    #[tokio::test]
+    async fn test_list_configs_offset_calculation() {
+        let service = create_test_service();
+        let tenant_id = TenantId::new();
+        
+        // Create test config
+        let mut params = HashMap::new();
+        params.insert("api_key".to_string(), "test-key".to_string());
+        params.insert("environment".to_string(), "test-env".to_string());
+        params.insert("index_name".to_string(), "test-index".to_string());
+        
+        let config = VectorConfigEntity::new(
+            tenant_id,
+            "Test Config".to_string(),
+            VectorProvider::Pinecone,
+            params,
+        );
+        service.vector_config_repository.save(&config).await.unwrap();
+        
+        // Test page 0 with limit 20 (offset should be 0)
+        let (configs, total) = service.list_configs(tenant_id, 0, 20).await.unwrap();
+        assert_eq!(configs.len(), 1);
+        assert_eq!(total, 1);
+        
+        // Test page 1 with limit 20 (offset should be 20, no results)
+        let (configs, total) = service.list_configs(tenant_id, 1, 20).await.unwrap();
+        assert_eq!(configs.len(), 0);
+        assert_eq!(total, 1);
     }
 }

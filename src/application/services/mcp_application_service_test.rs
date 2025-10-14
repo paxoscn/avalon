@@ -493,15 +493,86 @@ mod tests {
             Arc::new(proxy_service),
         );
 
-        let result = service.list_tools(tenant_id, Some(1), Some(20)).await;
+        // Use 0-based pagination: page=0 for first page
+        let result = service.list_tools(tenant_id, 0, 20).await;
         assert!(result.is_ok());
 
-        let response = result.unwrap();
-        assert_eq!(response.tools.len(), 1);
-        assert_eq!(response.total, 1);
-        assert_eq!(response.page, 1);
-        assert_eq!(response.limit, 20);
-        assert_eq!(response.total_pages, 1);
+        let (tools, total) = result.unwrap();
+        assert_eq!(tools.len(), 1);
+        assert_eq!(total, 1);
+    }
+
+    #[tokio::test]
+    async fn test_list_tools_offset_calculation() {
+        let tenant_id = TenantId::new();
+
+        let mut tool_repo = MockMCPToolRepositoryImpl::new();
+        let version_repo = MockMCPToolVersionRepositoryImpl::new();
+        let domain_service = MockMCPToolDomainServiceImpl::new();
+        let proxy_service = MockMCPProxyServiceImpl::new();
+
+        // Verify that offset is calculated as page * limit
+        tool_repo
+            .expect_find_by_options()
+            .times(1)
+            .withf(|options: &MCPToolQueryOptions| {
+                // For page=3, limit=10, offset should be 30
+                options.limit == Some(10) && options.offset == Some(30)
+            })
+            .returning(|_| {
+                Ok(MCPToolQueryResult {
+                    tools: vec![],
+                    total_count: 100,
+                })
+            });
+
+        let service = MCPApplicationServiceImpl::new(
+            Arc::new(tool_repo),
+            Arc::new(version_repo),
+            Arc::new(domain_service),
+            Arc::new(proxy_service),
+        );
+
+        // Test page 3 with limit 10 (offset should be 3 * 10 = 30)
+        let result = service.list_tools(tenant_id, 3, 10).await;
+        assert!(result.is_ok());
+
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 100);
+    }
+
+    #[tokio::test]
+    async fn test_list_tools_total_count_accuracy() {
+        let tenant_id = TenantId::new();
+
+        let mut tool_repo = MockMCPToolRepositoryImpl::new();
+        let version_repo = MockMCPToolVersionRepositoryImpl::new();
+        let domain_service = MockMCPToolDomainServiceImpl::new();
+        let proxy_service = MockMCPProxyServiceImpl::new();
+
+        // Verify total count is returned accurately
+        tool_repo
+            .expect_find_by_options()
+            .times(1)
+            .returning(|_| {
+                Ok(MCPToolQueryResult {
+                    tools: vec![],
+                    total_count: 67,
+                })
+            });
+
+        let service = MCPApplicationServiceImpl::new(
+            Arc::new(tool_repo),
+            Arc::new(version_repo),
+            Arc::new(domain_service),
+            Arc::new(proxy_service),
+        );
+
+        let result = service.list_tools(tenant_id, 0, 20).await;
+        assert!(result.is_ok());
+
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 67);
     }
 
     #[tokio::test]

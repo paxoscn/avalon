@@ -63,9 +63,9 @@ pub trait LLMApplicationService: Send + Sync {
     async fn list_configs_paginated(
         &self,
         tenant_id: TenantId,
-        offset: u64,
+        page: u64,
         limit: u64,
-    ) -> Result<Vec<LLMConfig>>;
+    ) -> Result<(Vec<LLMConfig>, u64)>;
 
     /// Get configurations by provider
     async fn get_configs_by_provider(&self, tenant_id: TenantId, provider: &str) -> Result<Vec<LLMConfig>>;
@@ -287,10 +287,13 @@ impl LLMApplicationService for LLMApplicationServiceImpl {
     async fn list_configs_paginated(
         &self,
         tenant_id: TenantId,
-        offset: u64,
+        page: u64,
         limit: u64,
-    ) -> Result<Vec<LLMConfig>> {
-        self.config_repository.find_by_tenant_paginated(tenant_id, offset, limit).await
+    ) -> Result<(Vec<LLMConfig>, u64)> {
+        let offset = page * limit;
+        let configs = self.config_repository.find_by_tenant_paginated(tenant_id, offset, limit).await?;
+        let total = self.config_repository.count_by_tenant(tenant_id).await?;
+        Ok((configs, total))
     }
 
     async fn get_configs_by_provider(&self, tenant_id: TenantId, provider: &str) -> Result<Vec<LLMConfig>> {
@@ -354,5 +357,109 @@ mod tests {
 
         // Note: In a real test, we would need to mock the LLM domain service and provider registry
         // For now, this test structure shows how the service would be tested
+    }
+
+    #[tokio::test]
+    async fn test_list_configs_paginated_zero_based() {
+        let mut mock_repo = MockConfigRepo::new();
+        let tenant_id = TenantId::new();
+
+        // Mock find_by_tenant_paginated to return empty vec
+        mock_repo
+            .expect_find_by_tenant_paginated()
+            .times(1)
+            .returning(|_, _, _| Ok(vec![]));
+
+        // Mock count_by_tenant to return total count
+        mock_repo
+            .expect_count_by_tenant()
+            .times(1)
+            .returning(|_| Ok(15));
+
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
+
+        let service = LLMApplicationServiceImpl::new(
+            Arc::new(mock_repo),
+            llm_domain_service,
+            provider_registry,
+        );
+
+        // Test page 0 (first page) with limit 10
+        let result = service.list_configs_paginated(tenant_id, 0, 10).await;
+
+        assert!(result.is_ok());
+        let (configs, total) = result.unwrap();
+        assert_eq!(configs.len(), 0);
+        assert_eq!(total, 15);
+    }
+
+    #[tokio::test]
+    async fn test_list_configs_paginated_offset_calculation() {
+        let mut mock_repo = MockConfigRepo::new();
+        let tenant_id = TenantId::new();
+
+        // Verify that offset is calculated as page * limit
+        mock_repo
+            .expect_find_by_tenant_paginated()
+            .times(1)
+            .withf(|_, offset, limit| {
+                // For page=4, limit=5, offset should be 20
+                *offset == 20 && *limit == 5
+            })
+            .returning(|_, _, _| Ok(vec![]));
+
+        mock_repo
+            .expect_count_by_tenant()
+            .times(1)
+            .returning(|_| Ok(50));
+
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
+
+        let service = LLMApplicationServiceImpl::new(
+            Arc::new(mock_repo),
+            llm_domain_service,
+            provider_registry,
+        );
+
+        // Test page 4 with limit 5 (offset should be 4 * 5 = 20)
+        let result = service.list_configs_paginated(tenant_id, 4, 5).await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 50);
+    }
+
+    #[tokio::test]
+    async fn test_list_configs_paginated_total_count_accuracy() {
+        let mut mock_repo = MockConfigRepo::new();
+        let tenant_id = TenantId::new();
+
+        mock_repo
+            .expect_find_by_tenant_paginated()
+            .times(1)
+            .returning(|_, _, _| Ok(vec![]));
+
+        // Verify total count is returned accurately
+        mock_repo
+            .expect_count_by_tenant()
+            .times(1)
+            .returning(|_| Ok(33));
+
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
+
+        let service = LLMApplicationServiceImpl::new(
+            Arc::new(mock_repo),
+            llm_domain_service,
+            provider_registry,
+        );
+
+        let result = service.list_configs_paginated(tenant_id, 0, 20).await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 33);
     }
 }

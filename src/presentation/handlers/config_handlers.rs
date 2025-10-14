@@ -53,14 +53,6 @@ pub struct LLMConfigResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct LLMConfigListResponse {
-    pub configs: Vec<LLMConfigResponse>,
-    pub total: u64,
-    pub page: u64,
-    pub limit: u64,
-}
-
-#[derive(Debug, Serialize)]
 pub struct ConnectionTestResponse {
     pub success: bool,
     pub response_time_ms: u64,
@@ -95,15 +87,37 @@ pub struct VectorConfigResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct ListConfigsQuery {
-    #[serde(default)]
+    #[serde(default = "default_page")]
     pub page: u64,
     #[serde(default = "default_limit")]
     pub limit: u64,
     pub provider: Option<String>,
 }
 
+fn default_page() -> u64 {
+    1
+}
+
 fn default_limit() -> u64 {
     20
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedLLMConfigResponse {
+    pub data: Vec<LLMConfigResponse>,
+    pub page: u64,
+    pub limit: u64,
+    pub total: u64,
+    pub total_pages: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedVectorConfigResponse {
+    pub data: Vec<VectorConfigResponse>,
+    pub page: u64,
+    pub limit: u64,
+    pub total: u64,
+    pub total_pages: u64,
 }
 
 #[derive(Debug, Serialize)]
@@ -153,14 +167,38 @@ pub async fn list_llm_configs(
     user: AuthenticatedUser,
     Query(query): Query<ListConfigsQuery>,
 ) -> Result<impl IntoResponse> {
-    let configs = if let Some(provider) = query.provider {
-        service.get_configs_by_provider(user.tenant_id, &provider).await?
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = query.page.saturating_sub(1);
+    let limit = query.limit;
+
+    let (configs, total) = if let Some(provider) = query.provider {
+        // For filtered queries, still need pagination
+        let all_configs = service.get_configs_by_provider(user.tenant_id, &provider).await?;
+        let total = all_configs.len() as u64;
+        let offset = (page * limit) as usize;
+        let paginated: Vec<_> = all_configs.into_iter()
+            .skip(offset)
+            .take(limit as usize)
+            .collect();
+        (paginated, total)
     } else {
-        let offset = query.page * query.limit;
-        service.list_configs_paginated(user.tenant_id, offset, query.limit).await?
+        service.list_configs_paginated(user.tenant_id, page, limit).await?
     };
 
-    let response: Vec<LLMConfigResponse> = configs.iter().map(llm_config_to_response).collect();
+    let total_pages = if limit > 0 {
+        (total + limit - 1) / limit
+    } else {
+        0
+    };
+
+    let response = PaginatedLLMConfigResponse {
+        data: configs.iter().map(llm_config_to_response).collect(),
+        page: page + 1,  // Convert back to 1-based for API
+        limit,
+        total,
+        total_pages,
+    };
+
     Ok(Json(response))
 }
 
@@ -289,14 +327,39 @@ pub async fn list_vector_configs(
     user: AuthenticatedUser,
     Query(query): Query<ListConfigsQuery>,
 ) -> Result<impl IntoResponse> {
-    let configs = if let Some(provider_str) = query.provider {
+    // Convert from 1-based (API) to 0-based (internal)
+    let page = query.page.saturating_sub(1);
+    let limit = query.limit;
+
+    let (configs, total) = if let Some(provider_str) = query.provider {
+        // For filtered queries, still need pagination
         let provider = parse_vector_provider(&provider_str)?;
-        service.get_configs_by_provider(user.tenant_id, provider).await?
+        let all_configs = service.get_configs_by_provider(user.tenant_id, provider).await?;
+        let total = all_configs.len() as u64;
+        let offset = (page * limit) as usize;
+        let paginated: Vec<_> = all_configs.into_iter()
+            .skip(offset)
+            .take(limit as usize)
+            .collect();
+        (paginated, total)
     } else {
-        service.get_configs_by_tenant(user.tenant_id).await?
+        service.list_configs(user.tenant_id, page, limit).await?
     };
 
-    let response: Vec<VectorConfigResponse> = configs.iter().map(vector_config_to_response).collect();
+    let total_pages = if limit > 0 {
+        (total + limit - 1) / limit
+    } else {
+        0
+    };
+
+    let response = PaginatedVectorConfigResponse {
+        data: configs.iter().map(vector_config_to_response).collect(),
+        page: page + 1,  // Convert back to 1-based for API
+        limit,
+        total,
+        total_pages,
+    };
+
     Ok(Json(response))
 }
 

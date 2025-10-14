@@ -92,13 +92,43 @@ pub async fn list_mcp_tools(
     user: AuthenticatedUser,
     Query(query): Query<MCPToolListQuery>,
 ) -> Result<Json<MCPToolListResponse>, PlatformError> {
-    let response = service
+    // Convert from 1-based to 0-based
+    let page = query.page.unwrap_or(1).saturating_sub(1);
+    let limit = query.limit.unwrap_or(20);
+
+    let (tools, total) = service
         .list_tools(
             user.tenant_id,
-            query.page,
-            query.limit,
+            page as u64,
+            limit as u64,
         )
         .await?;
+
+    // Convert tools to response DTOs
+    let tool_responses: Vec<MCPToolResponse> = tools
+        .iter()
+        .map(|tool| MCPToolResponse {
+            id: tool.id.0,
+            tenant_id: tool.tenant_id.0,
+            name: tool.name.clone(),
+            description: tool.description.clone(),
+            current_version: tool.current_version,
+            status: tool.status.clone(),
+            config: tool.config.clone(),
+            created_by: tool.created_by.0,
+            created_at: tool.created_at,
+            updated_at: tool.updated_at,
+        })
+        .collect();
+
+    // Build response with 1-based page
+    let response = MCPToolListResponse {
+        tools: tool_responses,
+        total: total as u32,
+        page: (page + 1) as u32,  // Convert back to 1-based
+        limit: limit as u32,
+        total_pages: ((total + limit as u64 - 1) / limit as u64) as u32,
+    };
 
     Ok(Json(response))
 }
@@ -281,19 +311,13 @@ pub async fn health_check() -> Result<Json<Value>, PlatformError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{
-        body::Body,
-        http::{Request, StatusCode},
-        Router,
-    };
     use mockall::predicate::*;
     use serde_json::json;
-    use tower::ServiceExt;
 
     use crate::{
         application::services::MockMCPApplicationService,
         domain::{
-            entities::MCPToolStatus,
+            entities::MCPTool,
             value_objects::{
                 ids::{TenantId, UserId, MCPToolId},
                 tool_config::{HTTPToolConfig, HttpMethod, ToolConfig},
@@ -421,18 +445,27 @@ mod tests {
         let user = create_test_user();
         let tool_response = create_test_tool_response();
 
-        let list_response = MCPToolListResponse {
-            tools: vec![tool_response],
-            total: 1,
-            page: 1,
-            limit: 20,
-            total_pages: 1,
+        // Create a domain entity from the response
+        let tool = MCPTool {
+            id: MCPToolId(tool_response.id),
+            tenant_id: TenantId(tool_response.tenant_id),
+            name: tool_response.name.clone(),
+            description: tool_response.description.clone(),
+            current_version: tool_response.current_version,
+            status: tool_response.status.clone(),
+            config: tool_response.config.clone(),
+            created_by: UserId(tool_response.created_by),
+            created_at: tool_response.created_at,
+            updated_at: tool_response.updated_at,
         };
+
+        let tools = vec![tool];
+        let total = 1u64;
 
         service
             .expect_list_tools()
             .times(1)
-            .returning(move |_, _, _| Ok(list_response.clone()));
+            .returning(move |_, _, _| Ok((tools.clone(), total)));
 
         let query = MCPToolListQuery::default();
 
@@ -446,6 +479,8 @@ mod tests {
         let response = result.unwrap();
         assert_eq!(response.0.tools.len(), 1);
         assert_eq!(response.0.total, 1);
+        assert_eq!(response.0.page, 1);  // Should be 1-based in response
+        assert_eq!(response.0.total_pages, 1);
     }
 
     #[tokio::test]

@@ -54,8 +54,8 @@ export interface VectorSearchResult {
 
 class VectorService {
   async listConfigs(): Promise<VectorConfig[]> {
-    const response = await apiClient.get<{ configs: VectorConfig[] }>('/config/vector');
-    return response.data.configs;
+    const response = await apiClient.get<{ data: VectorConfig[] }>('/config/vector');
+    return response.data.data;
   }
 
   async getConfig(id: string): Promise<VectorConfig> {

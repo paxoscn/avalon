@@ -66,13 +66,17 @@ impl SessionApplicationService {
     /// List sessions for a user with pagination
     pub async fn list_user_sessions(
         &self,
+        _tenant_id: TenantId,
         user_id: &UserId,
-        offset: u64,
+        page: u64,
         limit: u64,
-    ) -> Result<Vec<ChatSession>> {
-        self.session_repo
+    ) -> Result<(Vec<ChatSession>, u64)> {
+        let offset = page * limit;
+        let sessions = self.session_repo
             .find_by_user_paginated(user_id, offset, limit)
-            .await
+            .await?;
+        let total = self.session_repo.count_by_user(user_id).await?;
+        Ok((sessions, total))
     }
 
     /// List active sessions for a user
@@ -232,5 +236,159 @@ impl SessionApplicationService {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::repositories::{ChatSessionRepository, MessageRepository};
+    use async_trait::async_trait;
+    use chrono::{DateTime, Utc};
+    use mockall::mock;
+    use std::sync::Arc;
+
+    mock! {
+        ChatSessionRepositoryImpl {}
+
+        #[async_trait]
+        impl ChatSessionRepository for ChatSessionRepositoryImpl {
+            async fn find_by_id(&self, id: &SessionId) -> Result<Option<ChatSession>>;
+            async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<ChatSession>>;
+            async fn find_by_tenant(&self, tenant_id: &TenantId) -> Result<Vec<ChatSession>>;
+            async fn find_by_tenant_and_user(&self, tenant_id: &TenantId, user_id: &UserId) -> Result<Vec<ChatSession>>;
+            async fn find_active_by_user(&self, user_id: &UserId, timeout_minutes: u64) -> Result<Vec<ChatSession>>;
+            async fn save(&self, session: &ChatSession) -> Result<()>;
+            async fn delete(&self, id: &SessionId) -> Result<()>;
+            async fn delete_expired(&self, before: DateTime<Utc>) -> Result<u64>;
+            async fn count_by_user(&self, user_id: &UserId) -> Result<u64>;
+            async fn find_by_user_paginated(&self, user_id: &UserId, offset: u64, limit: u64) -> Result<Vec<ChatSession>>;
+        }
+    }
+
+    mock! {
+        MessageRepositoryImpl {}
+
+        #[async_trait]
+        impl MessageRepository for MessageRepositoryImpl {
+            async fn find_by_id(&self, id: &crate::domain::value_objects::ids::MessageId) -> Result<Option<Message>>;
+            async fn find_by_session(&self, session_id: &SessionId) -> Result<Vec<Message>>;
+            async fn find_recent_by_session(&self, session_id: &SessionId, limit: u64) -> Result<Vec<Message>>;
+            async fn find_by_session_paginated(&self, session_id: &SessionId, offset: u64, limit: u64) -> Result<Vec<Message>>;
+            async fn save(&self, message: &Message) -> Result<()>;
+            async fn delete(&self, id: &crate::domain::value_objects::ids::MessageId) -> Result<()>;
+            async fn delete_by_session(&self, session_id: &SessionId) -> Result<()>;
+            async fn count_by_session(&self, session_id: &SessionId) -> Result<u64>;
+            async fn search_by_content(&self, session_id: &SessionId, query: &str, limit: u64) -> Result<Vec<Message>>;
+        }
+    }
+
+
+
+    #[tokio::test]
+    async fn test_list_user_sessions_zero_based() {
+        let mut session_repo = MockChatSessionRepositoryImpl::new();
+        let message_repo = MockMessageRepositoryImpl::new();
+        let domain_service = Arc::new(SessionDomainService::new(30));
+
+        let user_id = UserId::new();
+        let tenant_id = TenantId::new();
+
+        // Mock find_by_user_paginated to return empty vec
+        session_repo
+            .expect_find_by_user_paginated()
+            .times(1)
+            .returning(|_, _, _| Ok(vec![]));
+
+        // Mock count_by_user to return total count
+        session_repo
+            .expect_count_by_user()
+            .times(1)
+            .returning(|_| Ok(25));
+
+        let service = SessionApplicationService::new(
+            Arc::new(session_repo),
+            Arc::new(message_repo),
+            domain_service,
+        );
+
+        // Test page 0 (first page) with limit 10
+        let result = service.list_user_sessions(tenant_id, &user_id, 0, 10).await;
+
+        assert!(result.is_ok());
+        let (sessions, total) = result.unwrap();
+        assert_eq!(sessions.len(), 0);
+        assert_eq!(total, 25);
+    }
+
+    #[tokio::test]
+    async fn test_list_user_sessions_offset_calculation() {
+        let mut session_repo = MockChatSessionRepositoryImpl::new();
+        let message_repo = MockMessageRepositoryImpl::new();
+        let domain_service = Arc::new(SessionDomainService::new(30));
+
+        let user_id = UserId::new();
+        let tenant_id = TenantId::new();
+
+        // Verify that offset is calculated as page * limit
+        session_repo
+            .expect_find_by_user_paginated()
+            .times(1)
+            .withf(|_, offset, limit| {
+                // For page=2, limit=15, offset should be 30
+                *offset == 30 && *limit == 15
+            })
+            .returning(|_, _, _| Ok(vec![]));
+
+        session_repo
+            .expect_count_by_user()
+            .times(1)
+            .returning(|_| Ok(50));
+
+        let service = SessionApplicationService::new(
+            Arc::new(session_repo),
+            Arc::new(message_repo),
+            domain_service,
+        );
+
+        // Test page 2 with limit 15 (offset should be 2 * 15 = 30)
+        let result = service.list_user_sessions(tenant_id, &user_id, 2, 15).await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 50);
+    }
+
+    #[tokio::test]
+    async fn test_list_user_sessions_total_count_accuracy() {
+        let mut session_repo = MockChatSessionRepositoryImpl::new();
+        let message_repo = MockMessageRepositoryImpl::new();
+        let domain_service = Arc::new(SessionDomainService::new(30));
+
+        let user_id = UserId::new();
+        let tenant_id = TenantId::new();
+
+        session_repo
+            .expect_find_by_user_paginated()
+            .times(1)
+            .returning(|_, _, _| Ok(vec![]));
+
+        // Verify total count is returned accurately
+        session_repo
+            .expect_count_by_user()
+            .times(1)
+            .returning(|_| Ok(17));
+
+        let service = SessionApplicationService::new(
+            Arc::new(session_repo),
+            Arc::new(message_repo),
+            domain_service,
+        );
+
+        let result = service.list_user_sessions(tenant_id, &user_id, 0, 20).await;
+
+        assert!(result.is_ok());
+        let (_, total) = result.unwrap();
+        assert_eq!(total, 17);
     }
 }

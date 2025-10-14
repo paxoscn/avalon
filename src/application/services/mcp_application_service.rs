@@ -17,7 +17,7 @@ use crate::{
     },
     application::dto::{
         CreateMCPToolRequest, UpdateMCPToolRequest, MCPToolResponse,
-        MCPToolListResponse, CallMCPToolRequest, CallMCPToolResponse,
+        CallMCPToolRequest, CallMCPToolResponse,
         TestMCPToolRequest, TestMCPToolResponse, MCPToolVersionResponse,
         MCPToolStatsResponse,
     },
@@ -62,9 +62,9 @@ pub trait MCPApplicationService: Send + Sync {
     async fn list_tools(
         &self,
         tenant_id: TenantId,
-        page: Option<u32>,
-        limit: Option<u32>,
-    ) -> Result<MCPToolListResponse>;
+        page: u64,
+        limit: u64,
+    ) -> Result<(Vec<MCPTool>, u64)>;
 
     /// 调用MCP工具
     async fn call_tool(
@@ -364,36 +364,20 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
     async fn list_tools(
         &self,
         tenant_id: TenantId,
-        page: Option<u32>,
-        limit: Option<u32>,
-    ) -> Result<MCPToolListResponse> {
-        let page = page.unwrap_or(1);
-        let limit = limit.unwrap_or(20);
-        let offset = (page - 1) * limit;
+        page: u64,
+        limit: u64,
+    ) -> Result<(Vec<MCPTool>, u64)> {
+        let offset = page * limit;
 
         let query_options = crate::domain::repositories::mcp_tool_repository::MCPToolQueryOptions::new()
             .with_tenant_id(tenant_id)
-            .with_pagination(limit as u64, offset as u64);
+            .with_pagination(limit, offset);
 
         let query_result = self.tool_repository
             .find_by_options(query_options)
             .await?;
 
-        let tools = query_result.tools;
-        let total = query_result.total_count;
-
-        let tool_responses: Vec<MCPToolResponse> = tools
-            .iter()
-            .map(|tool| self.tool_to_response(tool))
-            .collect();
-
-        Ok(MCPToolListResponse {
-            tools: tool_responses,
-            total: total as u32,
-            page,
-            limit,
-            total_pages: ((total + limit as u64 - 1) / limit as u64) as u32,
-        })
+        Ok((query_result.tools, query_result.total_count))
     }
 
     async fn call_tool(
