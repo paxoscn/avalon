@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+target/
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+*.test.rs
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

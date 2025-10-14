@@ -1,0 +1,13 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database_url: ""
+redis_url: ""
+
+jwt:
+  secret: ""
+  expires_in: 3600
+
+logging:
+  level: "info"
