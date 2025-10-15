@@ -99,6 +99,10 @@ export interface MCPToolVersion {
 }
 
 export interface MCPToolConfig {
+  HTTP: HTTPMCPToolConfig;
+}
+
+export interface HTTPMCPToolConfig {
   endpoint: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
@@ -108,7 +112,7 @@ export interface MCPToolConfig {
 
 export interface ParameterSchema {
   name: string;
-  type: string;
+  parameter_type: string;
   description?: string;
   required: boolean;
   defaultValue?: any;

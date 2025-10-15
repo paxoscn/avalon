@@ -4,6 +4,14 @@ import type { MCPTool, MCPToolVersion, MCPToolConfig, TestToolRequest, TestToolR
 export interface CreateMCPToolRequest {
   name: string;
   description?: string;
+  config: ToolConfig;
+}
+
+export interface ToolConfig {
+  HTTP: HTTPToolConfig;
+}
+
+export interface HTTPToolConfig {
   endpoint: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
@@ -13,7 +21,7 @@ export interface CreateMCPToolRequest {
 
 export interface ParameterSchema {
   name: string;
-  type: string;
+  parameter_type: string;
   description?: string;
   required: boolean;
   defaultValue?: any;
@@ -22,11 +30,7 @@ export interface ParameterSchema {
 export interface UpdateMCPToolRequest {
   name?: string;
   description?: string;
-  endpoint?: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  headers?: Record<string, string>;
-  parameters?: ParameterSchema[];
-  responseSchema?: Record<string, any>;
+  config: ToolConfig;
   changeLog?: string;
 }
 
@@ -42,13 +46,13 @@ class MCPService {
   }
 
   async createTool(request: CreateMCPToolRequest): Promise<MCPTool> {
-    const response = await apiClient.post<{ tool: MCPTool }>('/mcp/tools', request);
-    return response.data.tool;
+    const response = await apiClient.post<MCPTool>('/mcp/tools', request);
+    return response.data;
   }
 
   async updateTool(id: string, request: UpdateMCPToolRequest): Promise<MCPTool> {
-    const response = await apiClient.put<{ tool: MCPTool }>(`/mcp/tools/${id}`, request);
-    return response.data.tool;
+    const response = await apiClient.put<MCPTool>(`/mcp/tools/${id}`, request);
+    return response.data;
   }
 
   async deleteTool(id: string): Promise<void> {
@@ -61,8 +65,8 @@ class MCPService {
   }
 
   async getToolVersions(id: string): Promise<MCPToolVersion[]> {
-    const response = await apiClient.get<{ versions: MCPToolVersion[] }>(`/mcp/tools/${id}/versions`);
-    return response.data.versions;
+    const response = await apiClient.get<MCPToolVersion[]>(`/mcp/tools/${id}/versions`);
+    return response.data;
   }
 
   async getToolVersion(id: string, version: number): Promise<MCPToolVersion> {

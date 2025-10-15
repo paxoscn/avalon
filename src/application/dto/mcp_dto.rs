@@ -15,7 +15,6 @@ use crate::domain::{
 /// 创建MCP工具请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMCPToolRequest {
-    pub tenant_id: TenantId,
     pub name: String,
     pub description: Option<String>,
     pub config: ToolConfig,

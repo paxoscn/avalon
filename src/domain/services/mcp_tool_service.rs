@@ -250,12 +250,13 @@ impl MCPToolDomainService for MCPToolDomainServiceImpl {
             ));
         }
 
-        // 检查工具状态
-        if !tool.can_execute() {
-            return Ok(PermissionCheckResult::denied(
-                "Tool is not in active state".to_string(),
-            ));
-        }
+        // 注掉: 不需要检查状态
+        // // 检查工具状态
+        // if !tool.can_execute() {
+        //     return Ok(PermissionCheckResult::denied(
+        //         "Tool is not in active state".to_string(),
+        //     ));
+        // }
 
         Ok(PermissionCheckResult::allowed())
     }

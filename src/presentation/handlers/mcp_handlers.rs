@@ -10,18 +10,14 @@ use uuid::Uuid;
 use crate::{
     application::{
         dto::{
-            CreateMCPToolRequest, UpdateMCPToolRequest, MCPToolResponse,
-            MCPToolListResponse, CallMCPToolRequest, CallMCPToolResponse,
-            TestMCPToolRequest, TestMCPToolResponse, MCPToolVersionResponse,
-            MCPToolStatsResponse, MCPToolListQuery, RollbackVersionRequest,
+            CallMCPToolRequest, CallMCPToolResponse, CreateMCPToolRequest, MCPToolListQuery,
+            MCPToolListResponse, MCPToolResponse, MCPToolStatsResponse, MCPToolVersionResponse,
+            RollbackVersionRequest, TestMCPToolRequest, TestMCPToolResponse, UpdateMCPToolRequest,
             ValidateToolConfigRequest, ValidateToolConfigResponse,
         },
         services::MCPApplicationService,
     },
-    domain::{
-        services::mcp_tool_service::ToolCallContext,
-        value_objects::ids::MCPToolId,
-    },
+    domain::{services::mcp_tool_service::ToolCallContext, value_objects::ids::MCPToolId},
     error::PlatformError,
     presentation::extractors::AuthenticatedUser,
 };
@@ -32,16 +28,7 @@ pub async fn create_mcp_tool(
     user: AuthenticatedUser,
     Json(request): Json<CreateMCPToolRequest>,
 ) -> Result<Json<MCPToolResponse>, PlatformError> {
-    // 验证请求中的租户ID与用户的租户ID匹配
-    if request.tenant_id.0 != user.tenant_id.0 {
-        return Err(PlatformError::AuthorizationFailed(
-            "Cannot create tool for different tenant".to_string()
-        ));
-    }
-
-    let response = service
-        .create_tool(request, user.user_id)
-        .await?;
+    let response = service.create_tool(request, user.tenant_id, user.user_id).await?;
 
     Ok(Json(response))
 }
@@ -79,9 +66,7 @@ pub async fn get_mcp_tool(
     user: AuthenticatedUser,
     Path(tool_id): Path<Uuid>,
 ) -> Result<Json<MCPToolResponse>, PlatformError> {
-    let response = service
-        .get_tool(MCPToolId(tool_id), user.user_id)
-        .await?;
+    let response = service.get_tool(MCPToolId(tool_id), user.user_id).await?;
 
     Ok(Json(response))
 }
@@ -97,11 +82,7 @@ pub async fn list_mcp_tools(
     let limit = query.limit.unwrap_or(20);
 
     let (tools, total) = service
-        .list_tools(
-            user.tenant_id,
-            page as u64,
-            limit as u64,
-        )
+        .list_tools(user.tenant_id, page as u64, limit as u64)
         .await?;
 
     // Convert tools to response DTOs
@@ -125,7 +106,7 @@ pub async fn list_mcp_tools(
     let response = MCPToolListResponse {
         tools: tool_responses,
         total: total as u32,
-        page: (page + 1) as u32,  // Convert back to 1-based
+        page: (page + 1) as u32, // Convert back to 1-based
         limit: limit as u32,
         total_pages: ((total + limit as u64 - 1) / limit as u64) as u32,
     };
@@ -141,11 +122,8 @@ pub async fn call_mcp_tool(
     Json(request): Json<CallMCPToolRequest>,
 ) -> Result<Json<CallMCPToolResponse>, PlatformError> {
     // 创建调用上下文
-    let mut context = ToolCallContext::new(
-        user.tenant_id,
-        user.user_id,
-        Uuid::new_v4().to_string(),
-    );
+    let mut context =
+        ToolCallContext::new(user.tenant_id, user.user_id, Uuid::new_v4().to_string());
 
     if let Some(session_id) = request.session_id.clone() {
         context = context.with_session_id(session_id);
@@ -225,11 +203,7 @@ pub async fn rollback_tool_version(
     Json(request): Json<RollbackVersionRequest>,
 ) -> Result<Json<MCPToolResponse>, PlatformError> {
     let response = service
-        .rollback_tool_version(
-            MCPToolId(tool_id),
-            request.target_version,
-            user.user_id,
-        )
+        .rollback_tool_version(MCPToolId(tool_id), request.target_version, user.user_id)
         .await?;
 
     Ok(Json(response))
@@ -240,9 +214,7 @@ pub async fn get_tool_stats(
     State(service): State<Arc<dyn MCPApplicationService>>,
     user: AuthenticatedUser,
 ) -> Result<Json<MCPToolStatsResponse>, PlatformError> {
-    let response = service
-        .get_tool_stats(user.tenant_id)
-        .await?;
+    let response = service.get_tool_stats(user.tenant_id).await?;
 
     Ok(Json(response))
 }
@@ -253,9 +225,7 @@ pub async fn validate_tool_config(
     _user: AuthenticatedUser,
     Json(request): Json<ValidateToolConfigRequest>,
 ) -> Result<Json<ValidateToolConfigResponse>, PlatformError> {
-    let validation_result = service
-        .validate_tool_config(&request.config)
-        .await?;
+    let validation_result = service.validate_tool_config(&request.config).await?;
 
     let response = ValidateToolConfigResponse {
         valid: validation_result.valid,
@@ -282,9 +252,10 @@ pub async fn get_tool_config_template(
             "retry_count": 3
         }),
         _ => {
-            return Err(PlatformError::ValidationError(
-                format!("Unknown tool type: {}", tool_type)
-            ));
+            return Err(PlatformError::ValidationError(format!(
+                "Unknown tool type: {}",
+                tool_type
+            )));
         }
     };
 
@@ -319,7 +290,7 @@ mod tests {
         domain::{
             entities::MCPTool,
             value_objects::{
-                ids::{TenantId, UserId, MCPToolId},
+                ids::{MCPToolId, TenantId, UserId},
                 tool_config::{HTTPToolConfig, HttpMethod, ToolConfig},
             },
         },
@@ -362,10 +333,9 @@ mod tests {
         service
             .expect_create_tool()
             .times(1)
-            .returning(move |_, _| Ok(tool_response.clone()));
+            .returning(move |_, _, _| Ok(tool_response.clone()));
 
         let request = CreateMCPToolRequest {
-            tenant_id: user.tenant_id,
             name: "test-tool".to_string(),
             description: Some("Test tool".to_string()),
             config: ToolConfig::HTTP(HTTPToolConfig::new(
@@ -374,11 +344,7 @@ mod tests {
             )),
         };
 
-        let result = create_mcp_tool(
-            State(Arc::new(service)),
-            user,
-            Json(request),
-        ).await;
+        let result = create_mcp_tool(State(Arc::new(service)), user, Json(request)).await;
 
         assert!(result.is_ok());
         let response = result.unwrap();
@@ -391,7 +357,6 @@ mod tests {
         let user = create_test_user();
 
         let request = CreateMCPToolRequest {
-            tenant_id: TenantId(Uuid::new_v4()), // Different tenant ID
             name: "test-tool".to_string(),
             description: Some("Test tool".to_string()),
             config: ToolConfig::HTTP(HTTPToolConfig::new(
@@ -400,11 +365,7 @@ mod tests {
             )),
         };
 
-        let result = create_mcp_tool(
-            State(Arc::new(service)),
-            user,
-            Json(request),
-        ).await;
+        let result = create_mcp_tool(State(Arc::new(service)), user, Json(request)).await;
 
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -428,11 +389,7 @@ mod tests {
             .times(1)
             .returning(move |_, _| Ok(tool_response.clone()));
 
-        let result = get_mcp_tool(
-            State(Arc::new(service)),
-            user,
-            Path(tool_id),
-        ).await;
+        let result = get_mcp_tool(State(Arc::new(service)), user, Path(tool_id)).await;
 
         assert!(result.is_ok());
         let response = result.unwrap();
@@ -469,17 +426,13 @@ mod tests {
 
         let query = MCPToolListQuery::default();
 
-        let result = list_mcp_tools(
-            State(Arc::new(service)),
-            user,
-            Query(query),
-        ).await;
+        let result = list_mcp_tools(State(Arc::new(service)), user, Query(query)).await;
 
         assert!(result.is_ok());
         let response = result.unwrap();
         assert_eq!(response.0.tools.len(), 1);
         assert_eq!(response.0.total, 1);
-        assert_eq!(response.0.page, 1);  // Should be 1-based in response
+        assert_eq!(response.0.page, 1); // Should be 1-based in response
         assert_eq!(response.0.total_pages, 1);
     }
 
@@ -508,12 +461,8 @@ mod tests {
             metadata: None,
         };
 
-        let result = call_mcp_tool(
-            State(Arc::new(service)),
-            user,
-            Path(tool_id),
-            Json(request),
-        ).await;
+        let result =
+            call_mcp_tool(State(Arc::new(service)), user, Path(tool_id), Json(request)).await;
 
         assert!(result.is_ok());
         let response = result.unwrap();
@@ -526,7 +475,8 @@ mod tests {
         let mut service = MockMCPApplicationService::new();
         let user = create_test_user();
 
-        let validation_result = crate::domain::services::mcp_tool_service::ConfigValidationResult::valid();
+        let validation_result =
+            crate::domain::services::mcp_tool_service::ConfigValidationResult::valid();
 
         service
             .expect_validate_tool_config()
@@ -540,11 +490,7 @@ mod tests {
             )),
         };
 
-        let result = validate_tool_config(
-            State(Arc::new(service)),
-            user,
-            Json(request),
-        ).await;
+        let result = validate_tool_config(State(Arc::new(service)), user, Json(request)).await;
 
         assert!(result.is_ok());
         let response = result.unwrap();

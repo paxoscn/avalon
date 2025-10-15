@@ -87,7 +87,9 @@ impl IntoResponse for PlatformError {
             PlatformError::ValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             PlatformError::ConfigurationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             PlatformError::Conflict(_) => (StatusCode::CONFLICT, self.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
+            // _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
+            // FIXME For debugging only.
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", self.to_string())),
         };
 
         let body = Json(json!({

@@ -33,6 +33,7 @@ pub trait MCPApplicationService: Send + Sync {
     async fn create_tool(
         &self,
         request: CreateMCPToolRequest,
+        tenant_id: TenantId,
         user_id: UserId,
     ) -> Result<MCPToolResponse>;
 
@@ -214,6 +215,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
     async fn create_tool(
         &self,
         request: CreateMCPToolRequest,
+        tenant_id: TenantId,
         user_id: UserId,
     ) -> Result<MCPToolResponse> {
         // 验证配置
@@ -229,7 +231,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
 
         // 检查名称唯一性
         let is_unique = self.domain_service
-            .validate_tool_name_uniqueness(request.tenant_id, &request.name, None)
+            .validate_tool_name_uniqueness(tenant_id, &request.name, None)
             .await?;
 
         if !is_unique {
@@ -240,7 +242,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
 
         // 创建工具
         let tool = MCPTool::new(
-            request.tenant_id,
+            tenant_id,
             request.name,
             request.description,
             request.config,
@@ -250,8 +252,9 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         // 保存工具
         self.tool_repository.save(&tool).await?;
 
-        // 创建初始版本
-        self.create_tool_version(&tool, Some("Initial version".to_string()), user_id).await?;
+        // 注掉. 在tool_repository中已经保存
+        // // 创建初始版本
+        // self.create_tool_version(&tool, Some("Initial version".to_string()), user_id).await?;
 
         // 注册到代理服务
         self.proxy_service.register_tool(tool.clone()).await?;
@@ -308,12 +311,13 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
 
             tool.update_config(config);
 
-            // 创建新版本
-            self.create_tool_version(&tool, request.change_log, user_id).await?;
+            // 注掉: 在tool_repository中处理
+            // // 创建新版本
+            // self.create_tool_version(&tool, request.change_log, user_id).await?;
         }
 
         // 保存工具
-        self.tool_repository.save(&tool).await?;
+        self.tool_repository.update(&tool).await?;
 
         // 更新代理服务
         self.proxy_service.register_tool(tool.clone()).await?;

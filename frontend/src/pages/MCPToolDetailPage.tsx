@@ -48,14 +48,14 @@ export function MCPToolDetailPage() {
         setFormData({
           name: data.name,
           description: data.description || '',
-          endpoint: latestVersion.config.endpoint,
-          method: latestVersion.config.method,
-          headers: latestVersion.config.headers || {},
-          parameters: latestVersion.config.parameters || [],
+          endpoint: latestVersion.config.HTTP.endpoint,
+          method: latestVersion.config.HTTP.method,
+          headers: latestVersion.config.HTTP.headers || {},
+          parameters: latestVersion.config.HTTP.parameters || [],
           changeLog: '',
         });
       }
-    } catch (err: any) {
+    } catch (err: any) {console.log("xxx", err);
       setError(err.response?.data?.error || 'Failed to load tool');
     } finally {
       setLoading(false);
@@ -73,10 +73,14 @@ export function MCPToolDetailPage() {
         const request: CreateMCPToolRequest = {
           name: formData.name,
           description: formData.description || undefined,
-          endpoint: formData.endpoint,
-          method: formData.method,
-          headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
-          parameters: formData.parameters,
+          config: {
+            HTTP: {
+              endpoint: formData.endpoint,
+              method: formData.method,
+              headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
+              parameters: formData.parameters,
+            },
+          },
         };
         const newTool = await mcpService.createTool(request);
         setSuccess('Tool created successfully');
@@ -85,10 +89,14 @@ export function MCPToolDetailPage() {
         const request: UpdateMCPToolRequest = {
           name: formData.name,
           description: formData.description || undefined,
-          endpoint: formData.endpoint,
-          method: formData.method,
-          headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
-          parameters: formData.parameters,
+          config: {
+            HTTP: {
+              endpoint: formData.endpoint,
+              method: formData.method,
+              headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
+              parameters: formData.parameters,
+            },
+          },
           changeLog: formData.changeLog || undefined,
         };
         await mcpService.updateTool(id!, request);
@@ -124,7 +132,7 @@ export function MCPToolDetailPage() {
       ...formData,
       parameters: [
         ...formData.parameters,
-        { name: '', type: 'string', description: '', required: false },
+        { name: '', parameter_type: 'string', description: '', required: false },
       ],
     });
   };
@@ -315,15 +323,15 @@ export function MCPToolDetailPage() {
                       Type
                     </label>
                     <select
-                      value={param.type}
-                      onChange={(e) => updateParameter(index, 'type', e.target.value)}
+                      value={param.parameter_type}
+                      onChange={(e) => updateParameter(index, 'parameter_type', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="string">String</option>
-                      <option value="number">Number</option>
-                      <option value="boolean">Boolean</option>
-                      <option value="object">Object</option>
-                      <option value="array">Array</option>
+                      <option value="String">String</option>
+                      <option value="Number">Number</option>
+                      <option value="Boolean">Boolean</option>
+                      <option value="Object">Object</option>
+                      <option value="Array">Array</option>
                     </select>
                   </div>
                 </div>
