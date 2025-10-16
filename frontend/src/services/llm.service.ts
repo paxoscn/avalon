@@ -4,14 +4,18 @@ import type { LLMConfig, LLMTestResult } from '../types';
 export interface CreateLLMConfigRequest {
   name: string;
   provider: 'openai' | 'claude' | 'local';
-  config: LLMProviderConfig;
+  model_name: string;
+  parameters: LLMParametersConfig;
+  credentials: LLMCredentialsConfig;
   isDefault?: boolean;
 }
 
 export interface UpdateLLMConfigRequest {
   name?: string;
   provider?: 'openai' | 'claude' | 'local';
-  config?: LLMProviderConfig;
+  model_name: string;
+  parameters: LLMParametersConfig;
+  credentials: LLMCredentialsConfig;
   isDefault?: boolean;
 }
 
@@ -24,6 +28,22 @@ export interface LLMProviderConfig {
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
+  [key: string]: any;
+}
+
+export interface LLMParametersConfig {
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  [key: string]: any;
+}
+
+export interface LLMCredentialsConfig {
+  api_key?: string;
+  api_base?: string;
+  organization?: string;
   [key: string]: any;
 }
 

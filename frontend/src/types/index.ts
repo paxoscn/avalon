@@ -147,8 +147,9 @@ export interface LLMConfig {
   tenant_id: string;
   name: string;
   provider: 'openai' | 'claude' | 'local';
+  model_name: string;
   config: Record<string, any>;
-  isDefault: boolean;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -149,7 +149,7 @@ export function LLMConfigListPage() {
                       <p className="text-sm text-gray-500 capitalize">{config.provider}</p>
                     </div>
                   </div>
-                  {config.isDefault && (
+                  {config.is_default && (
                     <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       Default
                     </span>
@@ -157,7 +157,7 @@ export function LLMConfigListPage() {
                 </div>
 
                 <div className="text-sm text-gray-500">
-                  <div>Model: {config.config.model || 'N/A'}</div>
+                  <div>Model: {config.model_name || 'N/A'}</div>
                   <div>Created: {new Date(config.created_at).toLocaleDateString()}</div>
                 </div>
 
@@ -183,7 +183,7 @@ export function LLMConfigListPage() {
                   >
                     {testingId === config.id ? 'Testing...' : 'Test Connection'}
                   </Button>
-                  {!config.isDefault && (
+                  {!config.is_default && (
                     <Button
                       variant="secondary"
                       onClick={() => handleSetDefault(config.id)}
@@ -194,7 +194,7 @@ export function LLMConfigListPage() {
                   )}
                 </div>
 
-                {!config.isDefault && (
+                {!config.is_default && (
                   <Button
                     variant="secondary"
                     onClick={() => handleDelete(config.id)}

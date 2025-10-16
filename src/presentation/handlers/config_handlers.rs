@@ -16,6 +16,7 @@ use crate::{
     infrastructure::vector::VectorProvider,
     error::Result,
     presentation::extractors::AuthenticatedUser,
+    domain::LLMConfig,
 };
 
 // LLM Configuration DTOs
@@ -50,6 +51,7 @@ pub struct LLMConfigResponse {
     pub description: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub config: LLMConfig,
 }
 
 #[derive(Debug, Serialize)]
@@ -451,6 +453,7 @@ fn llm_config_to_response(config: &crate::domain::entities::LLMConfig) -> LLMCon
         description: config.description.clone(),
         created_at: config.created_at.to_rfc3339(),
         updated_at: config.updated_at.to_rfc3339(),
+        config: config.clone(),
     }
 }
 

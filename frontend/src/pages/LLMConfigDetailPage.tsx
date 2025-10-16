@@ -44,15 +44,15 @@ export function LLMConfigDetailPage() {
       setFormData({
         name: data.name,
         provider: data.provider,
-        apiKey: data.config.apiKey || '',
-        apiUrl: data.config.apiUrl || '',
-        model: data.config.model || '',
-        temperature: data.config.temperature ?? 0.7,
-        maxTokens: data.config.maxTokens ?? 2000,
-        topP: data.config.topP ?? 1.0,
-        frequencyPenalty: data.config.frequencyPenalty ?? 0,
-        presencePenalty: data.config.presencePenalty ?? 0,
-        isDefault: data.isDefault,
+        apiKey: data.config.model_config.credentials.api_key || '',
+        apiUrl: data.config.model_config.credentials.api_base || '',
+        model: data.model_name || '',
+        temperature: data.config.model_config.parameters.temperature ?? 0.7,
+        maxTokens: data.config.model_config.parameters.max_tokens ?? 2000,
+        topP: data.config.model_config.parameters.top_p ?? 1.0,
+        frequencyPenalty: data.config.model_config.parameters.frequency_penalty ?? 0,
+        presencePenalty: data.config.model_config.parameters.presence_penalty ?? 0,
+        isDefault: data.is_default,
       });
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load configuration');
@@ -79,11 +79,30 @@ export function LLMConfigDetailPage() {
         presencePenalty: formData.presencePenalty,
       };
 
+      const parameters = {
+        temperature: formData.temperature,
+        max_tokens: formData.maxTokens,
+        top_p: formData.topP,
+        frequency_penalty: formData.frequencyPenalty,
+        presence_penalty: formData.presencePenalty,
+        stop_sequences: [],
+        custom_parameters: {},
+      };
+
+      const credentials = {
+        api_key: formData.apiKey || undefined,
+        api_base: formData.apiUrl || undefined,
+        organization: '',
+        custom_headers: {},
+      };
+
       if (isNew) {
         const request: CreateLLMConfigRequest = {
           name: formData.name,
           provider: formData.provider,
-          config: configData,
+          model_name: formData.model,
+          parameters: parameters,
+          credentials: credentials,
           isDefault: formData.isDefault,
         };
         const newConfig = await llmService.createConfig(request);
@@ -93,7 +112,9 @@ export function LLMConfigDetailPage() {
         const request: UpdateLLMConfigRequest = {
           name: formData.name,
           provider: formData.provider,
-          config: configData,
+          model_name: formData.model,
+          parameters: parameters,
+          credentials: credentials,
           isDefault: formData.isDefault,
         };
         await llmService.updateConfig(id!, request);
