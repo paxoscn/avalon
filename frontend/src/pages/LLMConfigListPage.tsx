@@ -158,7 +158,7 @@ export function LLMConfigListPage() {
 
                 <div className="text-sm text-gray-500">
                   <div>Model: {config.config.model || 'N/A'}</div>
-                  <div>Created: {new Date(config.createdAt).toLocaleDateString()}</div>
+                  <div>Created: {new Date(config.created_at).toLocaleDateString()}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 border-t border-gray-200">

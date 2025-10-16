@@ -27,11 +27,11 @@ export interface Flow {
   tenant_id: string;
   name: string;
   description?: string;
-  currentVersion: number;
+  current_version: number;
   status: 'draft' | 'active' | 'archived';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FlowVersion {
@@ -40,8 +40,8 @@ export interface FlowVersion {
   version: number;
   definition: Record<string, any>;
   changeLog?: string;
-  createdBy: string;
-  createdAt: string;
+  created_by: string;
+  created_at: string;
 }
 
 export interface FlowExecution {
@@ -81,11 +81,11 @@ export interface MCPTool {
   tenant_id: string;
   name: string;
   description?: string;
-  currentVersion: number;
+  current_version: number;
   status: 'active' | 'inactive';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MCPToolVersion {
@@ -94,8 +94,8 @@ export interface MCPToolVersion {
   version: number;
   config: MCPToolConfig;
   changeLog?: string;
-  createdBy: string;
-  createdAt: string;
+  created_by: string;
+  created_at: string;
 }
 
 export interface MCPToolConfig {
@@ -139,7 +139,7 @@ export interface AuditLog {
   details?: Record<string, any>;
   ipAddress?: string;
   userAgent?: string;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface LLMConfig {
@@ -149,8 +149,8 @@ export interface LLMConfig {
   provider: 'openai' | 'claude' | 'local';
   config: Record<string, any>;
   isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LLMTestResult {
@@ -172,8 +172,8 @@ export interface VectorConfig {
   provider: 'pinecone' | 'weaviate' | 'chromadb' | 'qdrant' | 'milvus';
   config: Record<string, any>;
   isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface VectorTestResult {
@@ -194,8 +194,8 @@ export interface ChatSession {
   userId: string;
   title?: string;
   context?: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ChatMessage {
@@ -204,7 +204,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   metadata?: Record<string, any>;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface SessionStats {

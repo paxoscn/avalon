@@ -129,7 +129,7 @@ export const FlowVersionsPage = () => {
               </h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-xs text-gray-500 mb-2">
-                  {new Date(diff.version1.createdAt).toLocaleString()}
+                  {new Date(diff.version1.created_at).toLocaleString()}
                 </p>
                 {diff.version1.changeLog && (
                   <p className="text-sm text-gray-700 mb-3">{diff.version1.changeLog}</p>
@@ -145,7 +145,7 @@ export const FlowVersionsPage = () => {
               </h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-xs text-gray-500 mb-2">
-                  {new Date(diff.version2.createdAt).toLocaleString()}
+                  {new Date(diff.version2.created_at).toLocaleString()}
                 </p>
                 {diff.version2.changeLog && (
                   <p className="text-sm text-gray-700 mb-3">{diff.version2.changeLog}</p>
@@ -166,7 +166,7 @@ export const FlowVersionsPage = () => {
             <div
               key={version.id}
               className={`p-4 rounded-lg border-2 transition-colors ${
-                version.version === flow.currentVersion
+                version.version === flow.current_version
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
@@ -177,14 +177,14 @@ export const FlowVersionsPage = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       Version {version.version}
                     </h3>
-                    {version.version === flow.currentVersion && (
+                    {version.version === flow.current_version && (
                       <span className="inline-flex px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-100 rounded-full">
                         Current
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-gray-600 mb-2">
-                    {new Date(version.createdAt).toLocaleString()}
+                    {new Date(version.created_at).toLocaleString()}
                   </p>
                   {version.changeLog && (
                     <p className="text-sm text-gray-700 mb-3">{version.changeLog}</p>
@@ -199,7 +199,7 @@ export const FlowVersionsPage = () => {
                   </details>
                 </div>
                 <div className="flex gap-2 ml-4">
-                  {version.version !== flow.currentVersion && (
+                  {version.version !== flow.current_version && (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -215,8 +215,8 @@ export const FlowVersionsPage = () => {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleCompare(version.version, flow.currentVersion)}
-                      disabled={version.version === flow.currentVersion}
+                      onClick={() => handleCompare(version.version, flow.current_version)}
+                      disabled={version.version === flow.current_version}
                     >
                       Compare
                     </Button>

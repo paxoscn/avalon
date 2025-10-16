@@ -228,10 +228,10 @@ export function SessionHistoryPage() {
                       {session.userId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(session.createdAt)}
+                      {formatDate(session.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(session.updatedAt)}
+                      {formatDate(session.updated_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                       <Button

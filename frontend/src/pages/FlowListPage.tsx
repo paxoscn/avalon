@@ -89,16 +89,16 @@ export const FlowListPage = () => {
       ),
     },
     {
-      key: 'currentVersion',
+      key: 'current_version',
       label: 'Version',
-      render: (flow: Flow) => <span className="text-gray-900">v{flow.currentVersion}</span>,
+      render: (flow: Flow) => <span className="text-gray-900">v{flow.current_version}</span>,
     },
     {
-      key: 'updatedAt',
+      key: 'updated_at',
       label: 'Last Updated',
       render: (flow: Flow) => (
         <span className="text-gray-500">
-          {new Date(flow.updatedAt).toLocaleDateString()}
+          {new Date(flow.updated_at).toLocaleDateString()}
         </span>
       ),
     },

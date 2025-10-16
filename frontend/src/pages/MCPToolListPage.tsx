@@ -132,8 +132,8 @@ export function MCPToolListPage() {
                 </div>
 
                 <div className="text-sm text-gray-500">
-                  <div>Version: {tool.currentVersion}</div>
-                  <div>Created: {new Date(tool.createdAt).toLocaleDateString()}</div>
+                  <div>Version: {tool.current_version}</div>
+                  <div>Created: {new Date(tool.created_at).toLocaleDateString()}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 border-t border-gray-200">

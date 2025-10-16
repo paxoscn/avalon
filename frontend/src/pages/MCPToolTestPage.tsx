@@ -123,7 +123,7 @@ export function MCPToolTestPage() {
           </div>
           <div className="flex">
             <span className="font-medium w-32">Version:</span>
-            <span className="text-gray-600">{tool.currentVersion}</span>
+            <span className="text-gray-600">{tool.current_version}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Endpoint:</span>

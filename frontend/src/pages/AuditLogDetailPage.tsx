@@ -76,7 +76,7 @@ export function AuditLogDetailPage() {
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Timestamp
               </label>
-              <p className="text-sm text-gray-900">{formatDate(log.createdAt)}</p>
+              <p className="text-sm text-gray-900">{formatDate(log.created_at)}</p>
             </div>
 
             <div>

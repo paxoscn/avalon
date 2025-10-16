@@ -144,13 +144,13 @@ export const FlowDetailPage = () => {
 
         <Card>
           <h3 className="text-sm font-medium text-gray-500 mb-2">Current Version</h3>
-          <p className="text-2xl font-semibold text-gray-900">v{flow.currentVersion}</p>
+          <p className="text-2xl font-semibold text-gray-900">v{flow.current_version}</p>
         </Card>
 
         <Card>
           <h3 className="text-sm font-medium text-gray-500 mb-2">Last Updated</h3>
           <p className="text-lg text-gray-900">
-            {new Date(flow.updatedAt).toLocaleDateString()}
+            {new Date(flow.updated_at).toLocaleDateString()}
           </p>
         </Card>
       </div>

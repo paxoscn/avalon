@@ -101,7 +101,7 @@ export function MCPToolVersionsPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Current Version</h2>
           <span className="text-2xl font-bold text-blue-600">
-            v{tool.currentVersion}
+            v{tool.current_version}
           </span>
         </div>
       </Card>
@@ -121,17 +121,17 @@ export function MCPToolVersionsPage() {
                       <h3 className="text-lg font-medium text-gray-900">
                         Version {version.version}
                       </h3>
-                      {version.version === tool.currentVersion && (
+                      {version.version === tool.current_version && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           Current
                         </span>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
-                      Created {new Date(version.createdAt).toLocaleString()}
+                      Created {new Date(version.created_at).toLocaleString()}
                     </p>
                   </div>
-                  {version.version !== tool.currentVersion && (
+                  {version.version !== tool.current_version && (
                     <Button
                       variant="secondary"
                       size="sm"

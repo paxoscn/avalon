@@ -168,14 +168,14 @@ export function SessionDetailPage() {
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Created At
               </label>
-              <p className="text-sm text-gray-900">{formatDate(session.createdAt)}</p>
+              <p className="text-sm text-gray-900">{formatDate(session.created_at)}</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Last Updated
               </label>
-              <p className="text-sm text-gray-900">{formatDate(session.updatedAt)}</p>
+              <p className="text-sm text-gray-900">{formatDate(session.updated_at)}</p>
             </div>
           </div>
 
@@ -226,7 +226,7 @@ export function SessionDetailPage() {
                         {message.role}
                       </span>
                       <span className="text-xs text-gray-500 ml-auto">
-                        {formatDate(message.createdAt)}
+                        {formatDate(message.created_at)}
                       </span>
                     </div>
                     
