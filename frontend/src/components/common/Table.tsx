@@ -22,7 +22,7 @@ export function Table<T>({
   emptyMessage = 'No data available',
   isLoading = false,
 }: TableProps<T>) {
-  keyExtractor = keyExtractor || ((_) => { "" });
+  keyExtractor = keyExtractor || ((_) => { return "" });
 
   if (isLoading) {
     return (

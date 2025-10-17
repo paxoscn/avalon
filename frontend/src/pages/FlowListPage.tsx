@@ -166,7 +166,7 @@ export const FlowListPage = () => {
           ))}
         </div>
 
-        <Table data={flows} columns={columns} />
+        <Table data={flows} columns={columns} keyExtractor={(item) => { return item.id }} />
 
         {total > limit && (
           <div className="mt-4 flex items-center justify-between">
