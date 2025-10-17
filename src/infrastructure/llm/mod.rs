@@ -7,6 +7,7 @@ pub use error_handling::*;
 
 
 use crate::domain::services::llm_service::{LLMProvider, LLMError, ConnectionTestResult};
+use crate::domain::ModelConfig;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -24,6 +25,37 @@ impl LLMProviderRegistry {
 
     pub fn register_provider(&mut self, name: String, provider: Arc<dyn LLMProvider>) {
         self.providers.insert(name, provider);
+    }
+
+    pub fn create_provider(&self, model_config: &ModelConfig) -> Option<Arc<dyn LLMProvider>> {
+        let provider_name = format!("{:?}", model_config.provider).to_lowercase();
+        if provider_name == "openai" {
+            match &model_config.credentials.api_key {
+                Some(api_key) => {
+                    match &model_config.credentials.api_base {
+                        Some(api_base) => {
+                            match OpenAIProvider::new(api_key.clone(), Some(api_base.clone()))
+                                               .map_or_else(|e| None, |v| Some(v)) {
+                                Some(provider) => {
+                                    Some(Arc::new(provider))
+                                },
+                                None => {
+                                    None
+                                }
+                            }
+                        },
+                        None => {
+                            None
+                        }
+                    }
+                },
+                None => {
+                    None
+                }
+            }
+        } else {
+            None
+        }
     }
 
     pub fn get_provider(&self, name: &str) -> Option<Arc<dyn LLMProvider>> {

@@ -48,8 +48,8 @@ export interface LLMCredentialsConfig {
 }
 
 export interface TestLLMRequest {
-  prompt: string;
-  systemPrompt?: string;
+  user_prompt: string;
+  system_prompt?: string;
 }
 
 class LLMService {
@@ -78,8 +78,30 @@ class LLMService {
   }
 
   async testConfig(id: string, request: TestLLMRequest): Promise<LLMTestResult> {
-    const response = await apiClient.post<LLMTestResult>(`/config/llm/${id}/test`, request);
-    return response.data;
+    const response = await apiClient.post<{
+      success: boolean;
+      response_time_ms: number;
+      error_message?: string;
+      response?: string;
+      usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      };
+    }>(`/config/llm/${id}/test`, request);
+    
+    // Map backend response to frontend format
+    return {
+      success: response.data.success,
+      response: response.data.response,
+      executionTime: response.data.response_time_ms,
+      error: response.data.error_message,
+      usage: response.data.usage ? {
+        promptTokens: response.data.usage.prompt_tokens,
+        completionTokens: response.data.usage.completion_tokens,
+        totalTokens: response.data.usage.total_tokens,
+      } : undefined,
+    };
   }
 
   async testConnection(id: string): Promise<{ success: boolean; message?: string }> {

@@ -6,17 +6,19 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
     application::services::{LLMApplicationService, VectorApplicationService},
-    domain::value_objects::{ConfigId, ModelConfig, ModelProvider, ModelParameters, ModelCredentials},
-    infrastructure::vector::VectorProvider,
-    error::Result,
-    presentation::extractors::AuthenticatedUser,
+    domain::value_objects::{
+        ConfigId, ModelConfig, ModelCredentials, ModelParameters, ModelProvider,
+    },
     domain::LLMConfig,
+    error::Result,
+    infrastructure::vector::VectorProvider,
+    presentation::extractors::AuthenticatedUser,
 };
 
 // LLM Configuration DTOs
@@ -60,6 +62,21 @@ pub struct ConnectionTestResponse {
     pub response_time_ms: u64,
     pub error_message: Option<String>,
     pub model_info: Option<Value>,
+    pub response: Option<String>,
+    pub usage: Option<TokenUsageResponse>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TokenUsageResponse {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TestLLMConnectionRequest {
+    pub system_prompt: Option<String>,
+    pub user_prompt: String,
 }
 
 // Vector Configuration DTOs
@@ -145,12 +162,9 @@ pub async fn create_llm_config(
         credentials,
     };
 
-    let config = service.create_config(
-        user.tenant_id,
-        req.name,
-        model_config,
-        req.description,
-    ).await?;
+    let config = service
+        .create_config(user.tenant_id, req.name, model_config, req.description)
+        .await?;
 
     Ok((StatusCode::CREATED, Json(llm_config_to_response(&config))))
 }
@@ -160,7 +174,9 @@ pub async fn get_llm_config(
     user: AuthenticatedUser,
     Path(config_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    let config = service.get_config(ConfigId(config_id), user.tenant_id).await?;
+    let config = service
+        .get_config(ConfigId(config_id), user.tenant_id)
+        .await?;
     Ok(Json(llm_config_to_response(&config)))
 }
 
@@ -175,16 +191,21 @@ pub async fn list_llm_configs(
 
     let (configs, total) = if let Some(provider) = query.provider {
         // For filtered queries, still need pagination
-        let all_configs = service.get_configs_by_provider(user.tenant_id, &provider).await?;
+        let all_configs = service
+            .get_configs_by_provider(user.tenant_id, &provider)
+            .await?;
         let total = all_configs.len() as u64;
         let offset = (page * limit) as usize;
-        let paginated: Vec<_> = all_configs.into_iter()
+        let paginated: Vec<_> = all_configs
+            .into_iter()
             .skip(offset)
             .take(limit as usize)
             .collect();
         (paginated, total)
     } else {
-        service.list_configs_paginated(user.tenant_id, page, limit).await?
+        service
+            .list_configs_paginated(user.tenant_id, page, limit)
+            .await?
     };
 
     let total_pages = if limit > 0 {
@@ -195,7 +216,7 @@ pub async fn list_llm_configs(
 
     let response = PaginatedLLMConfigResponse {
         data: configs.iter().map(llm_config_to_response).collect(),
-        page: page + 1,  // Convert back to 1-based for API
+        page: page + 1, // Convert back to 1-based for API
         limit,
         total,
         total_pages,
@@ -210,39 +231,44 @@ pub async fn update_llm_config(
     Path(config_id): Path<Uuid>,
     Json(req): Json<UpdateLLMConfigRequest>,
 ) -> Result<impl IntoResponse> {
-    let model_config = if req.model_name.is_some() || req.parameters.is_some() || req.credentials.is_some() {
-        // Get existing config to merge changes
-        let existing = service.get_config(ConfigId(config_id), user.tenant_id).await?;
-        
-        let parameters = if let Some(p) = req.parameters {
-            parse_model_parameters(Some(p))?
-        } else {
-            existing.model_config.parameters
-        };
-        
-        let credentials = if let Some(c) = req.credentials {
-            parse_model_credentials(Some(c))?
-        } else {
-            existing.model_config.credentials
-        };
-        
-        Some(ModelConfig {
-            provider: existing.model_config.provider,
-            model_name: req.model_name.unwrap_or(existing.model_config.model_name),
-            parameters,
-            credentials,
-        })
-    } else {
-        None
-    };
+    let model_config =
+        if req.model_name.is_some() || req.parameters.is_some() || req.credentials.is_some() {
+            // Get existing config to merge changes
+            let existing = service
+                .get_config(ConfigId(config_id), user.tenant_id)
+                .await?;
 
-    let config = service.update_config(
-        ConfigId(config_id),
-        user.tenant_id,
-        req.name,
-        model_config,
-        req.description,
-    ).await?;
+            let parameters = if let Some(p) = req.parameters {
+                parse_model_parameters(Some(p))?
+            } else {
+                existing.model_config.parameters
+            };
+
+            let credentials = if let Some(c) = req.credentials {
+                parse_model_credentials(Some(c))?
+            } else {
+                existing.model_config.credentials
+            };
+
+            Some(ModelConfig {
+                provider: existing.model_config.provider,
+                model_name: req.model_name.unwrap_or(existing.model_config.model_name),
+                parameters,
+                credentials,
+            })
+        } else {
+            None
+        };
+
+    let config = service
+        .update_config(
+            ConfigId(config_id),
+            user.tenant_id,
+            req.name,
+            model_config,
+            req.description,
+        )
+        .await?;
 
     Ok(Json(llm_config_to_response(&config)))
 }
@@ -252,7 +278,9 @@ pub async fn delete_llm_config(
     user: AuthenticatedUser,
     Path(config_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    service.delete_config(ConfigId(config_id), user.tenant_id).await?;
+    service
+        .delete_config(ConfigId(config_id), user.tenant_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -261,7 +289,9 @@ pub async fn set_default_llm_config(
     user: AuthenticatedUser,
     Path(config_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    service.set_default_config(ConfigId(config_id), user.tenant_id).await?;
+    service
+        .set_default_config(ConfigId(config_id), user.tenant_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -269,23 +299,63 @@ pub async fn test_llm_connection(
     State(service): State<Arc<dyn LLMApplicationService>>,
     user: AuthenticatedUser,
     Path(config_id): Path<Uuid>,
+    Json(req): Json<TestLLMConnectionRequest>,
 ) -> Result<impl IntoResponse> {
-    let result = service.test_connection(ConfigId(config_id), user.tenant_id).await?;
-    
-    let response = ConnectionTestResponse {
-        success: result.success,
-        response_time_ms: result.response_time_ms,
-        error_message: result.error_message,
-        model_info: result.model_info.map(|info| serde_json::json!({
-            "id": info.id,
-            "name": info.name,
-            "description": info.description,
-            "context_length": info.context_length,
-            "supports_streaming": info.supports_streaming,
-        })),
-    };
+    use crate::domain::value_objects::ChatMessage;
 
-    Ok(Json(response))
+    let start_time = std::time::Instant::now();
+
+    // Build messages from prompts
+    let mut messages = Vec::new();
+
+    if let Some(system_prompt) = req.system_prompt {
+        if !system_prompt.trim().is_empty() {
+            messages.push(ChatMessage::new_system_message(system_prompt));
+        }
+    }
+
+    messages.push(ChatMessage::new_user_message(req.user_prompt));
+
+    // Call the LLM with the prompts
+    match service
+        .test_connection_with_prompts(ConfigId(config_id), user.tenant_id, messages)
+        .await
+    {
+        Ok(chat_response) => {
+            let response_time = start_time.elapsed().as_millis() as u64;
+
+            let response = ConnectionTestResponse {
+                success: true,
+                response_time_ms: response_time,
+                error_message: None,
+                model_info: Some(serde_json::json!({
+                    "model_used": chat_response.model_used,
+                })),
+                response: Some(chat_response.content),
+                usage: Some(TokenUsageResponse {
+                    prompt_tokens: chat_response.usage.prompt_tokens,
+                    completion_tokens: chat_response.usage.completion_tokens,
+                    total_tokens: chat_response.usage.total_tokens,
+                }),
+            };
+
+            Ok(Json(response))
+        }
+        Err(e) => {
+            let response_time = start_time.elapsed().as_millis() as u64;
+
+            let response = ConnectionTestResponse {
+                success: false,
+                response_time_ms: response_time,
+                error_message: Some(e.to_string()),
+                model_info: None,
+                response: None,
+                usage: None,
+            };
+
+            Ok(Json(response))
+        }
+    }
 }
 
 pub async fn get_available_models(
@@ -304,15 +374,15 @@ pub async fn create_vector_config(
     Json(req): Json<CreateVectorConfigRequest>,
 ) -> Result<impl IntoResponse> {
     let provider = parse_vector_provider(&req.provider)?;
-    
-    let config = service.create_config(
-        user.tenant_id,
-        req.name,
-        provider,
-        req.connection_params,
-    ).await?;
 
-    Ok((StatusCode::CREATED, Json(vector_config_to_response(&config))))
+    let config = service
+        .create_config(user.tenant_id, req.name, provider, req.connection_params)
+        .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(vector_config_to_response(&config)),
+    ))
 }
 
 pub async fn get_vector_config(
@@ -336,10 +406,13 @@ pub async fn list_vector_configs(
     let (configs, total) = if let Some(provider_str) = query.provider {
         // For filtered queries, still need pagination
         let provider = parse_vector_provider(&provider_str)?;
-        let all_configs = service.get_configs_by_provider(user.tenant_id, provider).await?;
+        let all_configs = service
+            .get_configs_by_provider(user.tenant_id, provider)
+            .await?;
         let total = all_configs.len() as u64;
         let offset = (page * limit) as usize;
-        let paginated: Vec<_> = all_configs.into_iter()
+        let paginated: Vec<_> = all_configs
+            .into_iter()
             .skip(offset)
             .take(limit as usize)
             .collect();
@@ -356,7 +429,7 @@ pub async fn list_vector_configs(
 
     let response = PaginatedVectorConfigResponse {
         data: configs.iter().map(vector_config_to_response).collect(),
-        page: page + 1,  // Convert back to 1-based for API
+        page: page + 1, // Convert back to 1-based for API
         limit,
         total,
         total_pages,
@@ -371,11 +444,9 @@ pub async fn update_vector_config(
     Path(config_id): Path<Uuid>,
     Json(req): Json<UpdateVectorConfigRequest>,
 ) -> Result<impl IntoResponse> {
-    let config = service.update_config(
-        ConfigId(config_id),
-        req.name,
-        req.connection_params,
-    ).await?;
+    let config = service
+        .update_config(ConfigId(config_id), req.name, req.connection_params)
+        .await?;
 
     Ok(Json(vector_config_to_response(&config)))
 }
@@ -394,7 +465,9 @@ pub async fn set_default_vector_config(
     user: AuthenticatedUser,
     Path(config_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    service.set_as_default(ConfigId(config_id), user.tenant_id).await?;
+    service
+        .set_as_default(ConfigId(config_id), user.tenant_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -404,12 +477,14 @@ pub async fn test_vector_connection(
     Path(config_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
     service.test_connection_by_id(ConfigId(config_id)).await?;
-    
+
     let response = ConnectionTestResponse {
         success: true,
         response_time_ms: 0,
         error_message: None,
         model_info: None,
+        response: None,
+        usage: None,
     };
 
     Ok(Json(response))
@@ -420,14 +495,11 @@ pub async fn get_vector_provider_params(
     Path(provider): Path<String>,
 ) -> Result<impl IntoResponse> {
     let provider_enum = parse_vector_provider(&provider)?;
-    
+
     let required = VectorApplicationService::get_required_params(provider_enum.clone());
     let optional = VectorApplicationService::get_optional_params(provider_enum);
-    
-    let response = ProviderParamsResponse {
-        required,
-        optional,
-    };
+
+    let response = ProviderParamsResponse { required, optional };
 
     Ok(Json(response))
 }
@@ -457,7 +529,9 @@ fn llm_config_to_response(config: &crate::domain::entities::LLMConfig) -> LLMCon
     }
 }
 
-fn vector_config_to_response(config: &crate::domain::entities::VectorConfigEntity) -> VectorConfigResponse {
+fn vector_config_to_response(
+    config: &crate::domain::entities::VectorConfigEntity,
+) -> VectorConfigResponse {
     VectorConfigResponse {
         id: config.id.0.to_string(),
         tenant_id: config.tenant_id.0.to_string(),
@@ -473,9 +547,10 @@ fn parse_model_provider(provider: &str) -> Result<ModelProvider> {
     match provider.to_lowercase().as_str() {
         "openai" => Ok(ModelProvider::OpenAI),
         "claude" | "anthropic" => Ok(ModelProvider::Claude),
-        _ => Err(crate::error::PlatformError::ValidationError(
-            format!("Unknown provider: {}", provider)
-        )),
+        _ => Err(crate::error::PlatformError::ValidationError(format!(
+            "Unknown provider: {}",
+            provider
+        ))),
     }
 }
 
@@ -485,10 +560,9 @@ fn parse_vector_provider(provider: &str) -> Result<VectorProvider> {
 
 fn parse_model_parameters(value: Option<Value>) -> Result<ModelParameters> {
     if let Some(v) = value {
-        serde_json::from_value(v)
-            .map_err(|e| crate::error::PlatformError::ValidationError(
-                format!("Invalid model parameters: {}", e)
-            ))
+        serde_json::from_value(v).map_err(|e| {
+            crate::error::PlatformError::ValidationError(format!("Invalid model parameters: {}", e))
+        })
     } else {
         Ok(ModelParameters::default())
     }
@@ -496,10 +570,12 @@ fn parse_model_parameters(value: Option<Value>) -> Result<ModelParameters> {
 
 fn parse_model_credentials(value: Option<Value>) -> Result<ModelCredentials> {
     if let Some(v) = value {
-        serde_json::from_value(v)
-            .map_err(|e| crate::error::PlatformError::ValidationError(
-                format!("Invalid model credentials: {}", e)
+        serde_json::from_value(v).map_err(|e| {
+            crate::error::PlatformError::ValidationError(format!(
+                "Invalid model credentials: {}",
+                e
             ))
+        })
     } else {
         Ok(ModelCredentials::default())
     }

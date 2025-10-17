@@ -47,8 +47,8 @@ export function LLMConfigTestPage() {
 
     try {
       const request: TestLLMRequest = {
-        prompt: prompt.trim(),
-        systemPrompt: systemPrompt.trim() || undefined,
+        user_prompt: prompt.trim(),
+        system_prompt: systemPrompt.trim() || undefined,
       };
       const result = await llmService.testConfig(id!, request);
       setTestResult(result);
@@ -109,26 +109,26 @@ export function LLMConfigTestPage() {
           </div>
           <div className="flex">
             <span className="font-medium w-32">Model:</span>
-            <span className="text-gray-600">{config.config.model || 'N/A'}</span>
+            <span className="text-gray-600">{config.model_name || 'N/A'}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Temperature:</span>
-            <span className="text-gray-600">{config.config.temperature ?? 0.7}</span>
+            <span className="text-gray-600">{config.config.model_config.parameters.temperature ?? 0.7}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Max Tokens:</span>
-            <span className="text-gray-600">{config.config.maxTokens ?? 2000}</span>
+            <span className="text-gray-600">{config.config.model_config.parameters.max_tokens ?? 2000}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Default:</span>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                config.isDefault
+                config.is_default
                   ? 'bg-blue-100 text-blue-800'
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {config.isDefault ? 'Yes' : 'No'}
+              {config.is_default ? 'Yes' : 'No'}
             </span>
           </div>
         </div>

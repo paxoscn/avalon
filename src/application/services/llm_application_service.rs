@@ -53,6 +53,14 @@ pub trait LLMApplicationService: Send + Sync {
     /// Test connection with a model configuration (without saving)
     async fn test_model_config(&self, model_config: ModelConfig) -> Result<ConnectionTestResult>;
 
+    /// Test connection with actual prompts and get LLM response
+    async fn test_connection_with_prompts(
+        &self,
+        config_id: ConfigId,
+        tenant_id: TenantId,
+        messages: Vec<crate::domain::value_objects::ChatMessage>,
+    ) -> Result<crate::domain::services::llm_service::ChatResponse>;
+
     /// Get available models for a provider
     async fn get_available_models(&self, provider: &str) -> Result<Vec<ModelInfo>>;
 
@@ -258,7 +266,8 @@ impl LLMApplicationService for LLMApplicationServiceImpl {
 
         // Get the provider and test connection
         let provider_name = format!("{:?}", model_config.provider).to_lowercase();
-        if let Some(provider) = self.provider_registry.get_provider(&provider_name) {
+        // if let Some(provider) = self.provider_registry.get_provider(&provider_name) {
+        if let Some(provider) = self.provider_registry.create_provider(&model_config) {
             provider.test_connection().await.map_err(PlatformError::from)
         } else {
             Ok(ConnectionTestResult {
@@ -298,6 +307,49 @@ impl LLMApplicationService for LLMApplicationServiceImpl {
 
     async fn get_configs_by_provider(&self, tenant_id: TenantId, provider: &str) -> Result<Vec<LLMConfig>> {
         self.config_repository.find_by_tenant_and_provider(tenant_id, provider).await
+    }
+
+    async fn test_connection_with_prompts(
+        &self,
+        config_id: ConfigId,
+        tenant_id: TenantId,
+        messages: Vec<crate::domain::value_objects::ChatMessage>,
+    ) -> Result<crate::domain::services::llm_service::ChatResponse> {
+        use crate::domain::services::llm_service::ChatRequest;
+        
+        // Get the config and ensure it belongs to the tenant
+        let config = self.ensure_config_belongs_to_tenant(config_id, tenant_id).await?;
+        
+        // Validate the configuration
+        let validation_result = self.llm_domain_service.validate_config(&config.model_config)?;
+        if !validation_result.is_valid {
+            return Err(PlatformError::ValidationError(
+                format!("Invalid configuration: {}", validation_result.errors.join(", "))
+            ));
+        }
+        
+        // Create provider and make the actual LLM call
+        if let Some(provider) = self.provider_registry.create_provider(&config.model_config) {
+            let request = ChatRequest {
+                messages,
+                model: config.model_config.model_name.clone(),
+                temperature: config.model_config.parameters.temperature,
+                max_tokens: config.model_config.parameters.max_tokens,
+                top_p: config.model_config.parameters.top_p,
+                frequency_penalty: config.model_config.parameters.frequency_penalty,
+                presence_penalty: config.model_config.parameters.presence_penalty,
+                stop_sequences: config.model_config.parameters.stop_sequences.clone(),
+                stream: false,
+                tenant_id: tenant_id.0,
+            };
+            
+            provider.chat_completion(request).await.map_err(PlatformError::from)
+        } else {
+            let provider_name = format!("{:?}", config.model_config.provider).to_lowercase();
+            Err(PlatformError::InternalError(
+                format!("Provider '{}' not available", provider_name)
+            ))
+        }
     }
 }
 
