@@ -175,14 +175,14 @@ export function LLMConfigListPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button
+                  {/* <Button
                     variant="secondary"
                     onClick={() => handleTestConnection(config.id)}
                     disabled={testingId === config.id}
                     className="flex-1"
                   >
                     {testingId === config.id ? 'Testing...' : 'Test Connection'}
-                  </Button>
+                  </Button> */}
                   {!config.is_default && (
                     <Button
                       variant="secondary"
@@ -192,17 +192,16 @@ export function LLMConfigListPage() {
                       Set Default
                     </Button>
                   )}
+                  {!config.is_default && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleDelete(config.id)}
+                      className="flex-1 text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
-
-                {!config.is_default && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleDelete(config.id)}
-                    className="w-full text-red-600 hover:text-red-700"
-                  >
-                    Delete
-                  </Button>
-                )}
               </div>
             </Card>
           ))}
