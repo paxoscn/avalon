@@ -541,7 +541,7 @@ impl NodeExecutor for LLMChatNodeExecutor {
     }
 
     fn can_handle(&self, node_type: &NodeType) -> bool {
-        matches!(node_type, NodeType::LlmChat)
+        matches!(node_type, NodeType::Llm)
     }
 }
 

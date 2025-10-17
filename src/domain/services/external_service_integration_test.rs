@@ -381,8 +381,7 @@ mod tests {
         // Create LLM node
         let node = FlowNode {
             id: "llm1".to_string(),
-            node_type: NodeType::LlmChat,
-            title: "LLM Chat".to_string(),
+            node_type: NodeType::Llm,
             data: json!({
                 "model_config": {
                     "provider": "open_a_i",

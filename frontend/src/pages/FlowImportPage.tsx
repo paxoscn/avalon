@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import yaml from 'js-yaml';
 import { flowService } from '../services/flow.service';
 import type { Flow, ValidationResult } from '../types';
 import { Button, Card, Alert, Input } from '../components/common';
@@ -47,12 +48,12 @@ export const FlowImportPage = () => {
       setError(null);
       setValidation(null);
 
-      // Parse DSL to validate JSON format
-      let parsedDsl;
+      // Parse DSL to validate YAML format
+      let parsedDsl: any;
       try {
-        parsedDsl = JSON.parse(dslContent);
-      } catch {
-        setError('Invalid JSON format in DSL');
+        parsedDsl = yaml.load(dslContent);
+      } catch (e: any) {
+        setError(`Invalid YAML format: ${e.message}`);
         return;
       }
 
@@ -60,20 +61,24 @@ export const FlowImportPage = () => {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (!parsedDsl.nodes || !Array.isArray(parsedDsl.nodes)) {
-        errors.push('DSL must contain a "nodes" array');
-      }
+      if (!parsedDsl || typeof parsedDsl !== 'object') {
+        errors.push('DSL must be a valid YAML object');
+      } else {
+        if (!parsedDsl.workflow.graph.nodes || !Array.isArray(parsedDsl.workflow.graph.nodes)) {
+          errors.push('DSL must contain a "nodes" array');
+        }
 
-      if (parsedDsl.nodes && parsedDsl.nodes.length === 0) {
-        warnings.push('Flow has no nodes defined');
-      }
+        if (parsedDsl.workflow.graph.nodes && parsedDsl.workflow.graph.nodes.length === 0) {
+          warnings.push('Flow has no nodes defined');
+        }
 
-      if (!parsedDsl.edges || !Array.isArray(parsedDsl.edges)) {
-        warnings.push('DSL should contain an "edges" array for node connections');
+        if (!parsedDsl.workflow.graph.edges || !Array.isArray(parsedDsl.workflow.graph.edges)) {
+          warnings.push('DSL should contain an "edges" array for node connections');
+        }
       }
 
       const validationResult: ValidationResult = {
-        valid: errors.length === 0,
+        is_valid: errors.length === 0,
         errors: errors.length > 0 ? errors : undefined,
         warnings: warnings.length > 0 ? warnings : undefined,
       };
@@ -97,15 +102,15 @@ export const FlowImportPage = () => {
       setImporting(true);
       setError(null);
 
-      const result = await flowService.importDify({
-        dsl: dslContent,
+      const result = await flowService.importDsl({
+        dsl: JSON.stringify(((obj: any) => ({ ...obj, workflow: { ...obj.workflow, graph: { ...obj.workflow.graph, nodes: obj.workflow.graph.nodes.map((node: any) => { node.node_type = node.data.type; return node }) } } }))(yaml.load(dslContent)), null, 2),
         name: flowName,
       });
 
       setImportedFlow(result.flow);
       setValidation(result.validation);
 
-      if (result.validation.valid) {
+      if (result.validation.is_valid) {
         setTimeout(() => {
           navigate(`/flows/${result.flow.id}`);
         }, 2000);
@@ -147,13 +152,13 @@ export const FlowImportPage = () => {
       </div>
 
       {error && (
-        <Alert variant="error" onClose={() => setError(null)}>
+        <Alert type="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {importedFlow && validation?.valid && (
-        <Alert variant="success">
+      {importedFlow && validation?.is_valid && (
+        <Alert type="success">
           Flow imported successfully! Redirecting to flow details...
         </Alert>
       )}
@@ -215,12 +220,11 @@ export const FlowImportPage = () => {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-3 h-3 rounded-full ${
-                      validation.valid ? 'bg-green-500' : 'bg-red-500'
-                    }`}
+                    className={`w-3 h-3 rounded-full ${validation.is_valid ? 'bg-green-500' : 'bg-red-500'
+                      }`}
                   />
                   <span className="font-medium">
-                    {validation.valid ? 'Valid DSL' : 'Invalid DSL'}
+                    {validation.is_valid ? 'Valid DSL' : 'Invalid DSL'}
                   </span>
                 </div>
 
@@ -250,7 +254,7 @@ export const FlowImportPage = () => {
                   </div>
                 )}
 
-                {validation.valid && !validation.warnings && (
+                {validation.is_valid && !validation.warnings && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-sm text-green-700">
                       ✓ DSL is valid and ready to import
@@ -272,15 +276,15 @@ export const FlowImportPage = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">DSL Structure</h3>
                 <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs max-h-96">
-                  {JSON.stringify(JSON.parse(dslContent), null, 2)}
+                  {JSON.stringify(yaml.load(dslContent), null, 2)}
                 </pre>
               </div>
 
-              {validation?.valid && (
+              {validation?.is_valid && (
                 <div className="pt-4 border-t border-gray-200">
                   <Button
                     onClick={handleImport}
-                    disabled={importing || !validation.valid}
+                    disabled={importing || !validation.is_valid}
                     className="w-full"
                   >
                     {importing ? 'Importing...' : 'Import Flow'}
@@ -297,7 +301,7 @@ export const FlowImportPage = () => {
         <div className="space-y-3 text-sm text-gray-700">
           <div>
             <h3 className="font-medium text-gray-900 mb-1">Supported Format</h3>
-            <p>The DSL must be in valid JSON format following the Dify DSL specification.</p>
+            <p>The DSL must be in valid YAML format following the Dify DSL specification.</p>
           </div>
           <div>
             <h3 className="font-medium text-gray-900 mb-1">Required Fields</h3>
@@ -309,7 +313,7 @@ export const FlowImportPage = () => {
           <div>
             <h3 className="font-medium text-gray-900 mb-1">Common Issues</h3>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Invalid JSON syntax - ensure proper formatting</li>
+              <li>Invalid YAML syntax - ensure proper formatting and indentation</li>
               <li>Missing required fields - check the DSL structure</li>
               <li>Unsupported node types - verify node compatibility</li>
             </ul>

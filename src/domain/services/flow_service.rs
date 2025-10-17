@@ -162,11 +162,11 @@ impl FlowDomainService for FlowDomainServiceImpl {
         }
 
         // Check for orphaned nodes (nodes with no incoming or outgoing edges)
-        let connected_nodes: std::collections::HashSet<_> = definition.edges.iter()
+        let connected_nodes: std::collections::HashSet<_> = definition.workflow.graph.edges.iter()
             .flat_map(|e| vec![&e.source, &e.target])
             .collect();
 
-        for node in &definition.nodes {
+        for node in &definition.workflow.graph.nodes {
             if !connected_nodes.contains(&node.id) && 
                node.node_type != crate::domain::value_objects::NodeType::Start &&
                node.node_type != crate::domain::value_objects::NodeType::End {

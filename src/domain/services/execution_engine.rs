@@ -170,11 +170,11 @@ impl ExecutionEngineImpl {
     }
 
     fn find_node_by_id<'a>(&self, node_id: &str, definition: &'a FlowDefinition) -> Option<&'a FlowNode> {
-        definition.nodes.iter().find(|n| n.id == node_id)
+        definition.workflow.graph.nodes.iter().find(|n| n.id == node_id)
     }
 
     fn get_outgoing_edges<'a>(&self, node_id: &str, definition: &'a FlowDefinition) -> Vec<&'a crate::domain::value_objects::FlowEdge> {
-        definition.edges.iter()
+        definition.workflow.graph.edges.iter()
             .filter(|e| e.source == node_id)
             .collect()
     }

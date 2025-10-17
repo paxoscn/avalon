@@ -71,7 +71,7 @@ Extended `frontend/src/types/index.ts` with:
 - `FlowVersion` - Version metadata and definition
 - `FlowExecution` - Execution state and results
 - `ExecuteFlowRequest` - Execution input parameters
-- `ImportDifyRequest` - DSL import request
+- `ImportDslRequest` - DSL import request
 - `ValidationResult` - Validation errors and warnings
 
 ## API Service Methods
@@ -85,7 +85,7 @@ Created `flowService` with methods:
 - `executeFlow()` - Execute flow with variables
 - `getFlowVersions()` - Get version history
 - `rollbackFlow()` - Rollback to version
-- `importDify()` - Import Dify DSL
+- `importDsl()` - Import Dify DSL
 - `getFlowExecutions()` - Get execution history
 - `getExecutionById()` - Get execution details
 

@@ -28,8 +28,8 @@ pub fn flow_routes(service: Arc<dyn FlowApplicationService>) -> Router {
         
         // Flow execution
         .route("/flows/{flow_id}/execute", post(flow_handlers::execute_flow))
-        .route("/executions/{execution_id}", get(flow_handlers::get_execution_status))
-        .route("/executions", get(flow_handlers::list_executions))
+        .route("/flows/{flow_id}/executions/{execution_id}", get(flow_handlers::get_execution_status))
+        .route("/flows/{flow_id}/executions", get(flow_handlers::list_executions))
         
         // Version management
         .route("/flows/{flow_id}/versions", post(flow_handlers::create_version))

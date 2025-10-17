@@ -320,13 +320,14 @@ pub async fn get_execution_status(
 pub async fn list_executions(
     State(service): State<Arc<dyn FlowApplicationService>>,
     user: AuthenticatedUser,
+    Path(flow_id): Path<Uuid>,
     Query(query): Query<ListExecutionsQuery>,
 ) -> Result<impl IntoResponse> {
     // Convert from 1-based (API) to 0-based (internal)
     let page = query.page.saturating_sub(1);
     let limit = query.limit;
     
-    let flow_id = query.flow_id.map(FlowId);
+    let flow_id = Some(flow_id).map(FlowId);
     let (executions, total) = service.list_executions(
         user.tenant_id,
         flow_id,

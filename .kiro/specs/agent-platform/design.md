@@ -345,7 +345,7 @@ GET /api/flows
 Query: tenant_id, page, limit
 Response: { flows: Flow[], total: number }
 
-POST /api/flows/import-dify
+POST /api/flows/import-dsl
 Body: { dsl: string, name: string }
 Response: { flow: Flow, validation: ValidationResult }
 

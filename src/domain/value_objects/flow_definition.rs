@@ -3,17 +3,27 @@ use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FlowDefinition {
+    pub workflow: FlowWorkflow,
+    // pub variables: Vec<FlowVariable>,
+    // pub metadata: FlowMetadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FlowWorkflow {
+    pub graph: FlowGraph,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FlowGraph {
     pub nodes: Vec<FlowNode>,
     pub edges: Vec<FlowEdge>,
-    pub variables: Vec<FlowVariable>,
-    pub metadata: FlowMetadata,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FlowNode {
     pub id: String,
     pub node_type: NodeType,
-    pub title: String,
+    // pub title: String,
     pub data: Value,
     pub position: NodePosition,
 }
@@ -23,7 +33,9 @@ pub struct FlowEdge {
     pub id: String,
     pub source: String,
     pub target: String,
+    #[serde(rename = "sourceHandle")]
     pub source_handle: Option<String>,
+    #[serde(rename = "targetHandle")]
     pub target_handle: Option<String>,
 }
 
@@ -55,7 +67,7 @@ pub struct NodePosition {
 pub enum NodeType {
     Start,
     End,
-    LlmChat,
+    Llm,
     VectorSearch,
     McpTool,
     Condition,
@@ -78,15 +90,19 @@ pub enum VariableType {
 impl FlowDefinition {
     pub fn new() -> Self {
         FlowDefinition {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-            variables: Vec::new(),
-            metadata: FlowMetadata {
-                description: None,
-                tags: Vec::new(),
-                author: String::new(),
-                version: "1.0.0".to_string(),
+            workflow: FlowWorkflow {
+                graph: FlowGraph {
+                    nodes: Vec::new(),
+                    edges: Vec::new(),
+                },
             },
+            // variables: Vec::new(),
+            // metadata: FlowMetadata {
+            //     description: None,
+            //     tags: Vec::new(),
+            //     author: String::new(),
+            //     version: "1.0.0".to_string(),
+            // },
         }
     }
 
@@ -110,7 +126,7 @@ impl FlowDefinition {
 
     pub fn validate(&self) -> Result<(), String> {
         // Check if there's at least one start node
-        let start_nodes: Vec<_> = self.nodes.iter()
+        let start_nodes: Vec<_> = self.workflow.graph.nodes.iter()
             .filter(|n| n.node_type == NodeType::Start)
             .collect();
         
@@ -119,7 +135,7 @@ impl FlowDefinition {
         }
 
         // Check if there's at least one end node
-        let end_nodes: Vec<_> = self.nodes.iter()
+        let end_nodes: Vec<_> = self.workflow.graph.nodes.iter()
             .filter(|n| n.node_type == NodeType::End)
             .collect();
         
@@ -129,14 +145,14 @@ impl FlowDefinition {
 
         // Validate node IDs are unique
         let mut node_ids = std::collections::HashSet::new();
-        for node in &self.nodes {
+        for node in &self.workflow.graph.nodes {
             if !node_ids.insert(&node.id) {
                 return Err(format!("Duplicate node ID: {}", node.id));
             }
         }
 
         // Validate edges reference existing nodes
-        for edge in &self.edges {
+        for edge in &self.workflow.graph.edges {
             if !node_ids.contains(&edge.source) {
                 return Err(format!("Edge references non-existent source node: {}", edge.source));
             }
@@ -149,13 +165,13 @@ impl FlowDefinition {
     }
 
     pub fn get_start_nodes(&self) -> Vec<&FlowNode> {
-        self.nodes.iter()
+        self.workflow.graph.nodes.iter()
             .filter(|n| n.node_type == NodeType::Start)
             .collect()
     }
 
     pub fn get_end_nodes(&self) -> Vec<&FlowNode> {
-        self.nodes.iter()
+        self.workflow.graph.nodes.iter()
             .filter(|n| n.node_type == NodeType::End)
             .collect()
     }

@@ -65,13 +65,13 @@ export interface ExecuteFlowRequest {
   sessionId?: string;
 }
 
-export interface ImportDifyRequest {
+export interface ImportDslRequest {
   dsl: string;
   name: string;
 }
 
 export interface ValidationResult {
-  valid: boolean;
+  is_valid: boolean;
   errors?: string[];
   warnings?: string[];
 }

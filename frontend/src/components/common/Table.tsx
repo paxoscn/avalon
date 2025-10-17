@@ -22,6 +22,8 @@ export function Table<T>({
   emptyMessage = 'No data available',
   isLoading = false,
 }: TableProps<T>) {
+  keyExtractor = keyExtractor || ((_) => { "" });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">

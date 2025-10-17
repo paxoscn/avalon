@@ -4,7 +4,7 @@ import type {
   FlowVersion,
   FlowExecution,
   ExecuteFlowRequest,
-  ImportDifyRequest,
+  ImportDslRequest,
   ValidationResult,
 } from '../types';
 
@@ -24,7 +24,7 @@ export interface ExecuteFlowResponse {
   status: string;
 }
 
-export interface ImportDifyResponse {
+export interface ImportDslResponse {
   flow: Flow;
   validation: ValidationResult;
 }
@@ -76,8 +76,8 @@ class FlowService {
     return response.data;
   }
 
-  async importDify(data: ImportDifyRequest): Promise<ImportDifyResponse> {
-    const response = await apiClient.post<ImportDifyResponse>('/flows/import-dify', data);
+  async importDsl(data: ImportDslRequest): Promise<ImportDslResponse> {
+    const response = await apiClient.post<ImportDslResponse>('/flows/import-dsl', data);
     return response.data;
   }
 
