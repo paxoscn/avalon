@@ -384,7 +384,7 @@ impl LLMDomainService for IntegratedLLMService {
                 let selected_provider = selected_provider.to_string();
                 
                 Box::pin(async move {
-                    if let Some(provider) = provider_registry.get_provider(&selected_provider) {
+                    if let Some(provider) = provider_registry.create_provider(&config) {
                         let request = ChatRequest {
                             messages,
                             model: config.model_name,
@@ -421,13 +421,15 @@ impl LLMDomainService for IntegratedLLMService {
         let provider_name = self.select_provider(config).await?;
         
         let provider_name_clone = provider_name.clone();
+        let config_clone = config.clone();
         self.execute_with_provider(&provider_name, move || {
             let provider_registry = self.provider_registry.clone();
             let text = text.to_string();
             let provider_name = provider_name_clone.clone();
+            let config = config_clone.clone();
             
             Box::pin(async move {
-                if let Some(provider) = provider_registry.get_provider(&provider_name) {
+                if let Some(provider) = provider_registry.create_provider(&config) {
                     provider.generate_embedding(&text).await
                 } else {
                     Err(LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))
@@ -444,7 +446,7 @@ impl LLMDomainService for IntegratedLLMService {
     ) -> Result<Box<dyn Stream<Item = Result<ChatStreamChunk, LLMError>> + Send + Unpin>, LLMError> {
         let provider_name = self.select_provider(config).await?;
         
-        if let Some(provider) = self.provider_registry.get_provider(&provider_name) {
+        if let Some(provider) = self.provider_registry.create_provider(&config) {
             let request = ChatRequest {
                 messages,
                 model: config.model_name.clone(),

@@ -151,7 +151,7 @@ pub async fn create_llm_config(
     user: AuthenticatedUser,
     Json(req): Json<CreateLLMConfigRequest>,
 ) -> Result<impl IntoResponse> {
-    let provider = parse_model_provider(&req.provider)?;
+    let provider = ModelProvider::parse_model_provider(&req.provider)?;
     let parameters = parse_model_parameters(req.parameters)?;
     let credentials = parse_model_credentials(req.credentials)?;
 
@@ -540,17 +540,6 @@ fn vector_config_to_response(
         is_default: config.is_default,
         created_at: config.created_at.to_rfc3339(),
         updated_at: config.updated_at.to_rfc3339(),
-    }
-}
-
-fn parse_model_provider(provider: &str) -> Result<ModelProvider> {
-    match provider.to_lowercase().as_str() {
-        "openai" => Ok(ModelProvider::OpenAI),
-        "claude" | "anthropic" => Ok(ModelProvider::Claude),
-        _ => Err(crate::error::PlatformError::ValidationError(format!(
-            "Unknown provider: {}",
-            provider
-        ))),
     }
 }
 

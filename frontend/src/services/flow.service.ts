@@ -92,6 +92,16 @@ class FlowService {
     const response = await apiClient.get<FlowExecution>(`/executions/${executionId}`);
     return response.data;
   }
+
+  async activateFlow(id: string): Promise<Flow> {
+    const response = await apiClient.post<Flow>(`/flows/${id}/activate`);
+    return response.data;
+  }
+
+  async deactivateFlow(id: string): Promise<Flow> {
+    const response = await apiClient.post<Flow>(`/flows/${id}/deactivate`);
+    return response.data;
+  }
 }
 
 export const flowService = new FlowService();

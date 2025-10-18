@@ -278,7 +278,7 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
             user_id,
         ).map_err(|e| PlatformError::ValidationError(e))?;
 
-        self.version_repo.save(&version).await?;
+        self.version_repo.save(&version, &tenant_id).await?;
 
         Ok((flow, validation))
     }
@@ -433,7 +433,7 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
             user_id,
         ).map_err(|e| PlatformError::ValidationError(e))?;
 
-        self.version_repo.save(&version).await?;
+        self.version_repo.save(&version, &tenant_id).await?;
         self.flow_repo.save(&flow).await?;
 
         Ok(version)
@@ -471,7 +471,7 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
             user_id,
         ).map_err(|e| PlatformError::ValidationError(e))?;
 
-        self.version_repo.save(&new_version).await?;
+        self.version_repo.save(&new_version, &tenant_id).await?;
         self.flow_repo.save(&flow).await?;
 
         Ok(flow)

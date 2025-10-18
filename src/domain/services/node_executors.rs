@@ -3,8 +3,12 @@ use chrono::Utc;
 use serde_json::Value;
 use std::sync::Arc;
 
-use crate::domain::services::execution_engine::{NodeExecutor, NodeExecutionResult, NodeExecutionStatus, ExecutionState};
+use crate::domain::services::execution_engine::{
+    ExecutionState, NodeExecutionResult, NodeExecutionStatus, NodeExecutor,
+};
 use crate::domain::value_objects::{FlowNode, NodeType};
+use crate::domain::ModelProvider;
+use crate::domain::ConfigId;
 use crate::error::Result;
 
 /// Start node executor - simply passes through
@@ -24,10 +28,16 @@ impl Default for StartNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for StartNodeExecutor {
-    async fn execute(&self, node: &FlowNode, _state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        _state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -62,9 +72,13 @@ impl Default for EndNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for EndNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
-        
+
         // Collect final output from state variables
         let output = serde_json::json!({
             "message": "Flow completed",
@@ -72,7 +86,9 @@ impl NodeExecutor for EndNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -107,7 +123,11 @@ impl Default for VariableNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for VariableNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Extract variable assignments from node data
@@ -115,10 +135,9 @@ impl NodeExecutor for VariableNodeExecutor {
         if let Some(assignments) = node.data.get("assignments").and_then(|v| v.as_array()) {
             for assignment in assignments {
                 if let Some(obj) = assignment.as_object() {
-                    if let (Some(name), Some(value)) = (
-                        obj.get("name").and_then(|v| v.as_str()),
-                        obj.get("value")
-                    ) {
+                    if let (Some(name), Some(value)) =
+                        (obj.get("name").and_then(|v| v.as_str()), obj.get("value"))
+                    {
                         // Support variable references in value
                         let resolved_value = self.resolve_value(value, state);
                         state.set_variable(name.to_string(), resolved_value);
@@ -128,7 +147,9 @@ impl NodeExecutor for VariableNodeExecutor {
         }
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -177,7 +198,11 @@ impl Default for ConditionNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for ConditionNodeExecutor {
-    async fn execute(&self, node: &FlowNode, _state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        _state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Condition evaluation is handled by the execution engine
@@ -188,7 +213,9 @@ impl NodeExecutor for ConditionNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -223,7 +250,11 @@ impl Default for LoopNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for LoopNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Increment loop counter
@@ -235,7 +266,9 @@ impl NodeExecutor for LoopNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -270,13 +303,17 @@ impl Default for CodeNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for CodeNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // For now, this is a placeholder
         // In a real implementation, this would execute code in a sandboxed environment
         let code = node.data.get("code").and_then(|v| v.as_str()).unwrap_or("");
-        
+
         // Simple variable extraction for demonstration
         // In production, you'd use a proper code execution engine
         let output = serde_json::json!({
@@ -286,7 +323,9 @@ impl NodeExecutor for CodeNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -321,13 +360,21 @@ impl Default for HttpRequestNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for HttpRequestNodeExecutor {
-    async fn execute(&self, node: &FlowNode, _state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        _state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Placeholder for HTTP request execution
         // In production, this would make actual HTTP requests
         let url = node.data.get("url").and_then(|v| v.as_str()).unwrap_or("");
-        let method = node.data.get("method").and_then(|v| v.as_str()).unwrap_or("GET");
+        let method = node
+            .data
+            .get("method")
+            .and_then(|v| v.as_str())
+            .unwrap_or("GET");
 
         let output = serde_json::json!({
             "message": "HTTP request placeholder",
@@ -336,7 +383,9 @@ impl NodeExecutor for HttpRequestNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -357,42 +406,73 @@ impl NodeExecutor for HttpRequestNodeExecutor {
 /// LLM Chat node executor - integrates with LLM services
 pub struct LLMChatNodeExecutor {
     llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>,
+    llm_config_repository:
+        Arc<dyn crate::domain::repositories::llm_config_repository::LLMConfigRepository>,
 }
 
 impl LLMChatNodeExecutor {
-    pub fn new(llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>) -> Self {
-        Self { llm_service }
+    pub fn new(
+        llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>,
+        llm_config_repository: Arc<
+            dyn crate::domain::repositories::llm_config_repository::LLMConfigRepository,
+        >,
+    ) -> Self {
+        Self {
+            llm_service,
+            llm_config_repository,
+        }
     }
 
-    fn extract_messages(&self, node: &FlowNode, state: &ExecutionState) -> Result<Vec<crate::domain::value_objects::ChatMessage>> {
+    fn extract_messages(
+        &self,
+        node: &FlowNode,
+        state: &ExecutionState,
+    ) -> Result<Vec<crate::domain::value_objects::ChatMessage>> {
+        let default_messages_data = Vec::new();
         let messages_data = node.data.get("messages")
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("LLM node missing 'messages' field".to_string()))?;
+        .and_then(|v| v.as_array())
+        .unwrap_or(&default_messages_data);
 
         let mut messages = Vec::new();
 
-        if let Some(array) = messages_data.as_array() {
-            for msg in array {
-                if let Some(obj) = msg.as_object() {
-                    let role = obj.get("role")
-                        .and_then(|v| v.as_str())
-                        .ok_or_else(|| crate::error::PlatformError::ValidationError("Message missing 'role' field".to_string()))?;
-                    
-                    let content = obj.get("content")
-                        .and_then(|v| v.as_str())
-                        .ok_or_else(|| crate::error::PlatformError::ValidationError("Message missing 'content' field".to_string()))?;
+        for msg in messages_data {
+            if let Some(obj) = msg.as_object() {
+                let role = obj.get("role").and_then(|v| v.as_str()).ok_or_else(|| {
+                    crate::error::PlatformError::ValidationError(
+                        "Message missing 'role' field".to_string(),
+                    )
+                })?;
 
-                    // Resolve variable references in content
-                    let resolved_content = self.resolve_template(content, state);
+                let content = obj.get("content").and_then(|v| v.as_str()).ok_or_else(|| {
+                    crate::error::PlatformError::ValidationError(
+                        "Message missing 'content' field".to_string(),
+                    )
+                })?;
 
-                    let message = match role {
-                        "user" => crate::domain::value_objects::ChatMessage::new_user_message(resolved_content),
-                        "assistant" => crate::domain::value_objects::ChatMessage::new_assistant_message(resolved_content),
-                        "system" => crate::domain::value_objects::ChatMessage::new_system_message(resolved_content),
-                        _ => return Err(crate::error::PlatformError::ValidationError(format!("Unknown message role: {}", role))),
-                    };
+                // Resolve variable references in content
+                let resolved_content = self.resolve_template(content, state);
 
-                    messages.push(message);
-                }
+                let message = match role {
+                    "user" => crate::domain::value_objects::ChatMessage::new_user_message(
+                        resolved_content,
+                    ),
+                    "assistant" => {
+                        crate::domain::value_objects::ChatMessage::new_assistant_message(
+                            resolved_content,
+                        )
+                    }
+                    "system" => crate::domain::value_objects::ChatMessage::new_system_message(
+                        resolved_content,
+                    ),
+                    _ => {
+                        return Err(crate::error::PlatformError::ValidationError(format!(
+                            "Unknown message role: {}",
+                            role
+                        )))
+                    }
+                };
+
+                messages.push(message);
             }
         }
 
@@ -401,7 +481,7 @@ impl LLMChatNodeExecutor {
 
     fn resolve_template(&self, template: &str, state: &ExecutionState) -> String {
         let mut result = template.to_string();
-        
+
         // Replace {{variable_name}} with actual values from state
         for (key, value) in &state.variables {
             let placeholder = format!("{{{{{}}}}}", key);
@@ -417,33 +497,81 @@ impl LLMChatNodeExecutor {
         result
     }
 
-    fn extract_model_config(&self, node: &FlowNode) -> Result<crate::domain::value_objects::ModelConfig> {
-        let config_data = node.data.get("model_config")
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("LLM node missing 'model_config' field".to_string()))?;
+    async fn extract_model_config(
+        &self,
+        node: &FlowNode,
+        state: &ExecutionState,
+    ) -> Result<crate::domain::value_objects::ModelConfig> {
+        let config_data = node.data.get("model").ok_or_else(|| {
+            crate::error::PlatformError::ValidationError(
+                "LLM node missing 'model' field".to_string(),
+            )
+        })?;
 
-        serde_json::from_value(config_data.clone())
-            .map_err(|e| crate::error::PlatformError::ValidationError(format!("Invalid model config: {}", e)))
+        let llm_config_id = config_data
+            .get("llm_config_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "LLM node missing 'model.llm_config_id' field".to_string(),
+                )
+            })?;
+
+        // // Extract tenant_id from state and convert to TenantId
+        // let tenant_id_uuid = self.extract_tenant_id(state)?;
+        // let tenant_id = crate::domain::value_objects::TenantId::from_uuid(tenant_id_uuid);
+
+        // Query database for matching config
+        // First try to find by provider
+        let config = self
+            .llm_config_repository
+            .find_by_id(ConfigId::from_string(llm_config_id).map_err(|e| {
+                crate::error::PlatformError::ValidationError(
+                    format!("Invalid UUID: {}. Error: {}", llm_config_id, e),
+                )
+            })?)
+            .await?
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    format!("LLM config not found: {}", llm_config_id),
+                )
+            })?;
+
+        // TODO Merging config from both the flow and the LLM config.
+        Ok(config.model_config.clone())
     }
 
     fn extract_tenant_id(&self, state: &ExecutionState) -> Result<uuid::Uuid> {
-        state.variables.get("tenant_id")
+        state
+            .variables
+            .get("tenant_id")
             .and_then(|v| v.as_str())
             .and_then(|s| uuid::Uuid::parse_str(s).ok())
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("Missing or invalid tenant_id in execution context".to_string()))
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Missing or invalid tenant_id in execution context".to_string(),
+                )
+            })
     }
 }
 
 #[async_trait]
 impl NodeExecutor for LLMChatNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Extract configuration and messages
-        let model_config = match self.extract_model_config(node) {
+        let model_config = match self.extract_model_config(node, state).await {
             Ok(config) => config,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -460,7 +588,9 @@ impl NodeExecutor for LLMChatNodeExecutor {
             Ok(msgs) => msgs,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -477,7 +607,9 @@ impl NodeExecutor for LLMChatNodeExecutor {
             Ok(id) => id,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -491,11 +623,17 @@ impl NodeExecutor for LLMChatNodeExecutor {
         };
 
         // Call LLM service
-        let response = match self.llm_service.chat_completion(&model_config, messages, tenant_id).await {
+        let response = match self
+            .llm_service
+            .chat_completion(&model_config, messages, tenant_id)
+            .await
+        {
             Ok(resp) => resp,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -509,10 +647,12 @@ impl NodeExecutor for LLMChatNodeExecutor {
         };
 
         // Store response in state variables
-        let output_var = node.data.get("output_variable")
+        let output_var = node
+            .data
+            .get("output_variable")
             .and_then(|v| v.as_str())
             .unwrap_or("llm_response");
-        
+
         state.set_variable(output_var.to_string(), serde_json::json!(response.content));
 
         let output = serde_json::json!({
@@ -527,7 +667,9 @@ impl NodeExecutor for LLMChatNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -551,34 +693,58 @@ pub struct VectorSearchNodeExecutor {
 }
 
 impl VectorSearchNodeExecutor {
-    pub fn new(vector_service: Arc<dyn crate::domain::services::vector_service::VectorStoreDomainService>) -> Self {
+    pub fn new(
+        vector_service: Arc<dyn crate::domain::services::vector_service::VectorStoreDomainService>,
+    ) -> Self {
         Self { vector_service }
     }
 
-    fn extract_search_query(&self, node: &FlowNode, state: &ExecutionState) -> Result<crate::domain::value_objects::SearchQuery> {
+    fn extract_search_query(
+        &self,
+        node: &FlowNode,
+        state: &ExecutionState,
+    ) -> Result<crate::domain::value_objects::SearchQuery> {
         // Get query vector - can be from a variable or directly specified
-        let vector = if let Some(var_name) = node.data.get("query_vector_variable").and_then(|v| v.as_str()) {
+        let vector = if let Some(var_name) = node
+            .data
+            .get("query_vector_variable")
+            .and_then(|v| v.as_str())
+        {
             // Get vector from state variable
-            state.variables.get(var_name)
+            state
+                .variables
+                .get(var_name)
                 .and_then(|v| v.as_array())
-                .ok_or_else(|| crate::error::PlatformError::ValidationError(format!("Variable '{}' not found or not an array", var_name)))?
+                .ok_or_else(|| {
+                    crate::error::PlatformError::ValidationError(format!(
+                        "Variable '{}' not found or not an array",
+                        var_name
+                    ))
+                })?
                 .iter()
                 .filter_map(|v| v.as_f64().map(|f| f as f32))
                 .collect::<Vec<f32>>()
         } else if let Some(vec_data) = node.data.get("query_vector").and_then(|v| v.as_array()) {
             // Get vector directly from node data
-            vec_data.iter()
+            vec_data
+                .iter()
                 .filter_map(|v| v.as_f64().map(|f| f as f32))
                 .collect::<Vec<f32>>()
         } else {
-            return Err(crate::error::PlatformError::ValidationError("Vector search node missing query vector".to_string()));
+            return Err(crate::error::PlatformError::ValidationError(
+                "Vector search node missing query vector".to_string(),
+            ));
         };
 
-        let top_k = node.data.get("top_k")
+        let top_k = node
+            .data
+            .get("top_k")
             .and_then(|v| v.as_u64())
             .unwrap_or(10) as usize;
 
-        let namespace = node.data.get("namespace")
+        let namespace = node
+            .data
+            .get("namespace")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
@@ -589,26 +755,41 @@ impl VectorSearchNodeExecutor {
 
         // Add filters if specified
         if let Some(filter_data) = node.data.get("filter") {
-            let filter: crate::domain::value_objects::SearchFilter = serde_json::from_value(filter_data.clone())
-                .map_err(|e| crate::error::PlatformError::ValidationError(format!("Invalid filter: {}", e)))?;
+            let filter: crate::domain::value_objects::SearchFilter =
+                serde_json::from_value(filter_data.clone()).map_err(|e| {
+                    crate::error::PlatformError::ValidationError(format!("Invalid filter: {}", e))
+                })?;
             query.filter = Some(filter);
         }
 
         Ok(query)
     }
 
-    fn extract_tenant_id(&self, state: &ExecutionState) -> Result<crate::domain::value_objects::ids::TenantId> {
-        state.variables.get("tenant_id")
+    fn extract_tenant_id(
+        &self,
+        state: &ExecutionState,
+    ) -> Result<crate::domain::value_objects::ids::TenantId> {
+        state
+            .variables
+            .get("tenant_id")
             .and_then(|v| v.as_str())
             .and_then(|s| uuid::Uuid::parse_str(s).ok())
             .map(crate::domain::value_objects::ids::TenantId::from)
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("Missing or invalid tenant_id in execution context".to_string()))
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Missing or invalid tenant_id in execution context".to_string(),
+                )
+            })
     }
 }
 
 #[async_trait]
 impl NodeExecutor for VectorSearchNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Extract search query
@@ -616,7 +797,9 @@ impl NodeExecutor for VectorSearchNodeExecutor {
             Ok(q) => q,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -633,7 +816,9 @@ impl NodeExecutor for VectorSearchNodeExecutor {
             Ok(id) => id,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -651,7 +836,9 @@ impl NodeExecutor for VectorSearchNodeExecutor {
             Ok(res) => res,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -665,17 +852,22 @@ impl NodeExecutor for VectorSearchNodeExecutor {
         };
 
         // Store results in state variables
-        let output_var = node.data.get("output_variable")
+        let output_var = node
+            .data
+            .get("output_variable")
             .and_then(|v| v.as_str())
             .unwrap_or("search_results");
 
-        let results_json: Vec<Value> = results.iter().map(|r| {
-            serde_json::json!({
-                "id": r.id,
-                "score": r.score,
-                "metadata": r.metadata,
+        let results_json: Vec<Value> = results
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "id": r.id,
+                    "score": r.score,
+                    "metadata": r.metadata,
+                })
             })
-        }).collect();
+            .collect();
 
         state.set_variable(output_var.to_string(), serde_json::json!(results_json));
 
@@ -685,7 +877,9 @@ impl NodeExecutor for VectorSearchNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         Ok(NodeExecutionResult {
             node_id: node.id.clone(),
@@ -712,7 +906,9 @@ pub struct MCPToolNodeExecutor {
 impl MCPToolNodeExecutor {
     pub fn new(
         mcp_service: Arc<dyn crate::domain::services::mcp_tool_service::MCPToolDomainService>,
-        tool_repository: Arc<dyn crate::domain::repositories::mcp_tool_repository::MCPToolRepository>,
+        tool_repository: Arc<
+            dyn crate::domain::repositories::mcp_tool_repository::MCPToolRepository,
+        >,
     ) -> Self {
         Self {
             mcp_service,
@@ -721,8 +917,11 @@ impl MCPToolNodeExecutor {
     }
 
     fn extract_tool_parameters(&self, node: &FlowNode, state: &ExecutionState) -> Result<Value> {
-        let params_data = node.data.get("parameters")
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("MCP tool node missing 'parameters' field".to_string()))?;
+        let params_data = node.data.get("parameters").ok_or_else(|| {
+            crate::error::PlatformError::ValidationError(
+                "MCP tool node missing 'parameters' field".to_string(),
+            )
+        })?;
 
         // Resolve variable references in parameters
         let resolved_params = self.resolve_parameters(params_data, state);
@@ -739,7 +938,8 @@ impl MCPToolNodeExecutor {
                 Value::Object(resolved)
             }
             Value::Array(arr) => {
-                let resolved: Vec<Value> = arr.iter()
+                let resolved: Vec<Value> = arr
+                    .iter()
                     .map(|v| self.resolve_parameters(v, state))
                     .collect();
                 Value::Array(resolved)
@@ -747,7 +947,9 @@ impl MCPToolNodeExecutor {
             Value::String(s) => {
                 // Check if it's a variable reference
                 if let Some(var_name) = s.strip_prefix("{{").and_then(|s| s.strip_suffix("}}")) {
-                    state.variables.get(var_name.trim())
+                    state
+                        .variables
+                        .get(var_name.trim())
                         .cloned()
                         .unwrap_or_else(|| Value::String(s.clone()))
                 } else {
@@ -758,25 +960,38 @@ impl MCPToolNodeExecutor {
         }
     }
 
-    fn extract_context(&self, state: &ExecutionState) -> Result<crate::domain::services::mcp_tool_service::ToolCallContext> {
-        let tenant_id = state.variables.get("tenant_id")
+    fn extract_context(
+        &self,
+        state: &ExecutionState,
+    ) -> Result<crate::domain::services::mcp_tool_service::ToolCallContext> {
+        let tenant_id = state
+            .variables
+            .get("tenant_id")
             .and_then(|v| v.as_str())
             .and_then(|s| uuid::Uuid::parse_str(s).ok())
             .map(crate::domain::value_objects::ids::TenantId::from)
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("Missing or invalid tenant_id".to_string()))?;
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Missing or invalid tenant_id".to_string(),
+                )
+            })?;
 
-        let user_id = state.variables.get("user_id")
+        let user_id = state
+            .variables
+            .get("user_id")
             .and_then(|v| v.as_str())
             .and_then(|s| uuid::Uuid::parse_str(s).ok())
             .map(crate::domain::value_objects::ids::UserId::from)
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("Missing or invalid user_id".to_string()))?;
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Missing or invalid user_id".to_string(),
+                )
+            })?;
 
         let request_id = uuid::Uuid::new_v4().to_string();
 
         let mut context = crate::domain::services::mcp_tool_service::ToolCallContext::new(
-            tenant_id,
-            user_id,
-            request_id,
+            tenant_id, user_id, request_id,
         );
 
         // Add session_id if available
@@ -790,21 +1005,34 @@ impl MCPToolNodeExecutor {
 
 #[async_trait]
 impl NodeExecutor for MCPToolNodeExecutor {
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult> {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
         // Extract tool ID or name
-        let tool_id_str = node.data.get("tool_id")
+        let tool_id_str = node
+            .data
+            .get("tool_id")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| crate::error::PlatformError::ValidationError("MCP tool node missing 'tool_id' field".to_string()));
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "MCP tool node missing 'tool_id' field".to_string(),
+                )
+            });
 
         let tool_id = match tool_id_str {
-            Ok(id_str) => {
-                match uuid::Uuid::parse_str(id_str) {
-                    Ok(uuid) => Ok(crate::domain::value_objects::ids::MCPToolId::from_uuid(uuid)),
-                    Err(e) => Err(crate::error::PlatformError::ValidationError(format!("Invalid tool_id: {}", e))),
-                }
-            }
+            Ok(id_str) => match uuid::Uuid::parse_str(id_str) {
+                Ok(uuid) => Ok(crate::domain::value_objects::ids::MCPToolId::from_uuid(
+                    uuid,
+                )),
+                Err(e) => Err(crate::error::PlatformError::ValidationError(format!(
+                    "Invalid tool_id: {}",
+                    e
+                ))),
+            },
             Err(e) => Err(e),
         };
 
@@ -812,7 +1040,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
             Ok(id) => id,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -830,7 +1060,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
             Ok(Some(t)) => t,
             Ok(None) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -843,7 +1075,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
             }
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -861,7 +1095,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
             Ok(ctx) => ctx,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -875,11 +1111,17 @@ impl NodeExecutor for MCPToolNodeExecutor {
         };
 
         // Check permissions
-        let permission = match self.mcp_service.check_tool_permission(&tool, &context).await {
+        let permission = match self
+            .mcp_service
+            .check_tool_permission(&tool, &context)
+            .await
+        {
             Ok(perm) => perm,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -894,12 +1136,18 @@ impl NodeExecutor for MCPToolNodeExecutor {
 
         if !permission.allowed {
             let completed_at = Utc::now();
-            let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+            let execution_time_ms = completed_at
+                .signed_duration_since(started_at)
+                .num_milliseconds();
             return Ok(NodeExecutionResult {
                 node_id: node.id.clone(),
                 status: NodeExecutionStatus::Failed,
                 output: None,
-                error: Some(permission.reason.unwrap_or_else(|| "Permission denied".to_string())),
+                error: Some(
+                    permission
+                        .reason
+                        .unwrap_or_else(|| "Permission denied".to_string()),
+                ),
                 started_at,
                 completed_at,
                 execution_time_ms,
@@ -911,7 +1159,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
             Ok(params) => params,
             Err(e) => {
                 let completed_at = Utc::now();
-                let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
                 return Ok(NodeExecutionResult {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
@@ -925,9 +1175,15 @@ impl NodeExecutor for MCPToolNodeExecutor {
         };
 
         // Validate parameters
-        if let Err(e) = self.mcp_service.validate_call_parameters(&tool, &parameters).await {
+        if let Err(e) = self
+            .mcp_service
+            .validate_call_parameters(&tool, &parameters)
+            .await
+        {
             let completed_at = Utc::now();
-            let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+            let execution_time_ms = completed_at
+                .signed_duration_since(started_at)
+                .num_milliseconds();
             return Ok(NodeExecutionResult {
                 node_id: node.id.clone(),
                 status: NodeExecutionStatus::Failed,
@@ -947,11 +1203,15 @@ impl NodeExecutor for MCPToolNodeExecutor {
                 "tool_id": tool_id.to_string(),
                 "parameters": parameters,
             }),
-            Utc::now().signed_duration_since(started_at).num_milliseconds() as u64,
+            Utc::now()
+                .signed_duration_since(started_at)
+                .num_milliseconds() as u64,
         );
 
         // Store result in state variables
-        let output_var = node.data.get("output_variable")
+        let output_var = node
+            .data
+            .get("output_variable")
             .and_then(|v| v.as_str())
             .unwrap_or("tool_result");
 
@@ -967,7 +1227,9 @@ impl NodeExecutor for MCPToolNodeExecutor {
         });
 
         let completed_at = Utc::now();
-        let execution_time_ms = completed_at.signed_duration_since(started_at).num_milliseconds();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
 
         let status = if tool_result.success {
             NodeExecutionStatus::Success
@@ -1000,7 +1262,10 @@ mod tests {
     fn create_test_state() -> ExecutionState {
         let mut variables = HashMap::new();
         variables.insert("test_var".to_string(), serde_json::json!("test_value"));
-        ExecutionState::new(crate::domain::value_objects::FlowExecutionId::new(), variables)
+        ExecutionState::new(
+            crate::domain::value_objects::FlowExecutionId::new(),
+            variables,
+        )
     }
 
     #[tokio::test]
@@ -1009,7 +1274,7 @@ mod tests {
         let node = FlowNode {
             id: "start".to_string(),
             node_type: NodeType::Start,
-            title: "Start".to_string(),
+            // title: "Start".to_string(),
             data: serde_json::json!({}),
             position: NodePosition { x: 0.0, y: 0.0 },
         };
@@ -1026,7 +1291,7 @@ mod tests {
         let node = FlowNode {
             id: "var1".to_string(),
             node_type: NodeType::Variable,
-            title: "Set Variable".to_string(),
+            // title: "Set Variable".to_string(),
             data: serde_json::json!({
                 "assignments": [
                     {"name": "new_var", "value": "new_value"}
@@ -1038,7 +1303,10 @@ mod tests {
 
         let result = executor.execute(&node, &mut state).await.unwrap();
         assert_eq!(result.status, NodeExecutionStatus::Success);
-        assert_eq!(state.get_variable("new_var"), Some(&serde_json::json!("new_value")));
+        assert_eq!(
+            state.get_variable("new_var"),
+            Some(&serde_json::json!("new_value"))
+        );
     }
 
     #[tokio::test]
@@ -1047,7 +1315,7 @@ mod tests {
         let node = FlowNode {
             id: "var1".to_string(),
             node_type: NodeType::Variable,
-            title: "Set Variable".to_string(),
+            // title: "Set Variable".to_string(),
             data: serde_json::json!({
                 "assignments": [
                     {"name": "copied_var", "value": "$test_var"}
@@ -1059,7 +1327,10 @@ mod tests {
 
         let result = executor.execute(&node, &mut state).await.unwrap();
         assert_eq!(result.status, NodeExecutionStatus::Success);
-        assert_eq!(state.get_variable("copied_var"), Some(&serde_json::json!("test_value")));
+        assert_eq!(
+            state.get_variable("copied_var"),
+            Some(&serde_json::json!("test_value"))
+        );
     }
 
     #[tokio::test]
@@ -1068,7 +1339,7 @@ mod tests {
         let node = FlowNode {
             id: "loop1".to_string(),
             node_type: NodeType::Loop,
-            title: "Loop".to_string(),
+            // title: "Loop".to_string(),
             data: serde_json::json!({"max_iterations": 5}),
             position: NodePosition { x: 0.0, y: 0.0 },
         };

@@ -5,6 +5,8 @@ use chrono::{DateTime, Utc};
 use crate::domain::entities::{Flow, FlowVersion, FlowExecution, FlowStatus, FlowExecutionStatus};
 use crate::domain::repositories::{FlowRepository, FlowVersionRepository, FlowExecutionRepository};
 use crate::domain::value_objects::{FlowId, TenantId, UserId, SessionId, FlowExecutionId, Version, FlowName, FlowDefinition};
+use crate::domain::NodeType;
+use serde_json::json;
 use crate::infrastructure::database::entities;
 use crate::error::{Result, PlatformError};
 
@@ -287,8 +289,58 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         }
     }
 
-    async fn save(&self, version: &FlowVersion) -> Result<()> {
-        let active_model = Self::domain_to_active_model(version)?;
+    async fn save(&self, version: &FlowVersion, tenant_id: &TenantId) -> Result<()> {
+        let mut version = version.clone();
+        
+        for node in &mut version.definition.workflow.graph.nodes {
+            if node.node_type == NodeType::Llm {
+                let config_data: &mut serde_json::Value = node.data.get_mut("model").ok_or_else(|| {
+                    crate::error::PlatformError::ValidationError(
+                        "LLM node missing 'model' field".to_string(),
+                    )
+                })?;
+
+                let model_name = config_data
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("qwen-plus-latest");
+
+                let model_provider = config_data
+                    .get("provider")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("openai")
+                    .replace("langgenius/tongyi/tongyi", "openai");
+
+                let llm_configs = entities::llm_config::Entity::find()
+                    .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))
+                    .filter(entities::llm_config::Column::Provider.eq(model_provider.clone()))
+                    .order_by_asc(entities::llm_config::Column::Name)
+                    .all(self.db.as_ref())
+                    .await
+                    .map_err(PlatformError::DatabaseError)?;
+
+                // Find the first config that matches model_name
+                let matching_llm_config = llm_configs.iter().find(|llm_config| {
+                    llm_config.config.get("model_name").and_then(|v| v.as_str()).unwrap_or("openai") == model_name
+                });
+
+                if let Some(matching_llm_config) = matching_llm_config {
+                    config_data["provider"] = json!(model_provider);
+                    config_data["llm_config_id"] = json!(matching_llm_config.id);
+                } else {
+                    return Err(
+                        crate::error::PlatformError::ValidationError(
+                            format!(
+                                "No matching model config matching provider '{}' and name '{}' found in database and failed to parse",
+                                model_provider.clone(), model_name,
+                            )
+                        )
+                    )
+                }
+            }
+        }
+
+        let active_model = Self::domain_to_active_model(&version)?;
         
         // Check if version exists
         let existing = entities::FlowVersion::find_by_id(version.id.0)

@@ -28,7 +28,7 @@ export interface Flow {
   name: string;
   description?: string;
   current_version: number;
-  status: 'draft' | 'active' | 'archived';
+  status: 'Draft' | 'Active' | 'Archived';
   created_by: string;
   created_at: string;
   updated_at: string;

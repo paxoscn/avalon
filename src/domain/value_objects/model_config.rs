@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::error::PlatformError;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModelConfig {
     pub provider: ModelProvider,
@@ -150,6 +152,19 @@ impl Default for ModelCredentials {
             api_base: None,
             organization: None,
             custom_headers: HashMap::new(),
+        }
+    }
+}
+
+impl ModelProvider {
+    pub fn parse_model_provider(provider: &str) -> Result<ModelProvider, PlatformError> {
+        match provider.to_lowercase().as_str() {
+            "openai" => Ok(ModelProvider::OpenAI),
+            "claude" | "anthropic" => Ok(ModelProvider::Claude),
+            _ => Err(PlatformError::ValidationError(format!(
+                "Unknown provider: {}",
+                provider
+            ))),
         }
     }
 }

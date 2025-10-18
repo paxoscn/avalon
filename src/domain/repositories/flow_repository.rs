@@ -54,7 +54,7 @@ pub trait FlowVersionRepository: Send + Sync {
     async fn find_latest_by_flow(&self, flow_id: &FlowId) -> Result<Option<FlowVersion>>;
     
     /// Save a flow version
-    async fn save(&self, version: &FlowVersion) -> Result<()>;
+    async fn save(&self, version: &FlowVersion, tenant_id: &TenantId) -> Result<()>;
     
     /// Delete a flow version
     async fn delete(&self, id: &FlowId) -> Result<()>;

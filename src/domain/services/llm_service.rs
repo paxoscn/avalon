@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use std::sync::Arc;
+use crate::infrastructure::llm::LLMProviderRegistry;
+
 /// LLM domain service interface defining business rules and operations
 #[async_trait]
 pub trait LLMDomainService: Send + Sync {
@@ -152,8 +155,7 @@ pub enum LLMError {
 
 /// LLM domain service implementation
 pub struct LLMDomainServiceImpl {
-    // This will be injected with the infrastructure layer providers
-    providers: HashMap<String, Box<dyn LLMProvider>>,
+    provider_registry: Arc<LLMProviderRegistry>,
 }
 
 /// Provider trait that will be implemented in infrastructure layer
@@ -183,22 +185,24 @@ pub struct ChatRequest {
 }
 
 impl LLMDomainServiceImpl {
-    pub fn new() -> Self {
+    pub fn new(
+        provider_registry: Arc<LLMProviderRegistry>,
+    ) -> Self {
         Self {
-            providers: HashMap::new(),
+            provider_registry,
         }
     }
 
-    pub fn register_provider(&mut self, provider_name: String, provider: Box<dyn LLMProvider>) {
-        self.providers.insert(provider_name, provider);
-    }
+    // pub fn register_provider(&mut self, provider_name: String, provider: Box<dyn LLMProvider>) {
+    //     self.providers.insert(provider_name, provider);
+    // }
 
-    fn get_provider(&self, provider_name: &str) -> Result<&dyn LLMProvider, LLMError> {
-        self.providers
-            .get(provider_name)
-            .map(|p| p.as_ref())
-            .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))
-    }
+    // fn get_provider(&self, provider_name: &str) -> Result<&dyn LLMProvider, LLMError> {
+    //     self.providers
+    //         .get(provider_name)
+    //         .map(|p| p.as_ref())
+    //         .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))
+    // }
 
     fn build_chat_request(&self, config: &ModelConfig, messages: Vec<ChatMessage>, tenant_id: Uuid, stream: bool) -> ChatRequest {
         ChatRequest {
@@ -236,7 +240,8 @@ impl LLMDomainService for LLMDomainServiceImpl {
         }
 
         let provider_name = format!("{:?}", config.provider).to_lowercase();
-        let provider = self.get_provider(&provider_name)?;
+        let provider = self.provider_registry.create_provider(&config)
+        .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))?;
         
         let request = self.build_chat_request(config, messages, tenant_id, false);
         provider.chat_completion(request).await
@@ -253,7 +258,8 @@ impl LLMDomainService for LLMDomainServiceImpl {
         }
 
         let provider_name = format!("{:?}", config.provider).to_lowercase();
-        let provider = self.get_provider(&provider_name)?;
+        let provider = self.provider_registry.create_provider(&config)
+        .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))?;
         
         provider.generate_embedding(text).await
     }
@@ -279,7 +285,8 @@ impl LLMDomainService for LLMDomainServiceImpl {
         }
 
         let provider_name = format!("{:?}", config.provider).to_lowercase();
-        let provider = self.get_provider(&provider_name)?;
+        let provider = self.provider_registry.create_provider(&config)
+        .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))?;
         
         let request = self.build_chat_request(config, messages, tenant_id, true);
         provider.stream_chat_completion(request).await
@@ -324,13 +331,16 @@ impl LLMDomainService for LLMDomainServiceImpl {
     }
 
     async fn get_available_models(&self, provider: &str) -> Result<Vec<ModelInfo>, LLMError> {
-        let provider = self.get_provider(provider)?;
-        Ok(provider.get_model_info())
+        // let provider = self.get_provider(provider)?;
+        // Ok(provider.get_model_info())
+        Err(LLMError::InternalError(String::from("Not implemented")))
     }
 
     async fn test_connection(&self, config: &ModelConfig) -> Result<ConnectionTestResult, LLMError> {
         let provider_name = format!("{:?}", config.provider).to_lowercase();
-        let provider = self.get_provider(&provider_name)?;
+        let provider = self.provider_registry.create_provider(&config)
+        .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))?;
+
         provider.test_connection().await
     }
 
@@ -353,7 +363,7 @@ impl LLMDomainService for LLMDomainServiceImpl {
 
 impl Default for LLMDomainServiceImpl {
     fn default() -> Self {
-        Self::new()
+        Self::new(Arc::new(LLMProviderRegistry::new()))
     }
 }
 
@@ -434,7 +444,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_llm_service_validate_config() {
-        let service = LLMDomainServiceImpl::new();
+        let service = LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new()));
         let config = create_test_config();
         
         let result = service.validate_config(&config).unwrap();
@@ -443,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_supports_streaming() {
-        let service = LLMDomainServiceImpl::new();
+        let service = LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new()));
         let config = create_test_config();
         
         assert!(service.supports_streaming(&config));
@@ -451,7 +461,7 @@ mod tests {
 
     #[test]
     fn test_estimate_token_count() {
-        let service = LLMDomainServiceImpl::new();
+        let service = LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new()));
         let messages = vec![
             ChatMessage::new_user_message("Hello, how are you?".to_string()),
             ChatMessage::new_assistant_message("I'm doing well, thank you!".to_string()),

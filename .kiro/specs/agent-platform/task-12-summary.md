@@ -13,7 +13,7 @@ Successfully implemented the complete Flow Management Frontend Interface with al
 - `frontend/src/services/flow.service.ts` - Flow API service layer
 
 **Features Implemented:**
-- Flow list display with status filtering (all, active, draft, archived)
+- Flow list display with status filtering (All, Active, Draft, Archived)
 - Pagination support for large flow lists
 - Flow detail view with metadata and recent executions
 - Execute flow functionality with variable input

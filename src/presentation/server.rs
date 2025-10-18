@@ -82,13 +82,19 @@ impl Server {
         ));
         
         let flow_domain_service: Arc<dyn FlowDomainService> = Arc::new(FlowDomainServiceImpl::new());
-        let llm_domain_service: Arc<dyn LLMDomainService> = Arc::new(LLMDomainServiceImpl::new());
+        let llm_domain_service: Arc<dyn LLMDomainService> = Arc::new(LLMDomainServiceImpl::new(llm_provider_registry.clone()));
         let vector_store_domain_service: Arc<dyn VectorStoreDomainService> = Arc::new(VectorStoreDomainServiceImpl::new());
         let mcp_domain_service: Arc<dyn MCPToolDomainService> = Arc::new(MCPToolDomainServiceImpl::new());
         let session_domain_service: Arc<SessionDomainService> = Arc::new(SessionDomainService::new(30));
         let audit_domain_service: Arc<dyn AuditService> = Arc::new(AuditServiceImpl::new(audit_repository));
 
-        let execution_engine = Arc::new(ExecutionEngineImpl::new(vec![]));
+        let execution_engine = ExecutionEngineFactory::create_with_services(
+            llm_domain_service.clone(),
+            llm_config_repository.clone(),
+            vector_store_domain_service.clone(),
+            mcp_domain_service.clone(),
+            mcp_tool_repository.clone(),
+        );
 
         // Create application services
         let auth_service: Arc<dyn AuthApplicationService> =

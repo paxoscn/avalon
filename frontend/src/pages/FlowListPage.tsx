@@ -49,13 +49,26 @@ export const FlowListPage = () => {
     }
   };
 
+  const handleToggleStatus = async (flowId: string, currentStatus: string) => {
+    try {
+      if (currentStatus === 'Active') {
+        await flowService.deactivateFlow(flowId);
+      } else {
+        await flowService.activateFlow(flowId);
+      }
+      await loadFlows();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update flow status');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'Active':
         return 'text-green-600 bg-green-100';
-      case 'draft':
+      case 'Draft':
         return 'text-yellow-600 bg-yellow-100';
-      case 'archived':
+      case 'Archived':
         return 'text-gray-600 bg-gray-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -110,7 +123,16 @@ export const FlowListPage = () => {
           <Button size="sm" variant="secondary" onClick={() => handleViewDetails(flow.id)}>
             View
           </Button>
-          {flow.status === 'active' && (
+          {flow.status !== 'Archived' && (
+            <Button
+              size="sm"
+              variant={flow.status === 'Active' ? 'secondary' : 'primary'}
+              onClick={() => handleToggleStatus(flow.id, flow.status)}
+            >
+              {flow.status === 'Active' ? 'Deactivate' : 'Activate'}
+            </Button>
+          )}
+          {flow.status === 'Active' && (
             <Button size="sm" onClick={() => handleExecute(flow.id)}>
               Execute
             </Button>
@@ -148,7 +170,7 @@ export const FlowListPage = () => {
 
       <Card>
         <div className="mb-4 flex gap-2">
-          {['all', 'active', 'draft', 'archived'].map((status) => (
+          {['All', 'Active', 'Draft', 'Archived'].map((status) => (
             <button
               key={status}
               onClick={() => {

@@ -14,6 +14,7 @@ export const FlowDetailPage = () => {
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [executionVariables, setExecutionVariables] = useState('{}');
+  const [showCurlModal, setShowCurlModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -113,6 +114,9 @@ export const FlowDetailPage = () => {
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => navigate(`/flows/${id}/versions`)}>
             Version History
+          </Button>
+          <Button variant="secondary" onClick={() => setShowCurlModal(true)}>
+            Show cURL Command
           </Button>
           {flow.status === 'active' && (
             <Button onClick={() => setShowExecuteModal(true)}>Execute Flow</Button>
@@ -219,6 +223,51 @@ export const FlowDetailPage = () => {
             <Button onClick={handleExecute} disabled={executing}>
               {executing ? 'Executing...' : 'Execute'}
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showCurlModal}
+        onClose={() => setShowCurlModal(false)}
+        title="cURL Command"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Use this command to execute the flow from the command line:
+          </p>
+          <div className="relative">
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+{`curl -v -X POST ${import.meta.env.VITE_API_BASE_URL}/flows/${id}/execute \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "variables": {}
+  }'`}
+            </pre>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute top-2 right-2"
+              onClick={() => {
+                const curlCommand = `curl -v -X POST ${import.meta.env.VITE_API_BASE_URL}/flows/${id}/execute -H "Content-Type: application/json" -d '{"variables": {}}'`;
+                navigator.clipboard.writeText(curlCommand);
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+          <div className="text-sm text-gray-600">
+            <p className="font-medium mb-2">With custom variables:</p>
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono">
+{`curl -v -X POST ${import.meta.env.VITE_API_BASE_URL}/flows/${id}/execute \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "variables": {
+      "key1": "value1",
+      "key2": "value2"
+    }
+  }'`}
+            </pre>
           </div>
         </div>
       </Modal>

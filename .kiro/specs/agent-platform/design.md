@@ -480,7 +480,7 @@ CREATE TABLE flows (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     current_version INT DEFAULT 1,
-    status ENUM('draft', 'active', 'archived') DEFAULT 'draft',
+    status ENUM('Draft', 'Active', 'Archived') DEFAULT 'Draft',
     created_by CHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
