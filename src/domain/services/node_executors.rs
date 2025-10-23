@@ -429,7 +429,7 @@ impl LLMChatNodeExecutor {
         state: &ExecutionState,
     ) -> Result<Vec<crate::domain::value_objects::ChatMessage>> {
         let default_messages_data = Vec::new();
-        let messages_data = node.data.get("messages")
+        let messages_data = node.data.get("prompt_template")
         .and_then(|v| v.as_array())
         .unwrap_or(&default_messages_data);
 
@@ -443,14 +443,18 @@ impl LLMChatNodeExecutor {
                     )
                 })?;
 
-                let content = obj.get("content").and_then(|v| v.as_str()).ok_or_else(|| {
+                let content = obj.get("text").and_then(|v| v.as_str()).ok_or_else(|| {
                     crate::error::PlatformError::ValidationError(
-                        "Message missing 'content' field".to_string(),
+                        "Message missing 'text' field".to_string(),
                     )
                 })?;
 
                 // Resolve variable references in content
                 let resolved_content = self.resolve_template(content, state);
+
+                if resolved_content.len() < 1 {
+                    continue;
+                }
 
                 let message = match role {
                     "user" => crate::domain::value_objects::ChatMessage::new_user_message(
