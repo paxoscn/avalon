@@ -27,7 +27,7 @@ export function AgentListPage() {
       setLoading(true);
       setError(null);
       let response;
-      
+
       switch (activeTab) {
         case 'created':
           response = await agentService.listCreatedAgents({ page, page_size: 12 });
@@ -39,7 +39,7 @@ export function AgentListPage() {
           response = await agentService.listAgents({ page, page_size: 12 });
           break;
       }
-      
+
       setAgents(response.items);
       setTotalPages(response.total_pages);
     } catch (err: any) {
@@ -75,9 +75,33 @@ export function AgentListPage() {
     try {
       await agentService.employAgent(id);
       alert('Agent employed successfully!');
+      await loadAgents();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to employ agent');
     }
+  };
+
+  const handleFire = async (id: string) => {
+    if (!confirm('Are you sure you want to fire this agent?')) {
+      return;
+    }
+
+    try {
+      await agentService.terminateEmployment(id);
+      await loadAgents();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to fire agent');
+    }
+  };
+
+  const handleTune = (id: string) => {
+    // Navigate to agent detail page for tuning
+    window.location.href = `/agents/${id}`;
+  };
+
+  const handleInterview = (id: string) => {
+    // Navigate to agent detail page for interview
+    window.location.href = `/agents/${id}`;
   };
 
   if (loading && page === 1) {
@@ -229,37 +253,72 @@ export function AgentListPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
-                    <Link to={`/agents/${agent.id}`} className="flex-1">
-                      <Button variant="secondary" className="w-full">
-                        Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleEmploy(agent.id)}
-                      className="flex-1"
-                    >
-                      Employ
-                    </Button>
-                  </div>
+                  {/* Action buttons based on active tab */}
+                  {activeTab === 'created' && (
+                    <>
+                      <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                        <Link to={`/agents/${agent.id}`} className="flex-1">
+                          <Button variant="secondary" className="w-full">
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleCopy(agent.id)}
+                          className="flex-1"
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleDelete(agent.id)}
+                          className="w-full text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </>
+                  )}
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleCopy(agent.id)}
-                      className="flex-1"
-                    >
-                      Copy
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleDelete(agent.id)}
-                      className="flex-1 text-red-600 hover:text-red-700"
-                    >
-                      Delete
-                    </Button>
-                  </div>
+                  {activeTab === 'employed' && (
+                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleTune(agent.id)}
+                        className="flex-1"
+                      >
+                        Tune
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleFire(agent.id)}
+                        className="flex-1 text-red-600 hover:text-red-700"
+                      >
+                        Fire
+                      </Button>
+                    </div>
+                  )}
+
+                  {activeTab === 'visible' && (
+                    <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleInterview(agent.id)}
+                        className="flex-1"
+                      >
+                        Interview
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleEmploy(agent.id)}
+                        className="flex-1"
+                      >
+                        Employ
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}

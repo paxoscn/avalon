@@ -84,9 +84,25 @@ async listCreatedAgents(params?: ListAgentsParams): Promise<ListAgentsResponse>
    - **Employed**: 显示你雇佣的所有 agents
    - **Visible**: 显示租户内所有可见的 agents
 
+## 不同 Tab 的操作按钮
+
+### Created Tab (我创建的)
+- **Edit**: 编辑 agent
+- **Copy**: 复制 agent
+- **Delete**: 删除 agent
+
+### Employed Tab (我雇佣的)
+- **Tune**: 调整 agent 设置（跳转到详情页）
+- **Fire**: 解雇 agent（终止雇佣关系）
+
+### Visible Tab (我可见的)
+- **Interview**: 查看 agent 详情（跳转到详情页）
+- **Employ**: 雇佣 agent
+
 ## 技术细节
 
 - 所有三个列表都支持分页（每页 12 个 agents）
 - Tab 切换时会自动重置到第一页
 - 使用相同的 agent card 组件显示
-- 保持了原有的所有功能（编辑、删除、复制、雇佣等）
+- 根据当前 tab 动态显示不同的操作按钮
+- 雇佣/解雇操作后会自动刷新列表
