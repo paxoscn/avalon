@@ -77,5 +77,16 @@
     "switch": "切换语言",
     "en": "English",
     "zh": "中文"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "welcomeBack": "欢迎回来，{{name}}！",
+    "totalFlows": "工作流总数",
+    "activeExecutions": "活跃执行",
+    "mcpTools": "MCP 工具",
+    "sessions": "会话",
+    "recentActivity": "最近活动",
+    "latestActions": "您的最新操作",
+    "noRecentActivity": "暂无最近活动"
   }
 }

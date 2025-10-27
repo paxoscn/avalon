@@ -77,5 +77,16 @@
     "switch": "Switch Language",
     "en": "English",
     "zh": "中文"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeBack": "Welcome back, {{name}}!",
+    "totalFlows": "Total Flows",
+    "activeExecutions": "Active Executions",
+    "mcpTools": "MCP Tools",
+    "sessions": "Sessions",
+    "recentActivity": "Recent Activity",
+    "latestActions": "Your latest actions",
+    "noRecentActivity": "No recent activity"
   }
 }
