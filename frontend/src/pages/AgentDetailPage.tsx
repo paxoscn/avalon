@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { agentService, type CreateAgentRequest, type UpdateAgentRequest } from '../services/agent.service';
 import { llmService } from '../services/llm.service';
 import { mcpService } from '../services/mcp.service';
@@ -10,6 +11,7 @@ import { Button, Card, Input, Loader, Alert, MobileChatPreview } from '../compon
 export function AgentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isNew = id === 'new';
 
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -60,7 +62,7 @@ export function AgentDetailPage() {
         flowIds: data.flow_ids,
       });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load agent');
+      setError(err.response?.data?.error || t('agents.errors.loadAgentFailed'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export function AgentDetailPage() {
           flow_ids: formData.flowIds,
         };
         const newAgent = await agentService.createAgent(request);
-        setSuccess('Agent created successfully');
+        setSuccess(t('agents.success.created'));
         setTimeout(() => navigate(`/agents/${newAgent.id}`), 1500);
       } else {
         const request: UpdateAgentRequest = {
@@ -113,11 +115,11 @@ export function AgentDetailPage() {
           preset_questions: presetQuestions,
         };
         await agentService.updateAgent(id!, request);
-        setSuccess('Agent updated successfully');
+        setSuccess(t('agents.success.updated'));
         await loadAgent();
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save agent');
+      setError(err.response?.data?.error || t('agents.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -142,7 +144,7 @@ export function AgentDetailPage() {
       }
       await loadAgent();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update knowledge base');
+      setError(err.response?.data?.error || t('agents.errors.updateKnowledgeBaseFailed'));
     }
   };
 
@@ -165,7 +167,7 @@ export function AgentDetailPage() {
       }
       await loadAgent();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update MCP tool');
+      setError(err.response?.data?.error || t('agents.errors.updateToolFailed'));
     }
   };
 
@@ -188,7 +190,7 @@ export function AgentDetailPage() {
       }
       await loadAgent();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update flow');
+      setError(err.response?.data?.error || t('agents.errors.updateFlowFailed'));
     }
   };
 
@@ -207,10 +209,10 @@ export function AgentDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">
-              {isNew ? 'Create Agent' : 'Edit Agent'}
+              {isNew ? t('agents.detail.createTitle') : t('agents.detail.editTitle')}
             </h1>
             <p className="mt-2 text-sm text-gray-600">
-              {isNew ? 'Configure a new AI agent' : 'Update agent configuration'}
+              {isNew ? t('agents.detail.createDescription') : t('agents.detail.editDescription')}
             </p>
           </div>
         </div>
@@ -229,26 +231,26 @@ export function AgentDetailPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.basicInfo')}</h2>
           <div className="space-y-4">
             <Input
-              label="Agent Name"
+              label={t('agents.detail.agentName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              placeholder="My AI Assistant"
+              placeholder={t('agents.detail.agentNamePlaceholder')}
             />
 
             <Input
-              label="Avatar URL (optional)"
+              label={t('agents.detail.avatarUrl')}
               value={formData.avatar}
               onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-              placeholder="https://example.com/avatar.png"
+              placeholder={t('agents.detail.avatarUrlPlaceholder')}
             />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                System Prompt *
+                {t('agents.detail.systemPrompt')} *
               </label>
               <textarea
                 value={formData.systemPrompt}
@@ -256,55 +258,55 @@ export function AgentDetailPage() {
                 required
                 rows={6}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="You are a helpful AI assistant..."
+                placeholder={t('agents.detail.systemPromptPlaceholder')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Additional Settings (JSON, optional)
+                {t('agents.detail.additionalSettings')}
               </label>
               <textarea
                 value={formData.additionalSettings}
                 onChange={(e) => setFormData({ ...formData, additionalSettings: e.target.value })}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                placeholder='{"key": "value"}'
+                placeholder={t('agents.detail.additionalSettingsPlaceholder')}
               />
             </div>
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Preset Questions</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.presetQuestions')}</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Add up to 3 preset questions that users can quickly select
+            {t('agents.detail.presetQuestionsDescription')}
           </p>
           <div className="space-y-3">
             {formData.presetQuestions.map((question, index) => (
               <Input
                 key={index}
-                label={`Question ${index + 1}`}
+                label={`${t('agents.detail.question')} ${index + 1}`}
                 value={question}
                 onChange={(e) => {
                   const newQuestions = [...formData.presetQuestions];
                   newQuestions[index] = e.target.value;
                   setFormData({ ...formData, presetQuestions: newQuestions });
                 }}
-                placeholder={`Preset question ${index + 1}`}
+                placeholder={`${t('agents.detail.questionPlaceholder')} ${index + 1}`}
               />
             ))}
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Knowledge Bases</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.knowledgeBases')}</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Select vector storage configurations for knowledge retrieval
+            {t('agents.detail.knowledgeBasesDescription')}
           </p>
           <div className="space-y-2">
             {availableKnowledgeBases.length === 0 ? (
-              <p className="text-sm text-gray-500">No knowledge bases available</p>
+              <p className="text-sm text-gray-500">{t('agents.detail.noKnowledgeBases')}</p>
             ) : (
               availableKnowledgeBases.map((kb) => (
                 <label key={kb.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -322,13 +324,13 @@ export function AgentDetailPage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">MCP Tools</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.mcpTools')}</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Select tools that the agent can use
+            {t('agents.detail.mcpToolsDescription')}
           </p>
           <div className="space-y-2">
             {availableTools.length === 0 ? (
-              <p className="text-sm text-gray-500">No tools available</p>
+              <p className="text-sm text-gray-500">{t('agents.detail.noTools')}</p>
             ) : (
               availableTools.map((tool) => (
                 <label key={tool.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -351,13 +353,13 @@ export function AgentDetailPage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Flows</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.flows')}</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Select flows that the agent can execute
+            {t('agents.detail.flowsDescription')}
           </p>
           <div className="space-y-2">
             {availableFlows.length === 0 ? (
-              <p className="text-sm text-gray-500">No flows available</p>
+              <p className="text-sm text-gray-500">{t('agents.detail.noFlows')}</p>
             ) : (
               availableFlows.map((flow) => (
                 <label key={flow.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -381,14 +383,14 @@ export function AgentDetailPage() {
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : isNew ? 'Create Agent' : 'Update Agent'}
+              {saving ? t('agents.detail.saving') : isNew ? t('agents.createAgent') : t('agents.detail.updateAgent')}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => navigate('/agents')}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         </form>
@@ -397,11 +399,11 @@ export function AgentDetailPage() {
       {/* 右侧手机预览 */}
       <div className="w-96 sticky top-6 self-start">
         <div className="mb-3 text-center">
-          <h3 className="text-sm font-medium text-gray-700">实时预览</h3>
-          <p className="text-xs text-gray-500">查看手机端聊天界面效果</p>
+          <h3 className="text-sm font-medium text-gray-700">{t('agents.detail.preview')}</h3>
+          <p className="text-xs text-gray-500">{t('agents.detail.previewDescription')}</p>
         </div>
         <MobileChatPreview
-          agentName={formData.name || 'AI 助手'}
+          agentName={formData.name || t('agents.detail.defaultAgentName')}
           agentAvatar={formData.avatar}
           systemPrompt={formData.systemPrompt}
           presetQuestions={formData.presetQuestions}
