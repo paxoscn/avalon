@@ -6,7 +6,7 @@ use crate::{
     infrastructure::{llm::LLMProviderRegistry, mcp::{proxy_service, MCPProxyServiceImpl}, repositories::*, vector::VectorStoreRegistry, Database, RedisCache},
     presentation::{
         routes::{
-            audit_routes, create_app_router, create_mcp_api_routes, execution_history_routes, flow_routes, llm_config_routes, session_routes, vector_config_routes
+            agent_routes, audit_routes, create_app_router, create_mcp_api_routes, execution_history_routes, flow_routes, llm_config_routes, session_routes, vector_config_routes
         },
         handlers::{
             login_handler, refresh_token_handler, logout_handler,
@@ -55,7 +55,7 @@ impl Server {
         Ok(())
     }
 
-    fn create_app(&self) -> Router {
+    pub fn create_app(&self) -> Router {
         // Create repositories
         let user_repository = Arc::new(UserRepositoryImpl::new(self.database.connection()));
         let tenant_repository = Arc::new(TenantRepositoryImpl::new(self.database.connection()));
@@ -70,6 +70,8 @@ impl Server {
         let message_repository = Arc::new(MessageRepositoryImpl::new(self.database.connection()));
         let audit_repository = Arc::new(AuditLogRepositoryImpl::new(self.database.connection()));
         let execution_history_repository = Arc::new(ExecutionHistoryRepositoryImpl::new(self.database.connection()));
+        let agent_repository = Arc::new(AgentRepositoryImpl::new(self.database.connection()));
+        let agent_employment_repository = Arc::new(AgentEmploymentRepositoryImpl::new(self.database.connection()));
 
         let vector_store_registry = Arc::new(VectorStoreRegistry::new());
         let llm_provider_registry = Arc::new(LLMProviderRegistry::new());
@@ -99,7 +101,7 @@ impl Server {
         // Create application services
         let auth_service: Arc<dyn AuthApplicationService> =
             Arc::new(AuthApplicationServiceImpl::new(
-                user_repository,
+                user_repository.clone(),
                 tenant_repository,
                 auth_domain_service,
                 None, // Use default token expiry
@@ -107,7 +109,7 @@ impl Server {
 
         let flow_service: Arc<dyn FlowApplicationService> =
             Arc::new(FlowApplicationServiceImpl::new(
-                flow_repository,
+                flow_repository.clone(),
                 flow_version_repository,
                 flow_execution_repository,
                 flow_domain_service,
@@ -116,7 +118,7 @@ impl Server {
 
         let llm_service: Arc<dyn LLMApplicationService> =
             Arc::new(LLMApplicationServiceImpl::new(
-                llm_config_repository,
+                llm_config_repository.clone(),
                 llm_domain_service,
                 llm_provider_registry,
             ));
@@ -132,7 +134,7 @@ impl Server {
 
         let mcp_service: Arc<dyn MCPApplicationService> =
             Arc::new(MCPApplicationServiceImpl::new(
-                mcp_tool_repository,
+                mcp_tool_repository.clone(),
                 mcp_version_repository,
                 mcp_domain_service,
                 mcp_proxy_service,
@@ -156,6 +158,15 @@ impl Server {
             execution_history_service,
         ));
 
+        let agent_service: Arc<dyn AgentApplicationService> = Arc::new(AgentApplicationServiceImpl::new(
+            agent_repository,
+            agent_employment_repository,
+            vector_config_repository,
+            mcp_tool_repository,
+            flow_repository,
+            user_repository,
+        ));
+
         // Configure CORS
         let cors = self.create_cors_layer();
 
@@ -165,6 +176,8 @@ impl Server {
             .merge(create_app_router(auth_service.clone()))
             // API routes
             .nest("/api", Router::new()
+                // Agent management routes
+                .merge(agent_routes(agent_service))
                 // Flow management routes
                 .merge(flow_routes(flow_service))
                 // Configuration routes

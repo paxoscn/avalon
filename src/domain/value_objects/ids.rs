@@ -30,6 +30,9 @@ pub struct MessageId(pub Uuid);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ConfigId(pub Uuid);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AgentId(pub Uuid);
+
 // Implementations for ID value objects
 impl UserId {
     pub fn new() -> Self {
@@ -138,6 +141,22 @@ impl ConfigId {
     }
 }
 
+impl AgentId {
+    pub fn new() -> Self {
+        AgentId(Uuid::new_v4())
+    }
+    
+    pub fn from_uuid(uuid: Uuid) -> Self {
+        AgentId(uuid)
+    }
+}
+
+impl From<Uuid> for AgentId {
+    fn from(uuid: Uuid) -> Self {
+        AgentId(uuid)
+    }
+}
+
 // Display implementations for all ID types
 impl fmt::Display for UserId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -188,6 +207,12 @@ impl fmt::Display for MessageId {
 }
 
 impl fmt::Display for ConfigId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for AgentId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }

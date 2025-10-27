@@ -8,6 +8,7 @@ pub mod llm_config_repository_impl;
 pub mod vector_config_repository_impl;
 pub mod audit_log_repository_impl;
 pub mod execution_history_repository_impl;
+pub mod agent_repository_impl;
 
 #[cfg(test)]
 mod user_repository_test;
@@ -22,3 +23,4 @@ pub use llm_config_repository_impl::*;
 pub use vector_config_repository_impl::*;
 pub use audit_log_repository_impl::*;
 pub use execution_history_repository_impl::*;
+pub use agent_repository_impl::*;

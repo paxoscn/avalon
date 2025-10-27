@@ -26,6 +26,6 @@ pub fn create_vector_config_routes() -> Router<Arc<VectorApplicationService>> {
         .route("/configs/health", get(get_vector_configs_health))
         
         // Provider information and validation
-        .route("/providers/:provider/params", get(get_provider_params))
-        .route("/providers/:provider/validate", post(validate_provider_params))
+        .route("/providers/{provider}/params", get(get_provider_params))
+        .route("/providers/{provider}/validate", post(validate_provider_params))
 }

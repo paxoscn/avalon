@@ -31,6 +31,24 @@ pub enum PlatformError {
     #[error("MCP tool error: {0}")]
     MCPToolError(String),
     
+    #[error("Agent not found: {0}")]
+    AgentNotFound(String),
+    
+    #[error("Agent unauthorized: {0}")]
+    AgentUnauthorized(String),
+    
+    #[error("Agent validation error: {0}")]
+    AgentValidationError(String),
+    
+    #[error("Agent already employed: {0}")]
+    AgentAlreadyEmployed(String),
+    
+    #[error("Agent not employed: {0}")]
+    AgentNotEmployed(String),
+    
+    #[error("Preset questions limit exceeded")]
+    PresetQuestionsLimitExceeded,
+    
     #[error("Database error: {0}")]
     DatabaseError(#[from] sea_orm::DbErr),
     
@@ -87,6 +105,12 @@ impl IntoResponse for PlatformError {
             PlatformError::ValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             PlatformError::ConfigurationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             PlatformError::Conflict(_) => (StatusCode::CONFLICT, self.to_string()),
+            PlatformError::AgentNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            PlatformError::AgentUnauthorized(_) => (StatusCode::FORBIDDEN, self.to_string()),
+            PlatformError::AgentValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            PlatformError::AgentAlreadyEmployed(_) => (StatusCode::CONFLICT, self.to_string()),
+            PlatformError::AgentNotEmployed(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            PlatformError::PresetQuestionsLimitExceeded => (StatusCode::BAD_REQUEST, self.to_string()),
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
             // FIXME For debugging only.
             _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("Internal server error: {}", self.to_string())),
@@ -139,5 +163,56 @@ macro_rules! internal_error {
     };
     ($fmt:expr, $($arg:tt)*) => {
         $crate::error::PlatformError::InternalError(format!($fmt, $($arg)*))
+    };
+}
+
+// Agent-specific error macros
+#[macro_export]
+macro_rules! agent_not_found {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentNotFound($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentNotFound(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_unauthorized {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentUnauthorized($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentUnauthorized(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_validation_error {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentValidationError($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentValidationError(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_already_employed {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentAlreadyEmployed($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentAlreadyEmployed(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_not_employed {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentNotEmployed($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentNotEmployed(format!($fmt, $($arg)*))
     };
 }

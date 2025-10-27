@@ -94,9 +94,9 @@ Created `flowService` with methods:
 Updated `frontend/src/router.tsx` with:
 - `/flows` - Flow list page
 - `/flows/import` - DSL import page
-- `/flows/:id` - Flow detail page
-- `/flows/:id/versions` - Version history page
-- `/flows/:flowId/executions/:executionId` - Execution detail page
+- `/flows/{id}` - Flow detail page
+- `/flows/{id}/versions` - Version history page
+- `/flows/{flowId}/executions/{executionId}` - Execution detail page
 
 ## UI/UX Features
 

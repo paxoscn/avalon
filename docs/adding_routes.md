@@ -191,43 +191,43 @@ fn create_app(&self) -> Router {
 ### 流程路由 (`/api/flows`)
 - `POST /api/flows` - 创建流程
 - `GET /api/flows` - 列出流程
-- `GET /api/flows/:flow_id` - 获取流程详情
-- `PUT /api/flows/:flow_id` - 更新流程
-- `DELETE /api/flows/:flow_id` - 删除流程
-- `POST /api/flows/:flow_id/execute` - 执行流程
-- `POST /api/flows/:flow_id/activate` - 激活流程
-- `POST /api/flows/:flow_id/archive` - 归档流程
+- `GET /api/flows/{flow_id}` - 获取流程详情
+- `PUT /api/flows/{flow_id}` - 更新流程
+- `DELETE /api/flows/{flow_id}` - 删除流程
+- `POST /api/flows/{flow_id}/execute` - 执行流程
+- `POST /api/flows/{flow_id}/activate` - 激活流程
+- `POST /api/flows/{flow_id}/archive` - 归档流程
 - `POST /api/flows/import-dsl` - 导入 Dify DSL
-- `GET /api/flows/:flow_id/versions` - 获取版本历史
-- `POST /api/flows/:flow_id/rollback` - 回滚到指定版本
+- `GET /api/flows/{flow_id}/versions` - 获取版本历史
+- `POST /api/flows/{flow_id}/rollback` - 回滚到指定版本
 
 ### LLM 配置路由 (`/api/llm-configs`)
 - `POST /api/llm-configs` - 创建 LLM 配置
 - `GET /api/llm-configs` - 列出 LLM 配置
-- `GET /api/llm-configs/:config_id` - 获取配置详情
-- `PUT /api/llm-configs/:config_id` - 更新配置
-- `DELETE /api/llm-configs/:config_id` - 删除配置
-- `POST /api/llm-configs/:config_id/test` - 测试连接
-- `POST /api/llm-configs/:config_id/set-default` - 设为默认
+- `GET /api/llm-configs/{config_id}` - 获取配置详情
+- `PUT /api/llm-configs/{config_id}` - 更新配置
+- `DELETE /api/llm-configs/{config_id}` - 删除配置
+- `POST /api/llm-configs/{config_id}/test` - 测试连接
+- `POST /api/llm-configs/{config_id}/set-default` - 设为默认
 
 ### 向量配置路由 (`/api/vector-configs`)
 - `POST /api/vector-configs` - 创建向量配置
 - `GET /api/vector-configs` - 列出向量配置
-- `GET /api/vector-configs/:config_id` - 获取配置详情
-- `PUT /api/vector-configs/:config_id` - 更新配置
-- `DELETE /api/vector-configs/:config_id` - 删除配置
-- `POST /api/vector-configs/:config_id/test` - 测试连接
+- `GET /api/vector-configs/{config_id}` - 获取配置详情
+- `PUT /api/vector-configs/{config_id}` - 更新配置
+- `DELETE /api/vector-configs/{config_id}` - 删除配置
+- `POST /api/vector-configs/{config_id}/test` - 测试连接
 - `GET /api/vector-configs/health` - 健康状态
 
 ### 会话路由 (`/api/sessions`)
 - `POST /api/sessions` - 创建会话
 - `GET /api/sessions` - 列出会话
-- `GET /api/sessions/:session_id` - 获取会话详情
-- `PUT /api/sessions/:session_id` - 更新会话
-- `DELETE /api/sessions/:session_id` - 删除会话
-- `POST /api/sessions/:session_id/messages` - 添加消息
-- `POST /api/sessions/:session_id/context` - 设置上下文
-- `GET /api/sessions/:session_id/context/:key` - 获取上下文
+- `GET /api/sessions/{session_id}` - 获取会话详情
+- `PUT /api/sessions/{session_id}` - 更新会话
+- `DELETE /api/sessions/{session_id}` - 删除会话
+- `POST /api/sessions/{session_id}/messages` - 添加消息
+- `POST /api/sessions/{session_id}/context` - 设置上下文
+- `GET /api/sessions/{session_id}/context/{key}` - 获取上下文
 
 ### 审计路由 (`/api/audit`)
 - `GET /api/audit/logs` - 查询审计日志
@@ -235,16 +235,16 @@ fn create_app(&self) -> Router {
 
 ### 执行历史路由 (`/api/execution-history`)
 - `GET /api/execution-history` - 查询执行历史
-- `GET /api/execution-history/:execution_id` - 获取执行详情
+- `GET /api/execution-history/{execution_id}` - 获取执行详情
 
 ### MCP 工具路由 (`/api/mcp`)
 - `POST /api/mcp/tools` - 创建 MCP 工具
 - `GET /api/mcp/tools` - 列出 MCP 工具
-- `GET /api/mcp/tools/:tool_id` - 获取工具详情
-- `PUT /api/mcp/tools/:tool_id` - 更新工具
-- `DELETE /api/mcp/tools/:tool_id` - 删除工具
-- `POST /api/mcp/tools/:tool_id/call` - 调用工具
-- `POST /api/mcp/tools/:tool_id/test` - 测试工具
+- `GET /api/mcp/tools/{tool_id}` - 获取工具详情
+- `PUT /api/mcp/tools/{tool_id}` - 更新工具
+- `DELETE /api/mcp/tools/{tool_id}` - 删除工具
+- `POST /api/mcp/tools/{tool_id}/call` - 调用工具
+- `POST /api/mcp/tools/{tool_id}/test` - 测试工具
 
 ## 认证中间件
 

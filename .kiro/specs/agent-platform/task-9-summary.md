@@ -70,9 +70,9 @@ Audit Handlers:
 
 Execution History Handlers:
 - `GET /api/executions` - Query execution history with pagination and filters
-- `GET /api/executions/:id` - Get detailed execution information with steps and metrics
-- `GET /api/executions/:id/steps` - Get execution steps
-- `GET /api/executions/:id/metrics` - Get execution performance metrics
+- `GET /api/executions/{id}` - Get detailed execution information with steps and metrics
+- `GET /api/executions/{id}/steps` - Get execution steps
+- `GET /api/executions/{id}/metrics` - Get execution performance metrics
 
 ## Key Features
 

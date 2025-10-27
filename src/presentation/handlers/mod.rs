@@ -8,6 +8,7 @@ pub mod flow_handlers;
 pub mod config_handlers;
 pub mod session_audit_handlers;
 pub mod health_handlers;
+pub mod agent_handlers;
 
 #[cfg(test)]
 mod auth_handlers_test;

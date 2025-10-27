@@ -87,19 +87,19 @@ List all flows for the authenticated tenant.
 }
 ```
 
-#### GET /flows/:flow_id
+#### GET /flows/{flow_id}
 Get a specific flow by ID.
 
-#### PUT /flows/:flow_id
+#### PUT /flows/{flow_id}
 Update a flow.
 
-#### DELETE /flows/:flow_id
+#### DELETE /flows/{flow_id}
 Delete a flow.
 
-#### POST /flows/:flow_id/activate
+#### POST /flows/{flow_id}/activate
 Activate a flow.
 
-#### POST /flows/:flow_id/archive
+#### POST /flows/{flow_id}/archive
 Archive a flow.
 
 #### POST /flows/import-dsl
@@ -113,7 +113,7 @@ Import a flow from Dify DSL.
 }
 ```
 
-#### POST /flows/:flow_id/execute
+#### POST /flows/{flow_id}/execute
 Execute a flow.
 
 **Request Body:**
@@ -124,7 +124,7 @@ Execute a flow.
 }
 ```
 
-#### GET /executions/:execution_id
+#### GET /executions/{execution_id}
 Get execution status.
 
 #### GET /executions
@@ -156,13 +156,13 @@ List executions with optional filtering.
 
 ### Flow Versions
 
-#### POST /flows/:flow_id/versions
+#### POST /flows/{flow_id}/versions
 Create a new version of a flow.
 
-#### GET /flows/:flow_id/versions
+#### GET /flows/{flow_id}/versions
 Get all versions of a flow.
 
-#### POST /flows/:flow_id/rollback
+#### POST /flows/{flow_id}/rollback
 Rollback to a specific version.
 
 **Request Body:**
@@ -216,22 +216,22 @@ List all LLM configurations.
 }
 ```
 
-#### GET /llm-configs/:config_id
+#### GET /llm-configs/{config_id}
 Get a specific LLM configuration.
 
-#### PUT /llm-configs/:config_id
+#### PUT /llm-configs/{config_id}
 Update an LLM configuration.
 
-#### DELETE /llm-configs/:config_id
+#### DELETE /llm-configs/{config_id}
 Delete an LLM configuration.
 
-#### POST /llm-configs/:config_id/set-default
+#### POST /llm-configs/{config_id}/set-default
 Set an LLM configuration as default.
 
-#### POST /llm-configs/:config_id/test
+#### POST /llm-configs/{config_id}/test
 Test connection to an LLM provider.
 
-#### GET /llm-providers/:provider/models
+#### GET /llm-providers/{provider}/models
 Get available models for a provider.
 
 ### Vector Configuration
@@ -273,22 +273,22 @@ List all vector configurations.
 }
 ```
 
-#### GET /vector-configs/:config_id
+#### GET /vector-configs/{config_id}
 Get a specific vector configuration.
 
-#### PUT /vector-configs/:config_id
+#### PUT /vector-configs/{config_id}
 Update a vector configuration.
 
-#### DELETE /vector-configs/:config_id
+#### DELETE /vector-configs/{config_id}
 Delete a vector configuration.
 
-#### POST /vector-configs/:config_id/set-default
+#### POST /vector-configs/{config_id}/set-default
 Set a vector configuration as default.
 
-#### POST /vector-configs/:config_id/test
+#### POST /vector-configs/{config_id}/test
 Test connection to a vector database.
 
-#### GET /vector-providers/:provider/params
+#### GET /vector-providers/{provider}/params
 Get required and optional parameters for a vector provider.
 
 #### GET /vector-configs/health
@@ -331,16 +331,16 @@ List all sessions for the authenticated user.
 }
 ```
 
-#### GET /sessions/:session_id
+#### GET /sessions/{session_id}
 Get a specific session.
 
-#### PUT /sessions/:session_id
+#### PUT /sessions/{session_id}
 Update a session.
 
-#### DELETE /sessions/:session_id
+#### DELETE /sessions/{session_id}
 Delete a session.
 
-#### POST /sessions/:session_id/messages
+#### POST /sessions/{session_id}/messages
 Add a message to a session.
 
 **Request Body:**
@@ -352,7 +352,7 @@ Add a message to a session.
 }
 ```
 
-#### POST /sessions/:session_id/context
+#### POST /sessions/{session_id}/context
 Set a context variable in a session.
 
 **Request Body:**
@@ -363,7 +363,7 @@ Set a context variable in a session.
 }
 ```
 
-#### GET /sessions/:session_id/context/:key
+#### GET /sessions/{session_id}/context/{key}
 Get a context variable from a session.
 
 ### Audit Logs
@@ -446,7 +446,7 @@ Query execution history.
 
 **Note:** This endpoint uses `page_size` instead of `limit` for historical reasons, but follows the same pagination pattern.
 
-#### GET /execution-history/:execution_id
+#### GET /execution-history/{execution_id}
 Get detailed execution history including steps and metrics.
 
 ## Error Responses
@@ -678,7 +678,7 @@ This allows clients to easily determine if there are more pages available:
 The following endpoints support pagination:
 
 - `GET /flows` - List flows
-- `GET /flows/:flow_id/versions` - List flow versions
+- `GET /flows/{flow_id}/versions` - List flow versions
 - `GET /executions` - List flow executions
 - `GET /llm-configs` - List LLM configurations
 - `GET /vector-configs` - List vector configurations

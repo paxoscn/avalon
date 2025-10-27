@@ -79,15 +79,15 @@ Updated `frontend/src/types/index.ts` with:
 
 Updated `frontend/src/router.tsx` with new routes:
 - `/mcp/tools` - MCP tool list
-- `/mcp/tools/:id` - MCP tool configuration
-- `/mcp/tools/:id/test` - MCP tool testing
-- `/mcp/tools/:id/versions` - MCP tool versions
+- `/mcp/tools/{id}` - MCP tool configuration
+- `/mcp/tools/{id}/test` - MCP tool testing
+- `/mcp/tools/{id}/versions` - MCP tool versions
 - `/config/llm` - LLM configuration list
-- `/config/llm/:id` - LLM configuration form
-- `/config/llm/:id/test` - LLM testing
+- `/config/llm/{id}` - LLM configuration form
+- `/config/llm/{id}/test` - LLM testing
 - `/config/vector` - Vector configuration list
-- `/config/vector/:id` - Vector configuration form
-- `/config/vector/:id/test` - Vector database testing
+- `/config/vector/{id}` - Vector configuration form
+- `/config/vector/{id}/test` - Vector database testing
 
 ## UI/UX Features
 

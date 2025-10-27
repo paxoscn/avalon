@@ -349,7 +349,7 @@ GET /api/audit/logs?page=1&page_size=50
 | Endpoint | Parameter Name | Default Limit | Max Limit |
 |----------|---------------|---------------|-----------|
 | GET /flows | `limit` | 20 | 100 |
-| GET /flows/:id/versions | `limit` | 20 | 100 |
+| GET /flows/{id}/versions | `limit` | 20 | 100 |
 | GET /executions | `limit` | 20 | 100 |
 | GET /llm-configs | `limit` | 20 | 100 |
 | GET /vector-configs | `limit` | 20 | 100 |

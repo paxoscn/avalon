@@ -8,6 +8,8 @@ pub mod llm_config;
 pub mod vector_config;
 pub mod audit_log;
 pub mod execution_history;
+pub mod agent;
+pub mod agent_employment;
 
 pub use user::*;
 pub use tenant::*;
@@ -19,3 +21,5 @@ pub use llm_config::*;
 pub use vector_config::*;
 pub use audit_log::*;
 pub use execution_history::*;
+pub use agent::*;
+pub use agent_employment::*;

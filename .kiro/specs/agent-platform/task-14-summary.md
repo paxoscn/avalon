@@ -116,26 +116,26 @@ Created session history viewing interface with:
 
 ### Audit Logs
 - `GET /api/audit/logs` - List audit logs with filters
-- `GET /api/audit/logs/:id` - Get audit log details
+- `GET /api/audit/logs/{id}` - Get audit log details
 - `GET /api/audit/stats` - Get audit statistics
 - `GET /api/audit/logs/export` - Export audit logs
 
 ### Executions
 - `GET /api/executions` - List executions with filters
-- `GET /api/executions/:id` - Get execution details
-- `GET /api/executions/:id/steps` - Get execution steps
-- `GET /api/executions/:id/performance` - Get performance metrics
-- `POST /api/executions/:id/cancel` - Cancel execution
-- `POST /api/executions/:id/retry` - Retry execution
+- `GET /api/executions/{id}` - Get execution details
+- `GET /api/executions/{id}/steps` - Get execution steps
+- `GET /api/executions/{id}/performance` - Get performance metrics
+- `POST /api/executions/{id}/cancel` - Cancel execution
+- `POST /api/executions/{id}/retry` - Retry execution
 - `GET /api/executions/stats` - Get execution statistics
 
 ### Sessions
 - `GET /api/sessions` - List sessions with filters
-- `GET /api/sessions/:id` - Get session details
-- `GET /api/sessions/:id/messages` - Get session messages
+- `GET /api/sessions/{id}` - Get session details
+- `GET /api/sessions/{id}/messages` - Get session messages
 - `GET /api/sessions/stats` - Get session statistics
-- `DELETE /api/sessions/:id` - Delete session
-- `GET /api/sessions/:id/export` - Export session
+- `DELETE /api/sessions/{id}` - Delete session
+- `GET /api/sessions/{id}/export` - Export session
 - `GET /api/sessions/search` - Search sessions
 
 ## Requirements Satisfied

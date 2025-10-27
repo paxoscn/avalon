@@ -21,6 +21,8 @@ impl MigratorTrait for Migrator {
             Box::new(migrations::m20231201_000011_create_vector_configs::Migration),
             Box::new(migrations::m20231201_000012_create_audit_logs::Migration),
             Box::new(migrations::m20231201_000013_create_execution_steps::Migration),
+            Box::new(migrations::m20231201_000014_create_agents::Migration),
+            Box::new(migrations::m20231201_000015_create_agent_employments::Migration),
         ]
     }
 }

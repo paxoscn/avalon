@@ -8,6 +8,7 @@ pub mod llm_config_repository;
 pub mod vector_config_repository;
 pub mod audit_log_repository;
 pub mod execution_history_repository;
+pub mod agent_repository;
 
 pub use user_repository::*;
 pub use tenant_repository::*;
@@ -19,3 +20,4 @@ pub use llm_config_repository::*;
 pub use vector_config_repository::*;
 pub use audit_log_repository::*;
 pub use execution_history_repository::*;
+pub use agent_repository::*;

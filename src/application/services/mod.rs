@@ -12,6 +12,7 @@ pub mod context_management_service;
 pub mod audit_application_service;
 pub mod execution_history_application_service;
 pub mod flow_application_service;
+pub mod agent_application_service;
 
 #[cfg(test)]
 pub mod integrated_llm_service_test;
@@ -42,3 +43,4 @@ pub use context_management_service::*;
 pub use audit_application_service::*;
 pub use execution_history_application_service::*;
 pub use flow_application_service::*;
+pub use agent_application_service::*;

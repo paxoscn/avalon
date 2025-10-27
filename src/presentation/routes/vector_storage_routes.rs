@@ -19,7 +19,7 @@ pub fn create_vector_storage_routes() -> Router<Arc<VectorStorageApplicationServ
         
         // Statistics and information
         .route("/stats", get(get_storage_stats))
-        .route("/stats/:namespace", get(get_namespace_stats))
+        .route("/stats/{namespace}", get(get_namespace_stats))
         
         // Namespace management
         .route("/namespaces", get(list_namespaces))

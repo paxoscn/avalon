@@ -11,3 +11,5 @@ pub mod m20231201_000010_create_llm_configs;
 pub mod m20231201_000011_create_vector_configs;
 pub mod m20231201_000012_create_audit_logs;
 pub mod m20231201_000013_create_execution_steps;
+pub mod m20231201_000014_create_agents;
+pub mod m20231201_000015_create_agent_employments;
