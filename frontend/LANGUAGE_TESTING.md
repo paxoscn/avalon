@@ -102,6 +102,18 @@ npm run dev
 ### 主界面 Header
 - [ ] 退出登录按钮
 
+### 侧边栏菜单
+- [ ] 平台标题
+- [ ] Dashboard 菜单项
+- [ ] Agents 菜单项
+- [ ] Flows 菜单项
+- [ ] MCP Tools 菜单项
+- [ ] LLM Config 菜单项
+- [ ] Vector Config 菜单项
+- [ ] Audit Logs 菜单项
+- [ ] Executions 菜单项
+- [ ] Sessions 菜单项
+
 ### Agents 列表页
 - [ ] 页面标题和描述
 - [ ] 创建按钮

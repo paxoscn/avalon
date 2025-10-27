@@ -25,28 +25,29 @@
     "username": "用户名",
     "password": "密码",
     "signInToAccount": "登录您的账户",
-    "agentPlatform": "智能体平台",
-    "copyright": "© 2025 智能体平台。保留所有权利。"
+    "agentPlatform": "AI 平台",
+    "copyright": "© 2025 AI 平台。保留所有权利。"
   },
   "nav": {
+    "agentPlatform": "AI 平台",
     "dashboard": "仪表板",
     "flows": "工作流",
     "mcpTools": "MCP 工具",
-    "agents": "智能体",
+    "agents": "数字人",
     "config": "配置",
-    "llmConfig": "LLM 配置",
-    "vectorConfig": "向量配置",
+    "llmConfig": "大模型",
+    "vectorConfig": "向量库",
     "audit": "审计",
     "auditLogs": "审计日志",
     "executions": "执行记录",
     "sessions": "会话记录"
   },
   "agents": {
-    "title": "智能体",
-    "description": "管理具有自定义能力和知识的 AI 智能体",
-    "createAgent": "创建智能体",
-    "noAgents": "暂无智能体",
-    "getStarted": "开始创建一个新的 AI 智能体。",
+    "title": "数字人",
+    "description": "管理具有自定义能力和知识的 AI 数字人",
+    "createAgent": "创建数字人",
+    "noAgents": "暂无数字人",
+    "getStarted": "开始创建一个新的 AI 数字人。",
     "tabs": {
       "created": "已创建",
       "employed": "已雇佣",
@@ -61,15 +62,15 @@
       "interview": "面试",
       "employ": "雇佣"
     },
-    "confirmDelete": "确定要删除此智能体吗？",
-    "confirmFire": "确定要解雇此智能体吗？",
-    "employSuccess": "智能体雇佣成功！",
+    "confirmDelete": "确定要删除此数字人吗？",
+    "confirmFire": "确定要解雇此数字人吗？",
+    "employSuccess": "数字人雇佣成功！",
     "errors": {
-      "loadFailed": "加载智能体失败",
-      "deleteFailed": "删除智能体失败",
-      "copyFailed": "复制智能体失败",
-      "employFailed": "雇佣智能体失败",
-      "fireFailed": "解雇智能体失败"
+      "loadFailed": "加载数字人失败",
+      "deleteFailed": "删除数字人失败",
+      "copyFailed": "复制数字人失败",
+      "employFailed": "雇佣数字人失败",
+      "fireFailed": "解雇数字人失败"
     }
   },
   "language": {

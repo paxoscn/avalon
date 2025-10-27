@@ -65,7 +65,11 @@ frontend/
 - 退出登录按钮："Sign out" / "退出登录"
 - 语言切换组件
 
-### 3. Agent 列表页 (AgentListPage.tsx)
+### 3. 侧边栏菜单 (Sidebar.tsx)
+- 平台标题："Agent Platform" / "智能体平台"
+- 所有菜单项：Dashboard/仪表板、Agents/智能体、Flows/工作流、MCP Tools/MCP 工具、LLM Config/LLM 配置、Vector Config/向量配置、Audit Logs/审计日志、Executions/执行记录、Sessions/会话记录
+
+### 4. Agent 列表页 (AgentListPage.tsx)
 - 页面标题和描述
 - Tab 标签：Created/已创建、Employed/已雇佣、Visible/可见
 - 操作按钮：Edit/编辑、Copy/复制、Delete/删除、Tune/调优、Fire/解雇、Interview/面试、Employ/雇佣
@@ -97,6 +101,22 @@ frontend/
   "username": "Username" / "用户名",
   "password": "Password" / "密码",
   ...
+}
+```
+
+### 导航菜单 (nav)
+```json
+{
+  "agentPlatform": "Agent Platform" / "智能体平台",
+  "dashboard": "Dashboard" / "仪表板",
+  "agents": "Agents" / "智能体",
+  "flows": "Flows" / "工作流",
+  "mcpTools": "MCP Tools" / "MCP 工具",
+  "llmConfig": "LLM Config" / "LLM 配置",
+  "vectorConfig": "Vector Config" / "向量配置",
+  "auditLogs": "Audit Logs" / "审计日志",
+  "executions": "Executions" / "执行记录",
+  "sessions": "Sessions" / "会话记录"
 }
 ```
 

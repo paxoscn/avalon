@@ -25,10 +25,11 @@
     "username": "Username",
     "password": "Password",
     "signInToAccount": "Sign in to your account",
-    "agentPlatform": "Agent Platform",
+    "agentPlatform": "AI Platform",
     "copyright": "© 2025 Agent Platform. All rights reserved."
   },
   "nav": {
+    "agentPlatform": "AI Platform",
     "dashboard": "Dashboard",
     "flows": "Flows",
     "mcpTools": "MCP Tools",

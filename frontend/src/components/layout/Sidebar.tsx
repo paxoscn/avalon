@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   HomeIcon,
   RectangleStackIcon,
@@ -10,25 +11,26 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Agents', href: '/agents', icon: UserGroupIcon },
-  { name: 'Flows', href: '/flows', icon: RectangleStackIcon },
-  { name: 'MCP Tools', href: '/mcp/tools', icon: WrenchScrewdriverIcon },
-  { name: 'LLM Config', href: '/config/llm', icon: Cog6ToothIcon },
-  { name: 'Vector Config', href: '/config/vector', icon: Cog6ToothIcon },
-  { name: 'Audit Logs', href: '/audit/logs', icon: ClipboardDocumentListIcon },
-  { name: 'Executions', href: '/executions', icon: ClockIcon },
-  { name: 'Sessions', href: '/sessions', icon: ChatBubbleLeftRightIcon },
-];
-
 export const Sidebar: React.FC = () => {
+  const { t } = useTranslation();
+
+  const navigation = [
+    { name: t('nav.dashboard'), href: '/dashboard', icon: HomeIcon },
+    { name: t('nav.agents'), href: '/agents', icon: UserGroupIcon },
+    { name: t('nav.flows'), href: '/flows', icon: RectangleStackIcon },
+    { name: t('nav.mcpTools'), href: '/mcp/tools', icon: WrenchScrewdriverIcon },
+    { name: t('nav.llmConfig'), href: '/config/llm', icon: Cog6ToothIcon },
+    { name: t('nav.vectorConfig'), href: '/config/vector', icon: Cog6ToothIcon },
+    { name: t('nav.auditLogs'), href: '/audit/logs', icon: ClipboardDocumentListIcon },
+    { name: t('nav.executions'), href: '/executions', icon: ClockIcon },
+    { name: t('nav.sessions'), href: '/sessions', icon: ChatBubbleLeftRightIcon },
+  ];
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
       <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
         <div className="flex items-center flex-shrink-0 px-6">
           <h1 className="text-2xl font-bold text-primary-600">
-            Agent Platform
+            {t('nav.agentPlatform')}
           </h1>
         </div>
         

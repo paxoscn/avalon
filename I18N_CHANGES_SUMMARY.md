@@ -44,6 +44,7 @@
 
 #### 布局组件
 - `frontend/src/components/layout/Header.tsx` - 添加语言切换按钮
+- `frontend/src/components/layout/Sidebar.tsx` - 菜单国际化
 
 #### 表单组件
 - `frontend/src/components/auth/LoginForm.tsx` - 添加表单字段翻译
@@ -74,6 +75,10 @@
 
 #### 主界面
 - Header 退出按钮："Sign out" / "退出登录"
+
+#### 侧边栏菜单
+- 平台标题："Agent Platform" / "智能体平台"
+- 所有菜单项：Dashboard/仪表板、Agents/智能体、Flows/工作流、MCP Tools/MCP 工具、LLM Config/LLM 配置、Vector Config/向量配置、Audit Logs/审计日志、Executions/执行记录、Sessions/会话记录
 
 #### Agent 列表页
 - 页面标题："Agents" / "智能体"
@@ -123,10 +128,10 @@ function MyComponent() {
 
 ### 修改文件
 - 页面组件: 2
-- 布局组件: 1
+- 布局组件: 2
 - 表单组件: 1
 - 配置文件: 2
-- **总计**: 6 个修改的文件
+- **总计**: 7 个修改的文件
 
 ### 翻译条目
 - 英文翻译: ~50 个键值对
