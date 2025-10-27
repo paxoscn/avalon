@@ -222,3 +222,28 @@ export interface SessionStats {
     count: number;
   }>;
 }
+
+export interface Agent {
+  id: string;
+  tenant_id: string;
+  name: string;
+  avatar?: string;
+  knowledge_base_ids: string[];
+  mcp_tool_ids: string[];
+  flow_ids: string[];
+  system_prompt: string;
+  additional_settings?: string;
+  preset_questions: string[];
+  source_agent_id?: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentEmployment {
+  id: string;
+  agent_id: string;
+  user_id: string;
+  tenant_id: string;
+  employed_at: string;
+}

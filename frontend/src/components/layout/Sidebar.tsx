@@ -7,10 +7,12 @@ import {
   ChatBubbleLeftRightIcon,
   ClockIcon,
   Cog6ToothIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Agents', href: '/agents', icon: UserGroupIcon },
   { name: 'Flows', href: '/flows', icon: RectangleStackIcon },
   { name: 'MCP Tools', href: '/mcp/tools', icon: WrenchScrewdriverIcon },
   { name: 'LLM Config', href: '/config/llm', icon: Cog6ToothIcon },

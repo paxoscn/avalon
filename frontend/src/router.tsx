@@ -18,6 +18,8 @@ import { LLMConfigTestPage } from './pages/LLMConfigTestPage';
 import { VectorConfigListPage } from './pages/VectorConfigListPage';
 import { VectorConfigDetailPage } from './pages/VectorConfigDetailPage';
 import { VectorConfigTestPage } from './pages/VectorConfigTestPage';
+import { AgentListPage } from './pages/AgentListPage';
+import { AgentDetailPage } from './pages/AgentDetailPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { AuditLogDetailPage } from './pages/AuditLogDetailPage';
 import { ExecutionHistoryPage } from './pages/ExecutionHistoryPage';
@@ -105,6 +107,14 @@ export const router = createBrowserRouter([
       {
         path: 'config/vector/:id/test',
         element: <VectorConfigTestPage />,
+      },
+      {
+        path: 'agents',
+        element: <AgentListPage />,
+      },
+      {
+        path: 'agents/:id',
+        element: <AgentDetailPage />,
       },
       {
         path: 'audit/logs',
