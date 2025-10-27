@@ -6,3 +6,7 @@ export { Alert } from './Alert';
 export { Modal } from './Modal';
 export { Loader } from './Loader';
 export { LanguageSwitcher } from './LanguageSwitcher';
+export { MobileChatPreview } from './MobileChatPreview';
+export { EmbeddedChat } from './EmbeddedChat';
+export type { MobileChatPreviewProps, ChatMessage } from './MobileChatPreview';
+export type { EmbeddedChatProps } from './EmbeddedChat';

@@ -5,7 +5,7 @@ import { llmService } from '../services/llm.service';
 import { mcpService } from '../services/mcp.service';
 import { flowService } from '../services/flow.service';
 import type { Agent, VectorConfig, MCPTool, Flow } from '../types';
-import { Button, Card, Input, Loader, Alert } from '../components/common';
+import { Button, Card, Input, Loader, Alert, MobileChatPreview } from '../components/common';
 
 export function AgentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,14 +68,14 @@ export function AgentDetailPage() {
 
   const loadResources = async () => {
     try {
-      const [kbs, tools, flows] = await Promise.all([
+      const [kbs, tools, flowsResponse] = await Promise.all([
         llmService.listConfigs().catch(() => []),
         mcpService.listTools().catch(() => []),
-        flowService.listFlows().catch(() => ({ data: [] })),
+        flowService.getFlows().catch(() => ({ flows: [], total: 0 })),
       ]);
       setAvailableKnowledgeBases(kbs as any);
-      setAvailableTools(tools);
-      setAvailableFlows(flows.data || []);
+      setAvailableTools(tools);console.log(flowsResponse.flows);
+      setAvailableFlows(flowsResponse.flows || []);
     } catch (err) {
       console.error('Failed to load resources:', err);
     }
@@ -127,7 +127,7 @@ export function AgentDetailPage() {
     if (isNew) {
       setFormData((prev) => ({
         ...prev,
-        knowledgeBaseIds: prev.knowledgeBaseIds.includes(configId)
+        knowledgeBaseIds: prev.knowledgeBaseIds != null && prev.knowledgeBaseIds.includes(configId)
           ? prev.knowledgeBaseIds.filter((id) => id !== configId)
           : [...prev.knowledgeBaseIds, configId],
       }));
@@ -135,7 +135,7 @@ export function AgentDetailPage() {
     }
 
     try {
-      if (formData.knowledgeBaseIds.includes(configId)) {
+      if (formData.knowledgeBaseIds != null && formData.knowledgeBaseIds.includes(configId)) {
         await agentService.removeKnowledgeBase(id!, configId);
       } else {
         await agentService.addKnowledgeBase(id!, configId);
@@ -201,33 +201,35 @@ export function AgentDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">
-            {isNew ? 'Create Agent' : 'Edit Agent'}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {isNew ? 'Configure a new AI agent' : 'Update agent configuration'}
-          </p>
+    <div className="flex gap-6">
+      {/* 左侧编辑表单 */}
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-900">
+              {isNew ? 'Create Agent' : 'Edit Agent'}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {isNew ? 'Configure a new AI agent' : 'Update agent configuration'}
+            </p>
+          </div>
         </div>
-      </div>
 
-      {error && (
-        <Alert type="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Alert type="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-      {success && (
-        <Alert type="success" onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+        {success && (
+          <Alert type="success" onClose={() => setSuccess(null)}>
+            {success}
+          </Alert>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
           <div className="space-y-4">
             <Input
               label="Agent Name"
@@ -270,11 +272,11 @@ export function AgentDetailPage() {
                 placeholder='{"key": "value"}'
               />
             </div>
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Preset Questions</h2>
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Preset Questions</h2>
           <p className="text-sm text-gray-600 mb-4">
             Add up to 3 preset questions that users can quickly select
           </p>
@@ -292,11 +294,11 @@ export function AgentDetailPage() {
                 placeholder={`Preset question ${index + 1}`}
               />
             ))}
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Knowledge Bases</h2>
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Knowledge Bases</h2>
           <p className="text-sm text-gray-600 mb-4">
             Select vector storage configurations for knowledge retrieval
           </p>
@@ -308,7 +310,7 @@ export function AgentDetailPage() {
                 <label key={kb.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.knowledgeBaseIds.includes(kb.id)}
+                    checked={formData.knowledgeBaseIds != null && formData.knowledgeBaseIds.includes(kb.id)}
                     onChange={() => handleToggleKnowledgeBase(kb.id)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -316,11 +318,11 @@ export function AgentDetailPage() {
                 </label>
               ))
             )}
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">MCP Tools</h2>
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">MCP Tools</h2>
           <p className="text-sm text-gray-600 mb-4">
             Select tools that the agent can use
           </p>
@@ -332,7 +334,7 @@ export function AgentDetailPage() {
                 <label key={tool.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.mcpToolIds.includes(tool.id)}
+                    checked={formData.mcpToolIds != null && formData.mcpToolIds.includes(tool.id)}
                     onChange={() => handleToggleTool(tool.id)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -345,11 +347,11 @@ export function AgentDetailPage() {
                 </label>
               ))
             )}
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Flows</h2>
+          <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Flows</h2>
           <p className="text-sm text-gray-600 mb-4">
             Select flows that the agent can execute
           </p>
@@ -361,7 +363,7 @@ export function AgentDetailPage() {
                 <label key={flow.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={formData.flowIds.includes(flow.id)}
+                    checked={formData.flowIds != null && formData.flowIds.includes(flow.id)}
                     onChange={() => handleToggleFlow(flow.id)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -374,22 +376,37 @@ export function AgentDetailPage() {
                 </label>
               ))
             )}
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : isNew ? 'Create Agent' : 'Update Agent'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/agents')}
-          >
-            Cancel
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving...' : isNew ? 'Create Agent' : 'Update Agent'}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate('/agents')}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      {/* 右侧手机预览 */}
+      <div className="w-96 sticky top-6 self-start">
+        <div className="mb-3 text-center">
+          <h3 className="text-sm font-medium text-gray-700">实时预览</h3>
+          <p className="text-xs text-gray-500">查看手机端聊天界面效果</p>
         </div>
-      </form>
+        <MobileChatPreview
+          agentName={formData.name || 'AI 助手'}
+          agentAvatar={formData.avatar}
+          systemPrompt={formData.systemPrompt}
+          presetQuestions={formData.presetQuestions}
+        />
+      </div>
     </div>
   );
 }
