@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 
 export const LoginForm: React.FC = () => {
+  const { t } = useTranslation();
   const [tenant_id, setTenantId] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ export const LoginForm: React.FC = () => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label htmlFor="tenant_id" className="block text-sm font-medium text-gray-700 mb-2">
-          Tenant ID
+          {t('common.tenant')} ID
         </label>
         <Input
           id="tenant_id"
@@ -40,14 +42,14 @@ export const LoginForm: React.FC = () => {
 
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-          Username
+          {t('auth.username')}
         </label>
         <Input
           id="username"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
+          placeholder={t('auth.username')}
           required
           disabled={isLoading}
         />
@@ -55,14 +57,14 @@ export const LoginForm: React.FC = () => {
 
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-          Password
+          {t('auth.password')}
         </label>
         <Input
           id="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
+          placeholder={t('auth.password')}
           required
           disabled={isLoading}
         />
@@ -81,7 +83,7 @@ export const LoginForm: React.FC = () => {
         disabled={isLoading}
         isLoading={isLoading}
       >
-        {isLoading ? 'Signing in...' : 'Sign in'}
+        {t('auth.login')}
       </Button>
     </form>
   );

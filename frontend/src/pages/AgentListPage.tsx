@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { agentService } from '../services/agent.service';
 import type { Agent } from '../types';
 import { Button, Card, Loader, Alert } from '../components/common';
@@ -7,6 +8,7 @@ import { Button, Card, Loader, Alert } from '../components/common';
 type TabType = 'created' | 'employed' | 'visible';
 
 export function AgentListPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('created');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,14 +45,14 @@ export function AgentListPage() {
       setAgents(response.items);
       setTotalPages(response.total_pages);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load agents');
+      setError(err.response?.data?.error || t('agents.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this agent?')) {
+    if (!confirm(t('agents.confirmDelete'))) {
       return;
     }
 
@@ -58,7 +60,7 @@ export function AgentListPage() {
       await agentService.deleteAgent(id);
       await loadAgents();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete agent');
+      setError(err.response?.data?.error || t('agents.errors.deleteFailed'));
     }
   };
 
@@ -67,22 +69,22 @@ export function AgentListPage() {
       await agentService.copyAgent(id);
       await loadAgents();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to copy agent');
+      setError(err.response?.data?.error || t('agents.errors.copyFailed'));
     }
   };
 
   const handleEmploy = async (id: string) => {
     try {
       await agentService.employAgent(id);
-      alert('Agent employed successfully!');
+      alert(t('agents.employSuccess'));
       await loadAgents();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to employ agent');
+      setError(err.response?.data?.error || t('agents.errors.employFailed'));
     }
   };
 
   const handleFire = async (id: string) => {
-    if (!confirm('Are you sure you want to fire this agent?')) {
+    if (!confirm(t('agents.confirmFire'))) {
       return;
     }
 
@@ -90,7 +92,7 @@ export function AgentListPage() {
       await agentService.terminateEmployment(id);
       await loadAgents();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fire agent');
+      setError(err.response?.data?.error || t('agents.errors.fireFailed'));
     }
   };
 
@@ -116,13 +118,13 @@ export function AgentListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Agents</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('agents.title')}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage AI agents with custom capabilities and knowledge
+            {t('agents.description')}
           </p>
         </div>
         <Link to="/agents/new">
-          <Button>Create Agent</Button>
+          <Button>{t('agents.createAgent')}</Button>
         </Link>
       </div>
 
@@ -139,7 +141,7 @@ export function AgentListPage() {
               }
             `}
           >
-            Created
+            {t('agents.tabs.created')}
           </button>
           <button
             onClick={() => setActiveTab('employed')}
@@ -151,7 +153,7 @@ export function AgentListPage() {
               }
             `}
           >
-            Employed
+            {t('agents.tabs.employed')}
           </button>
           <button
             onClick={() => setActiveTab('visible')}
@@ -163,7 +165,7 @@ export function AgentListPage() {
               }
             `}
           >
-            Visible
+            {t('agents.tabs.visible')}
           </button>
         </nav>
       </div>
@@ -190,13 +192,13 @@ export function AgentListPage() {
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No agents</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('agents.noAgents')}</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new AI agent.
+              {t('agents.getStarted')}
             </p>
             <div className="mt-6">
               <Link to="/agents/new">
-                <Button>Create Agent</Button>
+                <Button>{t('agents.createAgent')}</Button>
               </Link>
             </div>
           </div>
@@ -259,7 +261,7 @@ export function AgentListPage() {
                       <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                         <Link to={`/agents/${agent.id}`} className="flex-1">
                           <Button variant="secondary" className="w-full">
-                            Edit
+                            {t('agents.actions.edit')}
                           </Button>
                         </Link>
                         <Button
@@ -267,7 +269,7 @@ export function AgentListPage() {
                           onClick={() => handleCopy(agent.id)}
                           className="flex-1"
                         >
-                          Copy
+                          {t('agents.actions.copy')}
                         </Button>
                       </div>
                       <div className="flex items-center gap-2">
@@ -276,7 +278,7 @@ export function AgentListPage() {
                           onClick={() => handleDelete(agent.id)}
                           className="w-full text-red-600 hover:text-red-700"
                         >
-                          Delete
+                          {t('agents.actions.delete')}
                         </Button>
                       </div>
                     </>
@@ -289,14 +291,14 @@ export function AgentListPage() {
                         onClick={() => handleTune(agent.id)}
                         className="flex-1"
                       >
-                        Tune
+                        {t('agents.actions.tune')}
                       </Button>
                       <Button
                         variant="secondary"
                         onClick={() => handleFire(agent.id)}
                         className="flex-1 text-red-600 hover:text-red-700"
                       >
-                        Fire
+                        {t('agents.actions.fire')}
                       </Button>
                     </div>
                   )}
@@ -308,14 +310,14 @@ export function AgentListPage() {
                         onClick={() => handleInterview(agent.id)}
                         className="flex-1"
                       >
-                        Interview
+                        {t('agents.actions.interview')}
                       </Button>
                       <Button
                         variant="secondary"
                         onClick={() => handleEmploy(agent.id)}
                         className="flex-1"
                       >
-                        Employ
+                        {t('agents.actions.employ')}
                       </Button>
                     </div>
                   )}
@@ -331,17 +333,17 @@ export function AgentListPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                Previous
+                {t('common.previous')}
               </Button>
               <span className="text-sm text-gray-600">
-                Page {page} of {totalPages}
+                {t('common.page')} {page} {t('common.of')} {totalPages}
               </span>
               <Button
                 variant="secondary"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
-                Next
+                {t('common.next')}
               </Button>
             </div>
           )}

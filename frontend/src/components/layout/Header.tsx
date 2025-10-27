@@ -1,15 +1,18 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { 
   UserCircleIcon, 
   ArrowRightOnRectangleIcon,
   Bars3Icon,
 } from '@heroicons/react/24/outline';
+import { LanguageSwitcher } from '../common';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
 
   const handleLogout = async () => {
@@ -27,7 +30,9 @@ export const Header: React.FC = () => {
 
           <div className="flex-1" />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            
             <Menu as="div" className="relative">
               <Menu.Button className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
                 <UserCircleIcon className="w-8 h-8 text-gray-600" />
@@ -61,7 +66,7 @@ export const Header: React.FC = () => {
                           } flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 rounded-md`}
                         >
                           <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                          Sign out
+                          {t('auth.logout')}
                         </button>
                       )}
                     </Menu.Item>

@@ -1,0 +1,80 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "of": "of",
+    "actions": "Actions",
+    "close": "Close",
+    "tenant": "Tenant"
+  },
+  "auth": {
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "username": "Username",
+    "password": "Password",
+    "signInToAccount": "Sign in to your account",
+    "agentPlatform": "Agent Platform",
+    "copyright": "© 2025 Agent Platform. All rights reserved."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "flows": "Flows",
+    "mcpTools": "MCP Tools",
+    "agents": "Agents",
+    "config": "Configuration",
+    "llmConfig": "LLM Config",
+    "vectorConfig": "Vector Config",
+    "audit": "Audit",
+    "auditLogs": "Audit Logs",
+    "executions": "Executions",
+    "sessions": "Sessions"
+  },
+  "agents": {
+    "title": "Agents",
+    "description": "Manage AI agents with custom capabilities and knowledge",
+    "createAgent": "Create Agent",
+    "noAgents": "No agents",
+    "getStarted": "Get started by creating a new AI agent.",
+    "tabs": {
+      "created": "Created",
+      "employed": "Employed",
+      "visible": "Visible"
+    },
+    "actions": {
+      "edit": "Edit",
+      "copy": "Copy",
+      "delete": "Delete",
+      "tune": "Tune",
+      "fire": "Fire",
+      "interview": "Interview",
+      "employ": "Employ"
+    },
+    "confirmDelete": "Are you sure you want to delete this agent?",
+    "confirmFire": "Are you sure you want to fire this agent?",
+    "employSuccess": "Agent employed successfully!",
+    "errors": {
+      "loadFailed": "Failed to load agents",
+      "deleteFailed": "Failed to delete agent",
+      "copyFailed": "Failed to copy agent",
+      "employFailed": "Failed to employ agent",
+      "fireFailed": "Failed to fire agent"
+    }
+  },
+  "language": {
+    "switch": "Switch Language",
+    "en": "English",
+    "zh": "中文"
+  }
+}

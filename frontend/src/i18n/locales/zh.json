@@ -1,0 +1,80 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "confirm": "确认",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "filter": "筛选",
+    "previous": "上一页",
+    "next": "下一页",
+    "page": "第",
+    "of": "页，共",
+    "actions": "操作",
+    "close": "关闭",
+    "tenant": "租户"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "退出登录",
+    "username": "用户名",
+    "password": "密码",
+    "signInToAccount": "登录您的账户",
+    "agentPlatform": "智能体平台",
+    "copyright": "© 2025 智能体平台。保留所有权利。"
+  },
+  "nav": {
+    "dashboard": "仪表板",
+    "flows": "工作流",
+    "mcpTools": "MCP 工具",
+    "agents": "智能体",
+    "config": "配置",
+    "llmConfig": "LLM 配置",
+    "vectorConfig": "向量配置",
+    "audit": "审计",
+    "auditLogs": "审计日志",
+    "executions": "执行记录",
+    "sessions": "会话记录"
+  },
+  "agents": {
+    "title": "智能体",
+    "description": "管理具有自定义能力和知识的 AI 智能体",
+    "createAgent": "创建智能体",
+    "noAgents": "暂无智能体",
+    "getStarted": "开始创建一个新的 AI 智能体。",
+    "tabs": {
+      "created": "已创建",
+      "employed": "已雇佣",
+      "visible": "可见"
+    },
+    "actions": {
+      "edit": "编辑",
+      "copy": "复制",
+      "delete": "删除",
+      "tune": "调优",
+      "fire": "解雇",
+      "interview": "面试",
+      "employ": "雇佣"
+    },
+    "confirmDelete": "确定要删除此智能体吗？",
+    "confirmFire": "确定要解雇此智能体吗？",
+    "employSuccess": "智能体雇佣成功！",
+    "errors": {
+      "loadFailed": "加载智能体失败",
+      "deleteFailed": "删除智能体失败",
+      "copyFailed": "复制智能体失败",
+      "employFailed": "雇佣智能体失败",
+      "fireFailed": "解雇智能体失败"
+    }
+  },
+  "language": {
+    "switch": "切换语言",
+    "en": "English",
+    "zh": "中文"
+  }
+}

@@ -5,3 +5,4 @@ export { Table } from './Table';
 export { Alert } from './Alert';
 export { Modal } from './Modal';
 export { Loader } from './Loader';
+export { LanguageSwitcher } from './LanguageSwitcher';
