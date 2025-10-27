@@ -51,6 +51,7 @@
     "tabs": {
       "created": "已创建",
       "employed": "已雇佣",
+      "allocated": "已分配",
       "visible": "可见"
     },
     "actions": {
@@ -59,12 +60,16 @@
       "delete": "删除",
       "tune": "调优",
       "fire": "解雇",
+      "unallocate": "取消分配",
       "interview": "面试",
-      "employ": "雇佣"
+      "employ": "雇佣",
+      "allocate": "分配"
     },
     "confirmDelete": "确定要删除此数字人吗？",
     "confirmFire": "确定要解雇此数字人吗？",
+    "confirmUnallocate": "确定要取消分配此数字人吗？",
     "employSuccess": "数字人雇佣成功！",
+    "allocateSuccess": "数字人分配成功！",
     "detail": {
       "createTitle": "创建数字人",
       "editTitle": "编辑数字人",
@@ -106,7 +111,9 @@
       "deleteFailed": "删除数字人失败",
       "copyFailed": "复制数字人失败",
       "employFailed": "雇佣数字人失败",
+      "allocateFailed": "分配数字人失败",
       "fireFailed": "解雇数字人失败",
+      "unallocateFailed": "取消分配数字人失败",
       "loadAgentFailed": "加载数字人失败",
       "saveFailed": "保存数字人失败",
       "updateKnowledgeBaseFailed": "更新知识库失败",

@@ -3,6 +3,7 @@
 // - CRUD operations
 // - Permission control (creator-only modifications)
 // - Employment relationship management
+// - Allocation relationship management
 // - Copy functionality
 // - Resource association management
 // - Pagination
@@ -95,10 +96,11 @@ mod test_helpers {
         pub async fn cleanup(&self) {
             // Clean up test data in reverse order of dependencies
             use agent_platform::infrastructure::database::entities::{
-                agent_employment, agent, user, tenant
+                agent_employment, agent_allocation, agent, user, tenant
             };
             
             let _ = agent_employment::Entity::delete_many().exec(self.db.get_connection()).await;
+            let _ = agent_allocation::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = agent::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = user::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = tenant::Entity::delete_many().exec(self.db.get_connection()).await;
@@ -543,6 +545,97 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
+    async fn test_agent_allocation_management() {
+        // Requirement 5.1, 5.2, 5.3, 5.4, 5.5: Test allocation relationships
+        let ctx = TestContext::setup().await;
+        let app = create_test_app(ctx.db.clone()).await;
+        let token1 = ctx.login(&ctx.username, "password123", &app).await;
+        let token2 = ctx.login(&ctx.username2, "password456", &app).await;
+
+        // User 1 creates an agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            "/api/agents",
+            Some(&token1),
+            Some(json!({
+                "name": "Allocatable Agent",
+                "system_prompt": "Ready to work",
+                "preset_questions": [],
+                "knowledge_base_ids": [],
+                "mcp_tool_ids": [],
+                "flow_ids": []
+            })),
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let agent_id = response["id"].as_str().unwrap();
+
+        // User 2 allocates the agent
+        let (status, _) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/allocate", agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+
+        // Verify allocation status in agent details
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            &format!("/api/agents/{}", agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["is_allocated"], true);
+
+        // List allocated agents for User 2
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            "/api/agents/allocated",
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(response["items"].is_array());
+        let items = response["items"].as_array().unwrap();
+        assert!(items.iter().any(|item| item["id"] == agent_id));
+
+        // User 2 terminates allocation
+        let (status, _) = make_request(
+            &app,
+            "DELETE",
+            &format!("/api/agents/{}/allocate", agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+
+        // Verify allocation is terminated
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            &format!("/api/agents/{}", agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["is_allocated"], false);
+
+        ctx.cleanup().await;
+    }
+
+    #[tokio::test]
+    #[ignore]
     async fn test_agent_list_pagination() {
         // Requirement 6.1, 6.2, 6.3, 6.4, 6.5: Test agent listing with pagination
         let ctx = TestContext::setup().await;
@@ -590,6 +683,7 @@ mod tests {
         assert!(first_item["system_prompt_preview"].is_string());
         assert!(first_item["creator_name"].is_string());
         assert!(first_item["is_employed"].is_boolean());
+        assert!(first_item["is_allocated"].is_boolean());
         assert!(first_item["is_creator"].is_boolean());
 
         // Test pagination - page 2
@@ -780,6 +874,7 @@ mod tests {
         assert!(response["creator"].is_object());
         assert_eq!(response["creator"]["id"], ctx.user_id.to_string());
         assert_eq!(response["is_employed"], false);
+        assert_eq!(response["is_allocated"], false);
         assert_eq!(response["is_creator"], true);
         assert!(response["created_at"].is_string());
         assert!(response["updated_at"].is_string());

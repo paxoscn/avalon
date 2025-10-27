@@ -5,7 +5,7 @@ import { agentService } from '../services/agent.service';
 import type { Agent } from '../types';
 import { Button, Card, Loader, Alert } from '../components/common';
 
-type TabType = 'created' | 'employed' | 'visible';
+type TabType = 'created' | 'employed' | 'allocated' | 'visible';
 
 export function AgentListPage() {
   const { t } = useTranslation();
@@ -36,6 +36,9 @@ export function AgentListPage() {
           break;
         case 'employed':
           response = await agentService.listEmployedAgents({ page, page_size: 12 });
+          break;
+        case 'allocated':
+          response = await agentService.listAllocatedAgents({ page, page_size: 12 });
           break;
         case 'visible':
           response = await agentService.listAgents({ page, page_size: 12 });
@@ -93,6 +96,29 @@ export function AgentListPage() {
       await loadAgents();
     } catch (err: any) {
       setError(err.response?.data?.error || t('agents.errors.fireFailed'));
+    }
+  };
+
+  const handleAllocate = async (id: string) => {
+    try {
+      await agentService.allocateAgent(id);
+      alert(t('agents.allocateSuccess'));
+      await loadAgents();
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.allocateFailed'));
+    }
+  };
+
+  const handleUnallocate = async (id: string) => {
+    if (!confirm(t('agents.confirmUnallocate'))) {
+      return;
+    }
+
+    try {
+      await agentService.terminateAllocation(id);
+      await loadAgents();
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.unallocateFailed'));
     }
   };
 
@@ -154,6 +180,18 @@ export function AgentListPage() {
             `}
           >
             {t('agents.tabs.employed')}
+          </button>
+          <button
+            onClick={() => setActiveTab('allocated')}
+            className={`
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+              ${activeTab === 'allocated'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            {t('agents.tabs.allocated')}
           </button>
           <button
             onClick={() => setActiveTab('visible')}
@@ -285,6 +323,36 @@ export function AgentListPage() {
                   )}
 
                   {activeTab === 'employed' && (
+                    <>
+                      <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleTune(agent.id)}
+                          className="flex-1"
+                        >
+                          {t('agents.actions.tune')}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleAllocate(agent.id)}
+                          className="flex-1"
+                        >
+                          {t('agents.actions.allocate')}
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleFire(agent.id)}
+                          className="flex-1 text-red-600 hover:text-red-700"
+                        >
+                          {t('agents.actions.fire')}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === 'allocated' && (
                     <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                       <Button
                         variant="secondary"
@@ -295,10 +363,10 @@ export function AgentListPage() {
                       </Button>
                       <Button
                         variant="secondary"
-                        onClick={() => handleFire(agent.id)}
+                        onClick={() => handleUnallocate(agent.id)}
                         className="flex-1 text-red-600 hover:text-red-700"
                       >
-                        {t('agents.actions.fire')}
+                        {t('agents.actions.unallocate')}
                       </Button>
                     </div>
                   )}

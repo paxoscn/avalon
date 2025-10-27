@@ -25,6 +25,7 @@ Infrastructure Layer (Database, Repositories Implementation)
    - `AgentId` 值对象：Agent唯一标识符
    - `AgentRepository` 接口：数据访问抽象
    - `AgentEmploymentRepository` 接口：雇佣关系数据访问
+   - `AgentAllocationRepository` 接口：分配关系数据访问
 
 2. **Infrastructure Layer**
    - 数据库实体映射
@@ -117,6 +118,27 @@ impl AgentEmployment {
 }
 ```
 
+#### AgentAllocation Entity
+
+```rust
+// src/domain/entities/agent_allocation.rs
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use crate::domain::value_objects::{AgentId, UserId};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentAllocation {
+    pub agent_id: AgentId,
+    pub user_id: UserId,
+    pub employed_at: DateTime<Utc>,
+}
+
+impl AgentAllocation {
+    pub fn new(agent_id: AgentId, user_id: UserId) -> Self;
+}
+```
+
 ### 2. Value Objects
 
 #### AgentId
@@ -170,6 +192,15 @@ pub trait AgentEmploymentRepository: Send + Sync {
     async fn employ(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
     async fn terminate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
     async fn is_employed(&self, agent_id: &AgentId, user_id: &UserId) -> Result<bool>;
+    async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>>;
+    async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>>;
+}
+
+#[async_trait]
+pub trait AgentAllocationRepository: Send + Sync {
+    async fn allocate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
+    async fn terminate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
+    async fn is_allocated(&self, agent_id: &AgentId, user_id: &UserId) -> Result<bool>;
     async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>>;
     async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>>;
 }
@@ -265,6 +296,42 @@ pub enum Relation {
 impl ActiveModelBehavior for ActiveModel {}
 ```
 
+```rust
+// src/infrastructure/database/entities/agent_allocation.rs
+
+use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[sea_orm(table_name = "agent_allocations")]
+pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub agent_id: Uuid,
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub user_id: Uuid,
+    pub allocated_at: DateTime<Utc>,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::agent::Entity",
+        from = "Column::AgentId",
+        to = "super::agent::Column::Id"
+    )]
+    Agent,
+    #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::UserId",
+        to = "super::user::Column::Id"
+    )]
+    User,
+}
+
+impl ActiveModelBehavior for ActiveModel {}
+```
+
 ### 5. Application Services
 
 ```rust
@@ -273,6 +340,7 @@ impl ActiveModelBehavior for ActiveModel {}
 pub struct AgentApplicationService {
     agent_repo: Arc<dyn AgentRepository>,
     employment_repo: Arc<dyn AgentEmploymentRepository>,
+    allocation_repo: Arc<dyn AgentAllocationRepository>,
     vector_config_repo: Arc<dyn VectorConfigRepository>,
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
     flow_repo: Arc<dyn FlowRepository>,
@@ -293,6 +361,11 @@ impl AgentApplicationService {
     pub async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
     pub async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
     pub async fn list_employed_agents(&self, user_id: UserId, pagination: PaginationParams) -> Result<PaginatedResponse<AgentCardDto>>;
+    
+    // Allocation operations
+    pub async fn allocate_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+    pub async fn terminate_allocation(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+    pub async fn list_allocated_agents(&self, user_id: UserId, pagination: PaginationParams) -> Result<PaginatedResponse<AgentCardDto>>;
     
     // Resource management
     pub async fn add_knowledge_base(&self, agent_id: AgentId, config_id: ConfigId, user_id: UserId) -> Result<()>;
@@ -353,6 +426,7 @@ pub struct AgentCardDto {
     pub system_prompt_preview: String,  // First 200 chars
     pub creator_name: String,
     pub is_employed: bool,
+    pub is_allocated: bool,
     pub is_creator: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -372,6 +446,7 @@ pub struct AgentDetailDto {
     pub source_agent: Option<AgentSourceDto>,
     pub creator: UserSummaryDto,
     pub is_employed: bool,
+    pub is_allocated: bool,
     pub is_creator: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -474,6 +549,24 @@ pub async fn list_employed_agents(
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<PaginatedResponse<AgentCardDto>>>;
 
+pub async fn allocate_agent(
+    State(service): State<Arc<AgentApplicationService>>,
+    Extension(user_id): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<StatusCode>;
+
+pub async fn terminate_allocation(
+    State(service): State<Arc<AgentApplicationService>>,
+    Extension(user_id): Extension<UserId>,
+    Path(agent_id): Path<Uuid>,
+) -> Result<StatusCode>;
+
+pub async fn list_allocated_agents(
+    State(service): State<Arc<AgentApplicationService>>,
+    Extension(user_id): Extension<UserId>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<PaginatedResponse<AgentCardDto>>>;
+
 // Resource management endpoints
 pub async fn add_knowledge_base(
     State(service): State<Arc<AgentApplicationService>>,
@@ -559,6 +652,21 @@ CREATE INDEX idx_agent_employments_user_id ON agent_employments(user_id);
 CREATE INDEX idx_agent_employments_agent_id ON agent_employments(agent_id);
 ```
 
+#### agent_allocations table
+
+```sql
+CREATE TABLE agent_allocations (
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    allocated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    PRIMARY KEY (agent_id, user_id)
+);
+
+CREATE INDEX idx_agent_allocations_user_id ON agent_allocations(user_id);
+CREATE INDEX idx_agent_allocations_agent_id ON agent_allocations(agent_id);
+```
+
 ## Error Handling
 
 ### Error Types
@@ -575,6 +683,8 @@ pub enum PlatformError {
     AgentValidationError(String),
     AgentAlreadyEmployed(String),
     AgentNotEmployed(String),
+    AgentAlreadyAllocated(String),
+    AgentNotAllocated(String),
     PresetQuestionsLimitExceeded,
 }
 ```
@@ -631,6 +741,10 @@ POST   /api/v1/agents/{id}/copy                 - 复制Agent
 POST   /api/v1/agents/{id}/employ               - 雇佣Agent
 DELETE /api/v1/agents/{id}/employ               - 终止雇佣
 GET    /api/v1/agents/employed                 - 列出已雇佣的Agents
+
+POST   /api/v1/agents/{id}/allocate               - 分配Agent
+DELETE /api/v1/agents/{id}/allocate               - 终止分配
+GET    /api/v1/agents/allocated                 - 列出已分配的Agents
 
 POST   /api/v1/agents/{id}/knowledge-bases/{config_id}   - 添加知识库
 DELETE /api/v1/agents/{id}/knowledge-bases/{config_id}   - 移除知识库

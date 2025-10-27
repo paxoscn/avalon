@@ -51,6 +51,7 @@
     "tabs": {
       "created": "Created",
       "employed": "Employed",
+      "allocated": "Allocated",
       "visible": "Visible"
     },
     "actions": {
@@ -59,12 +60,16 @@
       "delete": "Delete",
       "tune": "Tune",
       "fire": "Fire",
+      "unallocate": "Unallocate",
       "interview": "Interview",
-      "employ": "Employ"
+      "employ": "Employ",
+      "allocate": "Allocate"
     },
     "confirmDelete": "Are you sure you want to delete this agent?",
     "confirmFire": "Are you sure you want to fire this agent?",
+    "confirmUnallocate": "Are you sure you want to unallocate this agent?",
     "employSuccess": "Agent employed successfully!",
+    "allocateSuccess": "Agent allocated successfully!",
     "detail": {
       "createTitle": "Create Agent",
       "editTitle": "Edit Agent",
@@ -106,7 +111,9 @@
       "deleteFailed": "Failed to delete agent",
       "copyFailed": "Failed to copy agent",
       "employFailed": "Failed to employ agent",
+      "allocateFailed": "Failed to allocate agent",
       "fireFailed": "Failed to fire agent",
+      "unallocateFailed": "Failed to unallocated agent",
       "loadAgentFailed": "Failed to load agent",
       "saveFailed": "Failed to save agent",
       "updateKnowledgeBaseFailed": "Failed to update knowledge base",

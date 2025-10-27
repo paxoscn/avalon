@@ -150,6 +150,45 @@ pub async fn list_employed_agents(
 }
 
 // ============================================================================
+// Allocation Management Handlers
+// ============================================================================
+
+/// Allocate an agent
+pub async fn allocate_agent(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    service.allocate_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Terminate allocation with an agent
+pub async fn terminate_allocation(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    service.terminate_allocation(AgentId::from_uuid(agent_id), user.user_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// List allocated agents
+pub async fn list_allocated_agents(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Query(query): Query<AgentListQuery>,
+) -> Result<impl IntoResponse> {
+    let params = PaginationParams {
+        page: query.page,
+        limit: query.limit,
+    };
+
+    let response = service.list_allocated_agents(user.user_id, params).await?;
+    Ok(Json(response))
+}
+
+// ============================================================================
 // Resource Management Handlers - Knowledge Base
 // ============================================================================
 

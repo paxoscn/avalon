@@ -3,7 +3,7 @@ use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, QuerySe
 use std::sync::Arc;
 use chrono::Utc;
 use crate::domain::entities::Agent;
-use crate::domain::repositories::{AgentRepository, AgentEmploymentRepository};
+use crate::domain::repositories::{AgentRepository, AgentEmploymentRepository, AgentAllocationRepository};
 use crate::domain::value_objects::{AgentId, TenantId, UserId, ConfigId, MCPToolId, FlowId};
 use crate::infrastructure::database::entities;
 use crate::error::{Result, PlatformError};
@@ -133,6 +133,33 @@ impl AgentRepository for AgentRepositoryImpl {
         // Join with agent_employments table to find employed agents
         let agent_ids: Vec<uuid::Uuid> = entities::agent_employment::Entity::find()
             .filter(entities::agent_employment::Column::UserId.eq(user_id.0))
+            .all(self.db.as_ref())
+            .await?
+            .into_iter()
+            .map(|e| e.agent_id)
+            .collect();
+
+        if agent_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let agents = entities::agent::Entity::find()
+            .filter(entities::agent::Column::Id.is_in(agent_ids))
+            .order_by_desc(entities::agent::Column::CreatedAt)
+            .all(self.db.as_ref())
+            .await?;
+
+        let mut result = Vec::new();
+        for entity in agents {
+            result.push(Self::entity_to_domain(entity)?);
+        }
+        Ok(result)
+    }
+
+    async fn find_allocated_to_user(&self, user_id: &UserId) -> Result<Vec<Agent>> {
+        // Join with allocations table to find allocated agents
+        let agent_ids: Vec<uuid::Uuid> = entities::agent_allocation::Entity::find()
+            .filter(entities::agent_allocation::Column::UserId.eq(user_id.0))
             .all(self.db.as_ref())
             .await?
             .into_iter()
@@ -298,5 +325,88 @@ impl AgentEmploymentRepository for AgentEmploymentRepositoryImpl {
             .await?;
 
         Ok(employments.into_iter().map(|e| AgentId::from_uuid(e.agent_id)).collect())
+    }
+}
+pub struct AgentAllocationRepositoryImpl {
+    db: Arc<DatabaseConnection>,
+}
+
+impl AgentAllocationRepositoryImpl {
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+        Self { db }
+    }
+}
+
+#[async_trait]
+impl AgentAllocationRepository for AgentAllocationRepositoryImpl {
+    async fn allocate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()> {
+        // Check if allocation already exists
+        let existing = entities::agent_allocation::Entity::find()
+            .filter(entities::agent_allocation::Column::AgentId.eq(agent_id.0))
+            .filter(entities::agent_allocation::Column::UserId.eq(user_id.0))
+            .one(self.db.as_ref())
+            .await?;
+
+        if existing.is_some() {
+            return Err(PlatformError::AgentAlreadyAllocated(
+                format!("User {} has already been allocated agent {}", user_id.0, agent_id.0)
+            ));
+        }
+
+        let allocation = entities::agent_allocation::ActiveModel {
+            agent_id: Set(agent_id.0),
+            user_id: Set(user_id.0),
+            allocated_at: Set(Utc::now()),
+        };
+
+        entities::agent_allocation::Entity::insert(allocation)
+            .exec(self.db.as_ref())
+            .await?;
+
+        Ok(())
+    }
+
+    async fn terminate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()> {
+        let result = entities::agent_allocation::Entity::delete_many()
+            .filter(entities::agent_allocation::Column::AgentId.eq(agent_id.0))
+            .filter(entities::agent_allocation::Column::UserId.eq(user_id.0))
+            .exec(self.db.as_ref())
+            .await?;
+
+        if result.rows_affected == 0 {
+            return Err(PlatformError::AgentNotAllocated(
+                format!("User {} has not allocated agent {}", user_id.0, agent_id.0)
+            ));
+        }
+
+        Ok(())
+    }
+
+    async fn is_allocated(&self, agent_id: &AgentId, user_id: &UserId) -> Result<bool> {
+        let count = entities::agent_allocation::Entity::find()
+            .filter(entities::agent_allocation::Column::AgentId.eq(agent_id.0))
+            .filter(entities::agent_allocation::Column::UserId.eq(user_id.0))
+            .count(self.db.as_ref())
+            .await?;
+
+        Ok(count > 0)
+    }
+
+    async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>> {
+        let allocations = entities::agent_allocation::Entity::find()
+            .filter(entities::agent_allocation::Column::AgentId.eq(agent_id.0))
+            .all(self.db.as_ref())
+            .await?;
+
+        Ok(allocations.into_iter().map(|e| UserId::from_uuid(e.user_id)).collect())
+    }
+
+    async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>> {
+        let allocations = entities::agent_allocation::Entity::find()
+            .filter(entities::agent_allocation::Column::UserId.eq(user_id.0))
+            .all(self.db.as_ref())
+            .await?;
+
+        Ok(allocations.into_iter().map(|e| AgentId::from_uuid(e.agent_id)).collect())
     }
 }

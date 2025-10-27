@@ -54,6 +54,7 @@ pub struct AgentCardDto {
     pub system_prompt_preview: String,
     pub creator_name: String,
     pub is_employed: bool,
+    pub is_allocated: bool,
     pub is_creator: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -75,6 +76,7 @@ pub struct AgentDetailDto {
     pub source_agent: Option<AgentSourceDto>,
     pub creator: UserSummaryDto,
     pub is_employed: bool,
+    pub is_allocated: bool,
     pub is_creator: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -195,6 +197,7 @@ pub struct AgentListQuery {
     pub page: Option<u64>,
     pub limit: Option<u64>,
     pub employed_only: Option<bool>,
+    pub allocated_only: Option<bool>,
     pub search: Option<String>,
 }
 
@@ -204,6 +207,7 @@ impl Default for AgentListQuery {
             page: Some(1),
             limit: Some(20),
             employed_only: None,
+            allocated_only: None,
             search: None,
         }
     }

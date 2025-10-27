@@ -78,6 +78,19 @@ class AgentService {
     return response.data;
   }
 
+  async allocateAgent(id: string): Promise<void> {
+    await apiClient.post(`/agents/${id}/allocate`);
+  }
+
+  async terminateAllocation(id: string): Promise<void> {
+    await apiClient.delete(`/agents/${id}/allocate`);
+  }
+
+  async listAllocatedAgents(params?: ListAgentsParams): Promise<ListAgentsResponse> {
+    const response = await apiClient.get<ListAgentsResponse>('/agents/allocated', { params });
+    return response.data;
+  }
+
   async listCreatedAgents(params?: ListAgentsParams): Promise<ListAgentsResponse> {
     const response = await apiClient.get<ListAgentsResponse>('/agents/created', { params });
     return response.data;

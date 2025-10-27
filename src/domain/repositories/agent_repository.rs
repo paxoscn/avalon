@@ -18,6 +18,9 @@ pub trait AgentRepository: Send + Sync {
     /// Find agents employed by a specific user
     async fn find_employed_by_user(&self, user_id: &UserId) -> Result<Vec<Agent>>;
     
+    /// Find agents allocated to a specific user
+    async fn find_allocated_to_user(&self, user_id: &UserId) -> Result<Vec<Agent>>;
+    
     /// Save an agent (create or update)
     async fn save(&self, agent: &Agent) -> Result<()>;
     
@@ -52,5 +55,24 @@ pub trait AgentEmploymentRepository: Send + Sync {
     async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>>;
     
     /// Find all agents employed by a specific user
+    async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>>;
+}
+
+/// Agent allocation repository interface for managing allocation relationships
+#[async_trait]
+pub trait AgentAllocationRepository: Send + Sync {
+    /// Create an allocation relationship between a user and an agent
+    async fn allocate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
+    
+    /// Terminate an allocation relationship
+    async fn terminate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
+    
+    /// Check if a user has been allocated an agent
+    async fn is_allocated(&self, agent_id: &AgentId, user_id: &UserId) -> Result<bool>;
+    
+    /// Find all users who have been allocated a specific agent
+    async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>>;
+    
+    /// Find all agents allocated to a specific user
     async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>>;
 }

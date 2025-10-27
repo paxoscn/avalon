@@ -248,3 +248,11 @@ export interface AgentEmployment {
   tenant_id: string;
   employed_at: string;
 }
+
+export interface AgentAllocation {
+  id: string;
+  agent_id: string;
+  user_id: string;
+  tenant_id: string;
+  allocated_at: string;
+}

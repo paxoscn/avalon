@@ -72,6 +72,7 @@ impl Server {
         let execution_history_repository = Arc::new(ExecutionHistoryRepositoryImpl::new(self.database.connection()));
         let agent_repository = Arc::new(AgentRepositoryImpl::new(self.database.connection()));
         let agent_employment_repository = Arc::new(AgentEmploymentRepositoryImpl::new(self.database.connection()));
+        let agent_allocation_repository = Arc::new(AgentAllocationRepositoryImpl::new(self.database.connection()));
 
         let vector_store_registry = Arc::new(VectorStoreRegistry::new());
         let llm_provider_registry = Arc::new(LLMProviderRegistry::new());
@@ -161,6 +162,7 @@ impl Server {
         let agent_service: Arc<dyn AgentApplicationService> = Arc::new(AgentApplicationServiceImpl::new(
             agent_repository,
             agent_employment_repository,
+            agent_allocation_repository,
             vector_config_repository,
             mcp_tool_repository,
             flow_repository,

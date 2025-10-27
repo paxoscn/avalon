@@ -46,6 +46,12 @@ pub enum PlatformError {
     #[error("Agent not employed: {0}")]
     AgentNotEmployed(String),
     
+    #[error("Agent already allocated: {0}")]
+    AgentAlreadyAllocated(String),
+    
+    #[error("Agent not allocated: {0}")]
+    AgentNotAllocated(String),
+    
     #[error("Preset questions limit exceeded")]
     PresetQuestionsLimitExceeded,
     
@@ -110,6 +116,8 @@ impl IntoResponse for PlatformError {
             PlatformError::AgentValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             PlatformError::AgentAlreadyEmployed(_) => (StatusCode::CONFLICT, self.to_string()),
             PlatformError::AgentNotEmployed(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            PlatformError::AgentAlreadyAllocated(_) => (StatusCode::CONFLICT, self.to_string()),
+            PlatformError::AgentNotAllocated(_) => (StatusCode::NOT_FOUND, self.to_string()),
             PlatformError::PresetQuestionsLimitExceeded => (StatusCode::BAD_REQUEST, self.to_string()),
             // _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
             // FIXME For debugging only.
@@ -214,5 +222,25 @@ macro_rules! agent_not_employed {
     };
     ($fmt:expr, $($arg:tt)*) => {
         $crate::error::PlatformError::AgentNotEmployed(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_already_allocated {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentAlreadyAllocated($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentAlreadyAllocated(format!($fmt, $($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! agent_not_allocated {
+    ($msg:expr) => {
+        $crate::error::PlatformError::AgentNotAllocated($msg.to_string())
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::error::PlatformError::AgentNotAllocated(format!($fmt, $($arg)*))
     };
 }

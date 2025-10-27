@@ -24,6 +24,7 @@ impl MigratorTrait for Migrator {
             Box::new(migrations::m20231201_000014_create_agents::Migration),
             Box::new(migrations::m20231201_000015_create_agent_employments::Migration),
             Box::new(migrations::m20241027_000001_add_greeting_to_agents::Migration),
+            Box::new(migrations::m20241027_000002_create_agent_allocations::Migration),
         ]
     }
 }

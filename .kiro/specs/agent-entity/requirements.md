@@ -10,6 +10,7 @@
 - **Agent**: 数字人实体，代表一个可配置的AI助手
 - **Creator**: 创建者，创建Agent的用户
 - **Employment Relationship**: 雇佣关系，用户与Agent之间的多对多关联
+- **Allocation Relationship**: 分配关系，用户与Agent之间的多对多关联
 - **Source Agent**: 来源Agent，被复制的原始Agent
 - **Knowledge Base**: 知识库，Agent可访问的向量存储配置
 - **MCP Tool**: MCP工具，Agent可使用的工具配置
@@ -87,8 +88,10 @@
 1. THE Agent System SHALL provide an API endpoint that returns a list of Agents with pagination support
 2. THE Agent System SHALL include agent name, avatar, system_prompt preview, and creator information in the list response
 3. THE Agent System SHALL indicate whether the current user has employed each Agent in the list
-4. THE Agent System SHALL allow filtering Agents by employment status (employed by current user)
-5. THE Agent System SHALL return Agent data in a format suitable for card-style UI rendering
+4. THE Agent System SHALL indicate whether the current user has been allocated each Agent in the list
+5. THE Agent System SHALL allow filtering Agents by employment status (employed by current user)
+6. THE Agent System SHALL allow filtering Agents by allocation status (allocated to current user)
+7. THE Agent System SHALL return Agent data in a format suitable for card-style UI rendering
 
 ### Requirement 7
 
@@ -102,4 +105,16 @@
 4. THE Agent System SHALL include the full list of associated MCP tools with their configurations
 5. THE Agent System SHALL include the full list of associated Flows with their configurations
 6. IF the Agent has a source_agent_id, THE Agent System SHALL include source Agent reference information
-7. THE Agent System SHALL indicate whether the current user is the creator and whether they have employed the Agent
+7. THE Agent System SHALL indicate whether the current user is the creator, whether they have employed the Agent and whether they have been allocated the Agent
+
+### Requirement 8
+
+**User Story:** 作为用户，我希望能够分配Agent以便使用它们提供的服务
+
+#### Acceptance Criteria
+
+1. THE Agent System SHALL maintain a many-to-many allocation relationship between Users and Agents
+2. WHEN a user allocates an Agent, THE Agent System SHALL create an allocation record linking the user and Agent
+3. THE Agent System SHALL allow a user to be allocated multiple Agents
+4. THE Agent System SHALL allow an Agent to be allocated to multiple users
+5. WHEN a user terminates allocation, THE Agent System SHALL remove the allocation relationship record

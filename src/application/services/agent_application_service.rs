@@ -6,7 +6,7 @@ use crate::{
     domain::{
         entities::Agent,
         repositories::{
-            AgentEmploymentRepository, AgentRepository, FlowRepository, MCPToolRepository,
+            AgentEmploymentRepository, AgentAllocationRepository, AgentRepository, FlowRepository, MCPToolRepository,
             UserRepository, VectorConfigRepository,
         },
         value_objects::{AgentId, ConfigId, FlowId, MCPToolId, TenantId, UserId},
@@ -75,6 +75,19 @@ pub trait AgentApplicationService: Send + Sync {
         params: PaginationParams,
     ) -> Result<PaginatedResponse<AgentCardDto>>;
 
+    /// Allocate an agent
+    async fn allocate_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+
+    /// Terminate allocation
+    async fn terminate_allocation(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+
+    /// List allocated agents
+    async fn list_allocated_agents(
+        &self,
+        user_id: UserId,
+        params: PaginationParams,
+    ) -> Result<PaginatedResponse<AgentCardDto>>;
+
     /// Add knowledge base to agent
     async fn add_knowledge_base(
         &self,
@@ -118,6 +131,7 @@ pub trait AgentApplicationService: Send + Sync {
 pub struct AgentApplicationServiceImpl {
     agent_repo: Arc<dyn AgentRepository>,
     employment_repo: Arc<dyn AgentEmploymentRepository>,
+    allocation_repo: Arc<dyn AgentAllocationRepository>,
     vector_config_repo: Arc<dyn VectorConfigRepository>,
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
     flow_repo: Arc<dyn FlowRepository>,
@@ -128,6 +142,7 @@ impl AgentApplicationServiceImpl {
     pub fn new(
         agent_repo: Arc<dyn AgentRepository>,
         employment_repo: Arc<dyn AgentEmploymentRepository>,
+        allocation_repo: Arc<dyn AgentAllocationRepository>,
         vector_config_repo: Arc<dyn VectorConfigRepository>,
         mcp_tool_repo: Arc<dyn MCPToolRepository>,
         flow_repo: Arc<dyn FlowRepository>,
@@ -136,6 +151,7 @@ impl AgentApplicationServiceImpl {
         Self {
             agent_repo,
             employment_repo,
+            allocation_repo,
             vector_config_repo,
             mcp_tool_repo,
             flow_repo,
@@ -183,6 +199,9 @@ impl AgentApplicationServiceImpl {
         // Check if user has employed this agent
         let is_employed = self.employment_repo.is_employed(&agent.id, user_id).await?;
 
+        // Check if user has been allocated this agent
+        let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
+
         // Create preview of system prompt (first 200 characters)
         let system_prompt_preview = if agent.system_prompt.len() > 200 {
             format!("{}...", &agent.system_prompt[..200])
@@ -201,6 +220,7 @@ impl AgentApplicationServiceImpl {
                 .clone()
                 .unwrap_or(creator.username.0.clone()),
             is_employed,
+            is_allocated,
             is_creator: agent.is_creator(user_id),
             created_at: agent.created_at,
         })
@@ -268,6 +288,9 @@ impl AgentApplicationServiceImpl {
         // Check if user has employed this agent
         let is_employed = self.employment_repo.is_employed(&agent.id, user_id).await?;
 
+        // Check if user has been allocated this agent
+        let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
+
         Ok(AgentDetailDto {
             id: agent.id.0,
             tenant_id: agent.tenant_id.0,
@@ -287,6 +310,7 @@ impl AgentApplicationServiceImpl {
                 nickname: creator.nickname,
             },
             is_employed,
+            is_allocated,
             is_creator: agent.is_creator(user_id),
             created_at: agent.created_at,
             updated_at: agent.updated_at,
@@ -416,7 +440,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
 
-        // Delete agent (employment relationships will be cascade deleted by database)
+        // Delete agent (employment and allocation relationships will be cascade deleted by database)
         self.agent_repo.delete(&id).await?;
 
         Ok(())
@@ -551,6 +575,67 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     ) -> Result<PaginatedResponse<AgentCardDto>> {
         // Get all employed agents (no pagination at repository level for now)
         let agents = self.agent_repo.find_employed_by_user(&user_id).await?;
+
+        let total = agents.len() as u64;
+        let page = params.get_page();
+        let limit = params.get_limit();
+        let offset = params.get_offset() as usize;
+
+        // Apply pagination manually
+        let paginated_agents: Vec<_> = agents
+            .into_iter()
+            .skip(offset)
+            .take(limit as usize)
+            .collect();
+
+        // Convert to card DTOs
+        let mut cards = Vec::new();
+        for agent in paginated_agents {
+            cards.push(self.agent_to_card_dto(&agent, &user_id).await?);
+        }
+
+        Ok(PaginatedResponse::new(cards, total, page, limit))
+    }
+
+    async fn allocate_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+        // Verify agent exists
+        let _agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Create allocation relationship
+        self.allocation_repo.allocate(&agent_id, &user_id).await?;
+
+        Ok(())
+    }
+
+    async fn terminate_allocation(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+        // Verify agent exists
+        let _agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Terminate allocation relationship
+        self.allocation_repo.terminate(&agent_id, &user_id).await?;
+
+        Ok(())
+    }
+
+    async fn list_allocated_agents(
+        &self,
+        user_id: UserId,
+        params: PaginationParams,
+    ) -> Result<PaginatedResponse<AgentCardDto>> {
+        // Get all allocated agents (no pagination at repository level for now)
+        let agents = self.agent_repo.find_allocated_to_user(&user_id).await?;
 
         let total = agents.len() as u64;
         let page = params.get_page();
