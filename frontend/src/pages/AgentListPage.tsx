@@ -4,7 +4,10 @@ import { agentService } from '../services/agent.service';
 import type { Agent } from '../types';
 import { Button, Card, Loader, Alert } from '../components/common';
 
+type TabType = 'created' | 'employed' | 'visible';
+
 export function AgentListPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('created');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,14 +15,31 @@ export function AgentListPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
+  useEffect(() => {
     loadAgents();
-  }, [page]);
+  }, [page, activeTab]);
 
   const loadAgents = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await agentService.listAgents({ page, page_size: 12 });
+      let response;
+      
+      switch (activeTab) {
+        case 'created':
+          response = await agentService.listCreatedAgents({ page, page_size: 12 });
+          break;
+        case 'employed':
+          response = await agentService.listEmployedAgents({ page, page_size: 12 });
+          break;
+        case 'visible':
+          response = await agentService.listAgents({ page, page_size: 12 });
+          break;
+      }
+      
       setAgents(response.items);
       setTotalPages(response.total_pages);
     } catch (err: any) {
@@ -80,6 +100,48 @@ export function AgentListPage() {
         <Link to="/agents/new">
           <Button>Create Agent</Button>
         </Link>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('created')}
+            className={`
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+              ${activeTab === 'created'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            Created
+          </button>
+          <button
+            onClick={() => setActiveTab('employed')}
+            className={`
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+              ${activeTab === 'employed'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            Employed
+          </button>
+          <button
+            onClick={() => setActiveTab('visible')}
+            className={`
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+              ${activeTab === 'visible'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            Visible
+          </button>
+        </nav>
       </div>
 
       {error && (

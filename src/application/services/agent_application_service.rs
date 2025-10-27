@@ -1,35 +1,44 @@
-use std::sync::Arc;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use crate::{
+    application::dto::agent_dto::*,
     domain::{
         entities::Agent,
         repositories::{
-            AgentRepository, AgentEmploymentRepository, 
-            VectorConfigRepository, MCPToolRepository, FlowRepository,
-            UserRepository,
+            AgentEmploymentRepository, AgentRepository, FlowRepository, MCPToolRepository,
+            UserRepository, VectorConfigRepository,
         },
-        value_objects::{AgentId, TenantId, UserId, ConfigId, MCPToolId, FlowId},
+        value_objects::{AgentId, ConfigId, FlowId, MCPToolId, TenantId, UserId},
     },
-    application::dto::agent_dto::*,
-    error::{Result, PlatformError},
+    error::{PlatformError, Result},
 };
 
 /// Agent application service trait
 #[async_trait]
 pub trait AgentApplicationService: Send + Sync {
     /// Create a new agent
-    async fn create_agent(&self, dto: CreateAgentDto, tenant_id: TenantId, creator_id: UserId) -> Result<AgentDto>;
-    
+    async fn create_agent(
+        &self,
+        dto: CreateAgentDto,
+        tenant_id: TenantId,
+        creator_id: UserId,
+    ) -> Result<AgentDto>;
+
     /// Get agent by ID
     async fn get_agent(&self, id: AgentId, user_id: UserId) -> Result<AgentDetailDto>;
-    
+
     /// Update agent
-    async fn update_agent(&self, id: AgentId, dto: UpdateAgentDto, user_id: UserId) -> Result<AgentDto>;
-    
+    async fn update_agent(
+        &self,
+        id: AgentId,
+        dto: UpdateAgentDto,
+        user_id: UserId,
+    ) -> Result<AgentDto>;
+
     /// Delete agent
     async fn delete_agent(&self, id: AgentId, user_id: UserId) -> Result<()>;
-    
+
     /// List agents with pagination
     async fn list_agents(
         &self,
@@ -37,38 +46,70 @@ pub trait AgentApplicationService: Send + Sync {
         user_id: UserId,
         params: PaginationParams,
     ) -> Result<PaginatedResponse<AgentCardDto>>;
-    
+
+    /// List agents created by the user
+    async fn list_created_agents(
+        &self,
+        user_id: UserId,
+        params: PaginationParams,
+    ) -> Result<PaginatedResponse<AgentCardDto>>;
+
     /// Copy an agent
-    async fn copy_agent(&self, source_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<AgentDto>;
-    
+    async fn copy_agent(
+        &self,
+        source_id: AgentId,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<AgentDto>;
+
     /// Employ an agent
     async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
-    
+
     /// Terminate employment
     async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
-    
+
     /// List employed agents
     async fn list_employed_agents(
         &self,
         user_id: UserId,
         params: PaginationParams,
     ) -> Result<PaginatedResponse<AgentCardDto>>;
-    
+
     /// Add knowledge base to agent
-    async fn add_knowledge_base(&self, agent_id: AgentId, config_id: ConfigId, user_id: UserId) -> Result<()>;
-    
+    async fn add_knowledge_base(
+        &self,
+        agent_id: AgentId,
+        config_id: ConfigId,
+        user_id: UserId,
+    ) -> Result<()>;
+
     /// Remove knowledge base from agent
-    async fn remove_knowledge_base(&self, agent_id: AgentId, config_id: ConfigId, user_id: UserId) -> Result<()>;
-    
+    async fn remove_knowledge_base(
+        &self,
+        agent_id: AgentId,
+        config_id: ConfigId,
+        user_id: UserId,
+    ) -> Result<()>;
+
     /// Add MCP tool to agent
-    async fn add_mcp_tool(&self, agent_id: AgentId, tool_id: MCPToolId, user_id: UserId) -> Result<()>;
-    
+    async fn add_mcp_tool(
+        &self,
+        agent_id: AgentId,
+        tool_id: MCPToolId,
+        user_id: UserId,
+    ) -> Result<()>;
+
     /// Remove MCP tool from agent
-    async fn remove_mcp_tool(&self, agent_id: AgentId, tool_id: MCPToolId, user_id: UserId) -> Result<()>;
-    
+    async fn remove_mcp_tool(
+        &self,
+        agent_id: AgentId,
+        tool_id: MCPToolId,
+        user_id: UserId,
+    ) -> Result<()>;
+
     /// Add flow to agent
     async fn add_flow(&self, agent_id: AgentId, flow_id: FlowId, user_id: UserId) -> Result<()>;
-    
+
     /// Remove flow from agent
     async fn remove_flow(&self, agent_id: AgentId, flow_id: FlowId, user_id: UserId) -> Result<()>;
 }
@@ -106,7 +147,7 @@ impl AgentApplicationServiceImpl {
     async fn verify_can_modify(&self, agent: &Agent, user_id: &UserId) -> Result<()> {
         if !agent.can_modify(user_id) {
             return Err(PlatformError::AgentUnauthorized(
-                "Only the creator can modify this agent".to_string()
+                "Only the creator can modify this agent".to_string(),
             ));
         }
         Ok(())
@@ -132,7 +173,10 @@ impl AgentApplicationServiceImpl {
     /// Convert domain Agent to AgentCardDto
     async fn agent_to_card_dto(&self, agent: &Agent, user_id: &UserId) -> Result<AgentCardDto> {
         // Get creator information
-        let creator = self.user_repo.find_by_id(agent.creator_id).await?
+        let creator = self
+            .user_repo
+            .find_by_id(agent.creator_id)
+            .await?
             .ok_or_else(|| PlatformError::NotFound("Creator not found".to_string()))?;
 
         // Check if user has employed this agent
@@ -150,7 +194,10 @@ impl AgentApplicationServiceImpl {
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
             system_prompt_preview,
-            creator_name: creator.nickname.clone().unwrap_or(creator.username.0.clone()),
+            creator_name: creator
+                .nickname
+                .clone()
+                .unwrap_or(creator.username.0.clone()),
             is_employed,
             is_creator: agent.is_creator(user_id),
             created_at: agent.created_at,
@@ -160,7 +207,10 @@ impl AgentApplicationServiceImpl {
     /// Convert domain Agent to AgentDetailDto
     async fn agent_to_detail_dto(&self, agent: &Agent, user_id: &UserId) -> Result<AgentDetailDto> {
         // Get creator information
-        let creator = self.user_repo.find_by_id(agent.creator_id).await?
+        let creator = self
+            .user_repo
+            .find_by_id(agent.creator_id)
+            .await?
             .ok_or_else(|| PlatformError::NotFound("Creator not found".to_string()))?;
 
         // Get knowledge bases
@@ -243,21 +293,23 @@ impl AgentApplicationServiceImpl {
 
 #[async_trait]
 impl AgentApplicationService for AgentApplicationServiceImpl {
-    async fn create_agent(&self, dto: CreateAgentDto, tenant_id: TenantId, creator_id: UserId) -> Result<AgentDto> {
+    async fn create_agent(
+        &self,
+        dto: CreateAgentDto,
+        tenant_id: TenantId,
+        creator_id: UserId,
+    ) -> Result<AgentDto> {
         // Create agent entity
-        let mut agent = Agent::new(
-            tenant_id,
-            dto.name,
-            dto.system_prompt,
-            creator_id,
-        ).map_err(|e| PlatformError::AgentValidationError(e))?;
+        let mut agent = Agent::new(tenant_id, dto.name, dto.system_prompt, creator_id)
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
 
         // Set optional fields
         agent.update_avatar(dto.avatar);
         agent.update_additional_settings(dto.additional_settings);
-        
+
         if !dto.preset_questions.is_empty() {
-            agent.set_preset_questions(dto.preset_questions)
+            agent
+                .set_preset_questions(dto.preset_questions)
                 .map_err(|e| PlatformError::AgentValidationError(e))?;
         }
 
@@ -273,7 +325,8 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         }
 
         // Validate agent
-        agent.validate()
+        agent
+            .validate()
             .map_err(|e| PlatformError::AgentValidationError(e))?;
 
         // Save agent
@@ -283,14 +336,25 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn get_agent(&self, id: AgentId, user_id: UserId) -> Result<AgentDetailDto> {
-        let agent = self.agent_repo.find_by_id(&id).await?
+        let agent = self
+            .agent_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", id.0)))?;
 
         self.agent_to_detail_dto(&agent, &user_id).await
     }
 
-    async fn update_agent(&self, id: AgentId, dto: UpdateAgentDto, user_id: UserId) -> Result<AgentDto> {
-        let mut agent = self.agent_repo.find_by_id(&id).await?
+    async fn update_agent(
+        &self,
+        id: AgentId,
+        dto: UpdateAgentDto,
+        user_id: UserId,
+    ) -> Result<AgentDto> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", id.0)))?;
 
         // Verify permission
@@ -298,7 +362,8 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
         // Update fields
         if let Some(name) = dto.name {
-            agent.update_name(name)
+            agent
+                .update_name(name)
                 .map_err(|e| PlatformError::AgentValidationError(e))?;
         }
 
@@ -307,7 +372,8 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         }
 
         if let Some(system_prompt) = dto.system_prompt {
-            agent.update_system_prompt(system_prompt)
+            agent
+                .update_system_prompt(system_prompt)
                 .map_err(|e| PlatformError::AgentValidationError(e))?;
         }
 
@@ -316,12 +382,14 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         }
 
         if let Some(preset_questions) = dto.preset_questions {
-            agent.set_preset_questions(preset_questions)
+            agent
+                .set_preset_questions(preset_questions)
                 .map_err(|e| PlatformError::AgentValidationError(e))?;
         }
 
         // Validate agent
-        agent.validate()
+        agent
+            .validate()
             .map_err(|e| PlatformError::AgentValidationError(e))?;
 
         // Save agent
@@ -331,7 +399,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn delete_agent(&self, id: AgentId, user_id: UserId) -> Result<()> {
-        let agent = self.agent_repo.find_by_id(&id).await?
+        let agent = self
+            .agent_repo
+            .find_by_id(&id)
+            .await?
             .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", id.0)))?;
 
         // Verify permission
@@ -354,7 +425,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let offset = params.get_offset();
 
         // Get agents with pagination
-        let agents = self.agent_repo.find_by_tenant_paginated(&tenant_id, offset, limit).await?;
+        let agents = self
+            .agent_repo
+            .find_by_tenant_paginated(&tenant_id, offset, limit)
+            .await?;
         let total = self.agent_repo.count_by_tenant(&tenant_id).await?;
 
         // Convert to card DTOs
@@ -366,14 +440,53 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(PaginatedResponse::new(cards, total, page, limit))
     }
 
-    async fn copy_agent(&self, source_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<AgentDto> {
-        let source_agent = self.agent_repo.find_by_id(&source_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", source_id.0)))?;
+    async fn list_created_agents(
+        &self,
+        user_id: UserId,
+        params: PaginationParams,
+    ) -> Result<PaginatedResponse<AgentCardDto>> {
+        // Get all agents created by the user
+        let agents = self.agent_repo.find_by_creator(&user_id).await?;
+
+        let total = agents.len() as u64;
+        let page = params.get_page();
+        let limit = params.get_limit();
+        let offset = params.get_offset() as usize;
+
+        // Apply pagination manually
+        let paginated_agents: Vec<_> = agents
+            .into_iter()
+            .skip(offset)
+            .take(limit as usize)
+            .collect();
+
+        // Convert to card DTOs
+        let mut cards = Vec::new();
+        for agent in paginated_agents {
+            cards.push(self.agent_to_card_dto(&agent, &user_id).await?);
+        }
+
+        Ok(PaginatedResponse::new(cards, total, page, limit))
+    }
+
+    async fn copy_agent(
+        &self,
+        source_id: AgentId,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<AgentDto> {
+        let source_agent = self
+            .agent_repo
+            .find_by_id(&source_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", source_id.0))
+            })?;
 
         // Verify the source agent belongs to the same tenant
         if source_agent.tenant_id != tenant_id {
             return Err(PlatformError::AgentUnauthorized(
-                "Cannot copy agent from different tenant".to_string()
+                "Cannot copy agent from different tenant".to_string(),
             ));
         }
 
@@ -381,7 +494,8 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let copied_agent = source_agent.copy_from(user_id);
 
         // Validate the copied agent
-        copied_agent.validate()
+        copied_agent
+            .validate()
             .map_err(|e| PlatformError::AgentValidationError(e))?;
 
         // Save the copied agent
@@ -392,8 +506,13 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
     async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
         // Verify agent exists
-        let _agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+        let _agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Create employment relationship
         self.employment_repo.employ(&agent_id, &user_id).await?;
@@ -403,8 +522,13 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
     async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
         // Verify agent exists
-        let _agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+        let _agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Terminate employment relationship
         self.employment_repo.terminate(&agent_id, &user_id).await?;
@@ -419,14 +543,15 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     ) -> Result<PaginatedResponse<AgentCardDto>> {
         // Get all employed agents (no pagination at repository level for now)
         let agents = self.agent_repo.find_employed_by_user(&user_id).await?;
-        
+
         let total = agents.len() as u64;
         let page = params.get_page();
         let limit = params.get_limit();
         let offset = params.get_offset() as usize;
 
         // Apply pagination manually
-        let paginated_agents: Vec<_> = agents.into_iter()
+        let paginated_agents: Vec<_> = agents
+            .into_iter()
             .skip(offset)
             .take(limit as usize)
             .collect();
@@ -440,16 +565,31 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(PaginatedResponse::new(cards, total, page, limit))
     }
 
-    async fn add_knowledge_base(&self, agent_id: AgentId, config_id: ConfigId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+    async fn add_knowledge_base(
+        &self,
+        agent_id: AgentId,
+        config_id: ConfigId,
+        user_id: UserId,
+    ) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
 
         // Verify knowledge base exists
-        let _config = self.vector_config_repo.find_by_id(config_id).await?
-            .ok_or_else(|| PlatformError::NotFound(format!("Knowledge base {} not found", config_id.0)))?;
+        let _config = self
+            .vector_config_repo
+            .find_by_id(config_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::NotFound(format!("Knowledge base {} not found", config_id.0))
+            })?;
 
         // Add knowledge base
         agent.add_knowledge_base(config_id);
@@ -460,9 +600,19 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(())
     }
 
-    async fn remove_knowledge_base(&self, agent_id: AgentId, config_id: ConfigId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+    async fn remove_knowledge_base(
+        &self,
+        agent_id: AgentId,
+        config_id: ConfigId,
+        user_id: UserId,
+    ) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
@@ -476,15 +626,28 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(())
     }
 
-    async fn add_mcp_tool(&self, agent_id: AgentId, tool_id: MCPToolId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+    async fn add_mcp_tool(
+        &self,
+        agent_id: AgentId,
+        tool_id: MCPToolId,
+        user_id: UserId,
+    ) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
 
         // Verify MCP tool exists
-        let _tool = self.mcp_tool_repo.find_by_id(tool_id).await?
+        let _tool = self
+            .mcp_tool_repo
+            .find_by_id(tool_id)
+            .await?
             .ok_or_else(|| PlatformError::NotFound(format!("MCP tool {} not found", tool_id.0)))?;
 
         // Add MCP tool
@@ -496,9 +659,19 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(())
     }
 
-    async fn remove_mcp_tool(&self, agent_id: AgentId, tool_id: MCPToolId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+    async fn remove_mcp_tool(
+        &self,
+        agent_id: AgentId,
+        tool_id: MCPToolId,
+        user_id: UserId,
+    ) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
@@ -513,14 +686,22 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn add_flow(&self, agent_id: AgentId, flow_id: FlowId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;
 
         // Verify flow exists
-        let _flow = self.flow_repo.find_by_id(&flow_id).await?
+        let _flow = self
+            .flow_repo
+            .find_by_id(&flow_id)
+            .await?
             .ok_or_else(|| PlatformError::NotFound(format!("Flow {} not found", flow_id.0)))?;
 
         // Add flow
@@ -533,8 +714,13 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn remove_flow(&self, agent_id: AgentId, flow_id: FlowId, user_id: UserId) -> Result<()> {
-        let mut agent = self.agent_repo.find_by_id(&agent_id).await?
-            .ok_or_else(|| PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0)))?;
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
 
         // Verify permission
         self.verify_can_modify(&agent, &user_id).await?;

@@ -26,6 +26,7 @@ pub fn agent_routes(service: Arc<dyn AgentApplicationService>) -> Router {
         .route("/agents/{agent_id}/employ", post(agent_handlers::employ_agent))
         .route("/agents/{agent_id}/employ", delete(agent_handlers::terminate_employment))
         .route("/agents/employed", get(agent_handlers::list_employed_agents))
+        .route("/agents/created", get(agent_handlers::list_created_agents))
         
         // Resource management - Knowledge Base
         .route(

@@ -77,6 +77,21 @@ pub async fn list_agents(
     Ok(Json(response))
 }
 
+/// List agents created by the user
+pub async fn list_created_agents(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Query(query): Query<AgentListQuery>,
+) -> Result<impl IntoResponse> {
+    let params = PaginationParams {
+        page: query.page,
+        limit: query.limit,
+    };
+
+    let response = service.list_created_agents(user.user_id, params).await?;
+    Ok(Json(response))
+}
+
 // ============================================================================
 // Copy Handler
 // ============================================================================

@@ -71,9 +71,14 @@ class AgentService {
     await apiClient.delete(`/agents/${id}/employ`);
   }
 
-  async listEmployedAgents(): Promise<Agent[]> {
-    const response = await apiClient.get<{ data: Agent[] }>('/agents/employed');
-    return response.data.data;
+  async listEmployedAgents(params?: ListAgentsParams): Promise<ListAgentsResponse> {
+    const response = await apiClient.get<ListAgentsResponse>('/agents/employed', { params });
+    return response.data;
+  }
+
+  async listCreatedAgents(params?: ListAgentsParams): Promise<ListAgentsResponse> {
+    const response = await apiClient.get<ListAgentsResponse>('/agents/created', { params });
+    return response.data;
   }
 
   async addKnowledgeBase(agentId: string, configId: string): Promise<void> {
