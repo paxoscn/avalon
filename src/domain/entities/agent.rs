@@ -1,6 +1,6 @@
+use crate::domain::value_objects::{AgentId, ConfigId, FlowId, MCPToolId, TenantId, UserId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::domain::value_objects::{AgentId, TenantId, UserId, ConfigId, MCPToolId, FlowId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Agent {
@@ -8,6 +8,7 @@ pub struct Agent {
     pub tenant_id: TenantId,
     pub name: String,
     pub avatar: Option<String>,
+    pub greeting: Option<String>,
     pub knowledge_base_ids: Vec<ConfigId>,
     pub mcp_tool_ids: Vec<MCPToolId>,
     pub flow_ids: Vec<FlowId>,
@@ -47,6 +48,7 @@ impl Agent {
             tenant_id,
             name,
             avatar: None,
+            greeting: None,
             knowledge_base_ids: Vec::new(),
             mcp_tool_ids: Vec::new(),
             flow_ids: Vec::new(),
@@ -75,6 +77,11 @@ impl Agent {
 
     pub fn update_avatar(&mut self, avatar: Option<String>) {
         self.avatar = avatar;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn update_greeting(&mut self, greeting: Option<String>) {
+        self.greeting = greeting;
         self.updated_at = Utc::now();
     }
 
@@ -111,7 +118,11 @@ impl Agent {
     }
 
     pub fn remove_knowledge_base(&mut self, config_id: &ConfigId) {
-        if let Some(pos) = self.knowledge_base_ids.iter().position(|id| id == config_id) {
+        if let Some(pos) = self
+            .knowledge_base_ids
+            .iter()
+            .position(|id| id == config_id)
+        {
             self.knowledge_base_ids.remove(pos);
             self.updated_at = Utc::now();
         }
@@ -155,12 +166,13 @@ impl Agent {
 
     pub fn copy_from(&self, new_creator_id: UserId) -> Self {
         let now = Utc::now();
-        
+
         Agent {
             id: AgentId::new(),
             tenant_id: self.tenant_id,
             name: self.name.clone(),
             avatar: self.avatar.clone(),
+            greeting: self.greeting.clone(),
             knowledge_base_ids: self.knowledge_base_ids.clone(),
             mcp_tool_ids: self.mcp_tool_ids.clone(),
             flow_ids: self.flow_ids.clone(),

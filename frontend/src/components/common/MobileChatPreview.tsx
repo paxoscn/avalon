@@ -10,6 +10,7 @@ export interface ChatMessage {
 export interface MobileChatPreviewProps {
   agentName: string;
   agentAvatar?: string;
+  greeting?: string;
   systemPrompt?: string;
   presetQuestions?: string[];
   onSendMessage?: (message: string) => Promise<string>;
@@ -19,6 +20,7 @@ export interface MobileChatPreviewProps {
 export function MobileChatPreview({
   agentName,
   agentAvatar,
+  greeting,
   systemPrompt,
   presetQuestions = [],
   onSendMessage,
@@ -154,7 +156,7 @@ export function MobileChatPreview({
             </div>
             <h4 className="text-lg font-semibold text-gray-900 mb-2">开始对话</h4>
             <p className="text-sm text-gray-500 mb-4">
-              {systemPrompt || `我是 ${agentName}，很高兴为您服务`}
+              {greeting || systemPrompt || `我是 ${agentName}，很高兴为您服务`}
             </p>
             {filteredPresetQuestions.length > 0 && (
               <div className="space-y-2">

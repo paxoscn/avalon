@@ -160,6 +160,7 @@ impl AgentApplicationServiceImpl {
             tenant_id: agent.tenant_id.0,
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
+            greeting: agent.greeting.clone(),
             system_prompt: agent.system_prompt.clone(),
             additional_settings: agent.additional_settings.clone(),
             preset_questions: agent.preset_questions.clone(),
@@ -193,6 +194,7 @@ impl AgentApplicationServiceImpl {
             id: agent.id.0,
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
+            greeting: agent.greeting.clone(),
             system_prompt_preview,
             creator_name: creator
                 .nickname
@@ -271,6 +273,7 @@ impl AgentApplicationServiceImpl {
             tenant_id: agent.tenant_id.0,
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
+            greeting: agent.greeting.clone(),
             knowledge_bases,
             mcp_tools,
             flows,
@@ -305,6 +308,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
         // Set optional fields
         agent.update_avatar(dto.avatar);
+        agent.update_greeting(dto.greeting);
         agent.update_additional_settings(dto.additional_settings);
 
         if !dto.preset_questions.is_empty() {
@@ -369,6 +373,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
         if let Some(avatar) = dto.avatar {
             agent.update_avatar(Some(avatar));
+        }
+
+        if let Some(greeting) = dto.greeting {
+            agent.update_greeting(Some(greeting));
         }
 
         if let Some(system_prompt) = dto.system_prompt {

@@ -14,7 +14,7 @@ export function AgentDetailPage() {
   const { t } = useTranslation();
   const isNew = id === 'new';
 
-  const [agent, setAgent] = useState<Agent | null>(null);
+  const [, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +27,7 @@ export function AgentDetailPage() {
   const [formData, setFormData] = useState({
     name: '',
     avatar: '',
+    greeting: '',
     systemPrompt: '',
     additionalSettings: '',
     presetQuestions: ['', '', ''],
@@ -51,6 +52,7 @@ export function AgentDetailPage() {
       setFormData({
         name: data.name,
         avatar: data.avatar || '',
+        greeting: data.greeting || '',
         systemPrompt: data.system_prompt,
         additionalSettings: data.additional_settings || '',
         presetQuestions: [
@@ -96,6 +98,7 @@ export function AgentDetailPage() {
         const request: CreateAgentRequest = {
           name: formData.name,
           avatar: formData.avatar || undefined,
+          greeting: formData.greeting || undefined,
           system_prompt: formData.systemPrompt,
           additional_settings: formData.additionalSettings || undefined,
           preset_questions: presetQuestions,
@@ -110,6 +113,7 @@ export function AgentDetailPage() {
         const request: UpdateAgentRequest = {
           name: formData.name,
           avatar: formData.avatar || undefined,
+          greeting: formData.greeting || undefined,
           system_prompt: formData.systemPrompt,
           additional_settings: formData.additionalSettings || undefined,
           preset_questions: presetQuestions,
@@ -247,6 +251,20 @@ export function AgentDetailPage() {
               onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
               placeholder={t('agents.detail.avatarUrlPlaceholder')}
             />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agents.detail.greeting')}
+              </label>
+              <textarea
+                value={formData.greeting}
+                onChange={(e) => setFormData({ ...formData, greeting: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={t('agents.detail.greetingPlaceholder')}
+              />
+              <p className="mt-1 text-xs text-gray-500">{t('agents.detail.greetingDescription')}</p>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -405,8 +423,10 @@ export function AgentDetailPage() {
         <MobileChatPreview
           agentName={formData.name || t('agents.detail.defaultAgentName')}
           agentAvatar={formData.avatar}
+          greeting={formData.greeting}
           systemPrompt={formData.systemPrompt}
           presetQuestions={formData.presetQuestions}
+          className="h-[700px]"
         />
       </div>
     </div>

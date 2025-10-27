@@ -1,9 +1,10 @@
 import { apiClient } from './api';
-import type { Agent, AgentEmployment } from '../types';
+import type { Agent } from '../types';
 
 export interface CreateAgentRequest {
   name: string;
   avatar?: string;
+  greeting?: string;
   system_prompt: string;
   additional_settings?: string;
   preset_questions?: string[];
@@ -15,6 +16,7 @@ export interface CreateAgentRequest {
 export interface UpdateAgentRequest {
   name?: string;
   avatar?: string;
+  greeting?: string;
   system_prompt?: string;
   additional_settings?: string;
   preset_questions?: string[];

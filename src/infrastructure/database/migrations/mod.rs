@@ -13,3 +13,4 @@ pub mod m20231201_000012_create_audit_logs;
 pub mod m20231201_000013_create_execution_steps;
 pub mod m20231201_000014_create_agents;
 pub mod m20231201_000015_create_agent_employments;
+pub mod m20241027_000001_add_greeting_to_agents;

@@ -228,6 +228,7 @@ export interface Agent {
   tenant_id: string;
   name: string;
   avatar?: string;
+  greeting?: string;
   knowledge_base_ids: string[];
   mcp_tool_ids: string[];
   flow_ids: string[];

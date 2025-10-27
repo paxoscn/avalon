@@ -10,6 +10,7 @@ pub struct Model {
     pub tenant_id: Uuid,
     pub name: String,
     pub avatar: Option<String>,
+    pub greeting: Option<String>,
     pub knowledge_base_ids: Json,
     pub mcp_tool_ids: Json,
     pub flow_ids: Json,
