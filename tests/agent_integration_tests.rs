@@ -96,10 +96,9 @@ mod test_helpers {
         pub async fn cleanup(&self) {
             // Clean up test data in reverse order of dependencies
             use agent_platform::infrastructure::database::entities::{
-                agent_employment, agent_allocation, agent, user, tenant
+                agent_allocation, agent, user, tenant
             };
             
-            let _ = agent_employment::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = agent_allocation::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = agent::Entity::delete_many().exec(self.db.get_connection()).await;
             let _ = user::Entity::delete_many().exec(self.db.get_connection()).await;
@@ -455,7 +454,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_agent_employment_management() {
-        // Requirement 5.1, 5.2, 5.3, 5.4, 5.5: Test employment relationships
+        // Requirement 5.1, 5.2, 5.3, 5.4, 5.5, 5.6: Test employment relationships (copy-based model)
         let ctx = TestContext::setup().await;
         let app = create_test_app(ctx.db.clone()).await;
         let token1 = ctx.login(&ctx.username, "password123", &app).await;
@@ -478,30 +477,43 @@ mod tests {
         ).await;
 
         assert_eq!(status, StatusCode::CREATED);
-        let agent_id = response["id"].as_str().unwrap();
+        let original_agent_id = response["id"].as_str().unwrap().to_string();
 
-        // User 2 employs the agent
-        let (status, _) = make_request(
+        // User 2 employs the agent (creates a copy)
+        let (status, response) = make_request(
             &app,
             "POST",
-            &format!("/api/agents/{}/employ", agent_id),
+            &format!("/api/agents/{}/employ", original_agent_id),
             Some(&token2),
             None,
         ).await;
 
-        assert_eq!(status, StatusCode::OK);
+        assert_eq!(status, StatusCode::CREATED);
+        
+        // Verify a new agent copy was created
+        let employed_agent_id = response["id"].as_str().unwrap().to_string();
+        assert_ne!(employed_agent_id, original_agent_id, "Employed agent should be a new copy");
+        
+        // Verify the copy has correct employer_id
+        assert_eq!(response["employer_id"], ctx.user2_id.to_string());
+        assert_eq!(response["name"], "Employable Agent");
+        assert_eq!(response["system_prompt"], "Ready to work");
+        assert_eq!(response["creator_id"], ctx.user_id.to_string(), "Creator should remain original user");
+        assert_eq!(response["source_agent_id"], original_agent_id);
 
-        // Verify employment status in agent details
+        // Verify employment status in agent details for User 2
         let (status, response) = make_request(
             &app,
             "GET",
-            &format!("/api/agents/{}", agent_id),
+            &format!("/api/agents/{}", employed_agent_id),
             Some(&token2),
             None,
         ).await;
 
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(response["is_employed"], true);
+        assert_eq!(response["is_employer"], true, "User 2 should be the employer");
+        assert_eq!(response["is_creator"], false, "User 2 is not the creator");
+        assert!(response["fired_at"].is_null(), "Agent should not be fired");
 
         // List employed agents for User 2
         let (status, response) = make_request(
@@ -515,30 +527,278 @@ mod tests {
         assert_eq!(status, StatusCode::OK);
         assert!(response["items"].is_array());
         let items = response["items"].as_array().unwrap();
-        assert!(items.iter().any(|item| item["id"] == agent_id));
+        assert!(items.iter().any(|item| item["id"] == employed_agent_id));
+        assert_eq!(items.len(), 1, "User 2 should have exactly 1 employed agent");
 
-        // User 2 terminates employment
-        let (status, _) = make_request(
-            &app,
-            "DELETE",
-            &format!("/api/agents/{}/employ", agent_id),
-            Some(&token2),
-            None,
-        ).await;
-
-        assert_eq!(status, StatusCode::OK);
-
-        // Verify employment is terminated
+        // Original agent should still exist and be unaffected
         let (status, response) = make_request(
             &app,
             "GET",
-            &format!("/api/agents/{}", agent_id),
+            &format!("/api/agents/{}", original_agent_id),
+            Some(&token1),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(response["employer_id"].is_null(), "Original agent should have no employer");
+
+        ctx.cleanup().await;
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_agent_fire_operation() {
+        // Requirement 5.5, 5.6: Test firing agents
+        let ctx = TestContext::setup().await;
+        let app = create_test_app(ctx.db.clone()).await;
+        let token1 = ctx.login(&ctx.username, "password123", &app).await;
+        let token2 = ctx.login(&ctx.username2, "password456", &app).await;
+
+        // User 1 creates an agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            "/api/agents",
+            Some(&token1),
+            Some(json!({
+                "name": "Fireable Agent",
+                "system_prompt": "Can be fired",
+                "preset_questions": [],
+                "knowledge_base_ids": [],
+                "mcp_tool_ids": [],
+                "flow_ids": []
+            })),
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let original_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // User 2 employs the agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/employ", original_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let employed_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // User 2 fires the agent
+        let (status, _) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/fire", employed_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::NO_CONTENT);
+
+        // Verify agent is fired
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            &format!("/api/agents/{}", employed_agent_id),
             Some(&token2),
             None,
         ).await;
 
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(response["is_employed"], false);
+        assert_eq!(response["is_fired"], true);
+        assert!(!response["fired_at"].is_null(), "fired_at timestamp should be set");
+        assert_eq!(response["is_employer"], true, "User 2 should still be the employer");
+
+        // Verify fired agent is preserved in database
+        assert_eq!(response["id"], employed_agent_id);
+        assert_eq!(response["name"], "Fireable Agent");
+
+        ctx.cleanup().await;
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_agent_fire_permission() {
+        // Requirement 5.5: Test that only employer can fire an agent
+        let ctx = TestContext::setup().await;
+        let app = create_test_app(ctx.db.clone()).await;
+        let token1 = ctx.login(&ctx.username, "password123", &app).await;
+        let token2 = ctx.login(&ctx.username2, "password456", &app).await;
+
+        // User 1 creates an agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            "/api/agents",
+            Some(&token1),
+            Some(json!({
+                "name": "Protected Agent",
+                "system_prompt": "Only employer can fire",
+                "preset_questions": [],
+                "knowledge_base_ids": [],
+                "mcp_tool_ids": [],
+                "flow_ids": []
+            })),
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let original_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // User 2 employs the agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/employ", original_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let employed_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // User 1 (creator but not employer) tries to fire the agent
+        let (status, _) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/fire", employed_agent_id),
+            Some(&token1),
+            None,
+        ).await;
+
+        assert!(status == StatusCode::FORBIDDEN || status == StatusCode::UNAUTHORIZED,
+                "Non-employer should not be able to fire agent");
+
+        // Verify agent is not fired
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            &format!("/api/agents/{}", employed_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["is_fired"], false);
+        assert!(response["fired_at"].is_null());
+
+        // User 2 (employer) can fire the agent
+        let (status, _) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/fire", employed_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::NO_CONTENT);
+
+        // Verify agent is now fired
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            &format!("/api/agents/{}", employed_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["is_fired"], true);
+
+        ctx.cleanup().await;
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_agent_list_excludes_fired() {
+        // Requirement 6.7: Test that fired agents are excluded from default list view
+        let ctx = TestContext::setup().await;
+        let app = create_test_app(ctx.db.clone()).await;
+        let token1 = ctx.login(&ctx.username, "password123", &app).await;
+        let token2 = ctx.login(&ctx.username2, "password456", &app).await;
+
+        // User 1 creates an agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            "/api/agents",
+            Some(&token1),
+            Some(json!({
+                "name": "Agent to Fire",
+                "system_prompt": "Will be fired",
+                "preset_questions": [],
+                "knowledge_base_ids": [],
+                "mcp_tool_ids": [],
+                "flow_ids": []
+            })),
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let original_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // User 2 employs the agent
+        let (status, response) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/employ", original_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::CREATED);
+        let employed_agent_id = response["id"].as_str().unwrap().to_string();
+
+        // List employed agents before firing
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            "/api/agents/employed",
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        let items_before = response["items"].as_array().unwrap();
+        assert!(items_before.iter().any(|item| item["id"] == employed_agent_id));
+
+        // Fire the agent
+        let (status, _) = make_request(
+            &app,
+            "POST",
+            &format!("/api/agents/{}/fire", employed_agent_id),
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::NO_CONTENT);
+
+        // List employed agents after firing (default should exclude fired)
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            "/api/agents/employed",
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        let items_after = response["items"].as_array().unwrap();
+        assert!(!items_after.iter().any(|item| item["id"] == employed_agent_id),
+                "Fired agent should not appear in default list");
+
+        // List with include_fired=true should show fired agents
+        let (status, response) = make_request(
+            &app,
+            "GET",
+            "/api/agents/employed?include_fired=true",
+            Some(&token2),
+            None,
+        ).await;
+
+        assert_eq!(status, StatusCode::OK);
+        let items_with_fired = response["items"].as_array().unwrap();
+        assert!(items_with_fired.iter().any(|item| item["id"] == employed_agent_id),
+                "Fired agent should appear when include_fired=true");
 
         ctx.cleanup().await;
     }
@@ -682,9 +942,10 @@ mod tests {
         assert!(first_item["name"].is_string());
         assert!(first_item["system_prompt_preview"].is_string());
         assert!(first_item["creator_name"].is_string());
-        assert!(first_item["is_employed"].is_boolean());
+        assert!(first_item["is_employer"].is_boolean());
         assert!(first_item["is_allocated"].is_boolean());
         assert!(first_item["is_creator"].is_boolean());
+        assert!(first_item["is_fired"].is_boolean());
 
         // Test pagination - page 2
         let (status, response) = make_request(
@@ -873,9 +1134,11 @@ mod tests {
         assert_eq!(response["preset_questions"].as_array().unwrap().len(), 2);
         assert!(response["creator"].is_object());
         assert_eq!(response["creator"]["id"], ctx.user_id.to_string());
-        assert_eq!(response["is_employed"], false);
+        assert_eq!(response["is_employer"], false);
         assert_eq!(response["is_allocated"], false);
         assert_eq!(response["is_creator"], true);
+        assert_eq!(response["is_fired"], false);
+        assert!(response["fired_at"].is_null());
         assert!(response["created_at"].is_string());
         assert!(response["updated_at"].is_string());
 

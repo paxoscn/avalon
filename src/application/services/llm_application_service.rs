@@ -428,7 +428,7 @@ mod tests {
             .times(1)
             .returning(|_| Ok(15));
 
-        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new())));
         let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
 
         let service = LLMApplicationServiceImpl::new(
@@ -466,7 +466,7 @@ mod tests {
             .times(1)
             .returning(|_| Ok(50));
 
-        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new())));
         let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
 
         let service = LLMApplicationServiceImpl::new(
@@ -499,7 +499,7 @@ mod tests {
             .times(1)
             .returning(|_| Ok(33));
 
-        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new());
+        let llm_domain_service = Arc::new(crate::domain::services::llm_service::LLMDomainServiceImpl::new(Arc::new(LLMProviderRegistry::new())));
         let provider_registry = Arc::new(crate::infrastructure::llm::LLMProviderRegistry::new());
 
         let service = LLMApplicationServiceImpl::new(

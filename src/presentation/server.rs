@@ -3,14 +3,10 @@ use crate::{
     config::AppConfig,
     domain::services::*,
     error::Result,
-    infrastructure::{llm::LLMProviderRegistry, mcp::{proxy_service, MCPProxyServiceImpl}, repositories::*, vector::VectorStoreRegistry, Database, RedisCache},
+    infrastructure::{llm::LLMProviderRegistry, mcp::MCPProxyServiceImpl, repositories::*, vector::VectorStoreRegistry, Database, RedisCache},
     presentation::{
         routes::{
             agent_routes, audit_routes, create_app_router, create_mcp_api_routes, execution_history_routes, flow_routes, llm_config_routes, session_routes, vector_config_routes
-        },
-        handlers::{
-            login_handler, refresh_token_handler, logout_handler,
-            change_password_handler, me_handler, health_handler,
         },
         middleware::auth_middleware,
     },
@@ -71,7 +67,6 @@ impl Server {
         let audit_repository = Arc::new(AuditLogRepositoryImpl::new(self.database.connection()));
         let execution_history_repository = Arc::new(ExecutionHistoryRepositoryImpl::new(self.database.connection()));
         let agent_repository = Arc::new(AgentRepositoryImpl::new(self.database.connection()));
-        let agent_employment_repository = Arc::new(AgentEmploymentRepositoryImpl::new(self.database.connection()));
         let agent_allocation_repository = Arc::new(AgentAllocationRepositoryImpl::new(self.database.connection()));
 
         let vector_store_registry = Arc::new(VectorStoreRegistry::new());
@@ -161,7 +156,6 @@ impl Server {
 
         let agent_service: Arc<dyn AgentApplicationService> = Arc::new(AgentApplicationServiceImpl::new(
             agent_repository,
-            agent_employment_repository,
             agent_allocation_repository,
             vector_config_repository,
             mcp_tool_repository,

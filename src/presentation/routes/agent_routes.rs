@@ -24,7 +24,7 @@ pub fn agent_routes(service: Arc<dyn AgentApplicationService>) -> Router {
         
         // Employment management
         .route("/agents/{agent_id}/employ", post(agent_handlers::employ_agent))
-        .route("/agents/{agent_id}/employ", delete(agent_handlers::terminate_employment))
+        .route("/agents/{agent_id}/fire", post(agent_handlers::fire_agent))
         .route("/agents/employed", get(agent_handlers::list_employed_agents))
         
         // Allocation management

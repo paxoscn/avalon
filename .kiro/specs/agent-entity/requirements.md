@@ -9,7 +9,7 @@
 - **Agent System**: 数字人管理系统，负责Agent实体的创建、配置、权限管理和雇佣关系
 - **Agent**: 数字人实体，代表一个可配置的AI助手
 - **Creator**: 创建者，创建Agent的用户
-- **Employment Relationship**: 雇佣关系，用户与Agent之间的多对多关联
+- **Employer**: 雇佣者，雇佣Agent的用户，一个Agent只能有一个雇佣者
 - **Allocation Relationship**: 分配关系，用户与Agent之间的多对多关联
 - **Source Agent**: 来源Agent，被复制的原始Agent
 - **Knowledge Base**: 知识库，Agent可访问的向量存储配置
@@ -25,7 +25,7 @@
 
 #### Acceptance Criteria
 
-1. THE Agent System SHALL store Agent entities with tenant_id, name, avatar, system_prompt, additional_settings, source_agent_id, and creator_id attributes
+1. THE Agent System SHALL store Agent entities with tenant_id, name, avatar, system_prompt, additional_settings, source_agent_id, creator_id, employer_id, and fired_at attributes
 2. THE Agent System SHALL associate each Agent with a list of knowledge base configurations
 3. THE Agent System SHALL associate each Agent with a list of MCP tool configurations
 4. THE Agent System SHALL associate each Agent with a list of Flow configurations
@@ -73,11 +73,12 @@
 
 #### Acceptance Criteria
 
-1. THE Agent System SHALL maintain a many-to-many employment relationship between Users and Agents
-2. WHEN a user employs an Agent, THE Agent System SHALL create an employment record linking the user and Agent
-3. THE Agent System SHALL allow a user to employ multiple Agents
-4. THE Agent System SHALL allow an Agent to be employed by multiple users
-5. WHEN a user terminates employment, THE Agent System SHALL remove the employment relationship record
+1. THE Agent System SHALL maintain a one-to-one employment relationship where each Agent has at most one employer
+2. WHEN a user employs an Agent, THE Agent System SHALL create a copy of the Agent and set the employer_id to the user's ID
+3. THE Agent System SHALL allow a user to employ multiple Agents by creating copies
+4. THE Agent System SHALL set employer_id to NULL for Agents that have no employer
+5. WHEN a user terminates employment, THE Agent System SHALL set the fired_at timestamp on the Agent
+6. THE Agent System SHALL preserve fired Agents in the database for historical records
 
 ### Requirement 6
 
@@ -89,9 +90,10 @@
 2. THE Agent System SHALL include agent name, avatar, system_prompt preview, and creator information in the list response
 3. THE Agent System SHALL indicate whether the current user has employed each Agent in the list
 4. THE Agent System SHALL indicate whether the current user has been allocated each Agent in the list
-5. THE Agent System SHALL allow filtering Agents by employment status (employed by current user)
+5. THE Agent System SHALL allow filtering Agents by employment status (employer_id equals current user)
 6. THE Agent System SHALL allow filtering Agents by allocation status (allocated to current user)
-7. THE Agent System SHALL return Agent data in a format suitable for card-style UI rendering
+7. THE Agent System SHALL exclude fired Agents (fired_at is not NULL) from the default list view
+8. THE Agent System SHALL return Agent data in a format suitable for card-style UI rendering
 
 ### Requirement 7
 
@@ -105,7 +107,8 @@
 4. THE Agent System SHALL include the full list of associated MCP tools with their configurations
 5. THE Agent System SHALL include the full list of associated Flows with their configurations
 6. IF the Agent has a source_agent_id, THE Agent System SHALL include source Agent reference information
-7. THE Agent System SHALL indicate whether the current user is the creator, whether they have employed the Agent and whether they have been allocated the Agent
+7. THE Agent System SHALL indicate whether the current user is the creator, whether they are the employer (employer_id equals current user), and whether they have been allocated the Agent
+8. IF the Agent has a fired_at timestamp, THE Agent System SHALL include the termination date in the detail response
 
 ### Requirement 8
 

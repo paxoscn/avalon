@@ -9,7 +9,6 @@ pub mod vector_config;
 pub mod audit_log;
 pub mod execution_history;
 pub mod agent;
-pub mod agent_employment;
 pub mod agent_allocation;
 
 pub use user::*;
@@ -23,5 +22,4 @@ pub use vector_config::*;
 pub use audit_log::*;
 pub use execution_history::*;
 pub use agent::*;
-pub use agent_employment::*;
 pub use agent_allocation::*;

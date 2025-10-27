@@ -36,3 +36,11 @@ agent的执行需要有审计历史.
 并增加Agent与User的多对多雇佣关系表.
 
 Agent列表界面采用卡片样式.
+
+**Fourth prompt**
+
+模型变更:
+Agent只能有一个雇佣者, 用agents表的employer_id表示(空表示无人雇佣).
+agent_employments表废弃.
+当进行雇佣时, 首先对原Agent执行复制, 再填充其employer_id.
+当解雇时, 填充fired_at字段.

@@ -24,7 +24,6 @@ Infrastructure Layer (Database, Repositories Implementation)
    - `Agent` 实体：核心业务实体
    - `AgentId` 值对象：Agent唯一标识符
    - `AgentRepository` 接口：数据访问抽象
-   - `AgentEmploymentRepository` 接口：雇佣关系数据访问
    - `AgentAllocationRepository` 接口：分配关系数据访问
 
 2. **Infrastructure Layer**
@@ -67,6 +66,8 @@ pub struct Agent {
     pub preset_questions: Vec<String>,  // Max 3
     pub source_agent_id: Option<AgentId>,
     pub creator_id: UserId,
+    pub employer_id: Option<UserId>,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -92,29 +93,13 @@ impl Agent {
     pub fn remove_flow(&mut self, flow_id: &FlowId);
     pub fn is_creator(&self, user_id: &UserId) -> bool;
     pub fn can_modify(&self, user_id: &UserId) -> bool;
-    pub fn copy_from(&self, new_creator_id: UserId) -> Self;
+    pub fn copy_for_employment(&self, employer_id: UserId) -> Self;
+    pub fn employ(&mut self, employer_id: UserId) -> Result<(), String>;
+    pub fn fire(&mut self) -> Result<(), String>;
+    pub fn is_employed(&self) -> bool;
+    pub fn is_fired(&self) -> bool;
+    pub fn is_employer(&self, user_id: &UserId) -> bool;
     pub fn validate(&self) -> Result<(), String>;
-}
-```
-
-#### AgentEmployment Entity
-
-```rust
-// src/domain/entities/agent_employment.rs
-
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use crate::domain::value_objects::{AgentId, UserId};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AgentEmployment {
-    pub agent_id: AgentId,
-    pub user_id: UserId,
-    pub employed_at: DateTime<Utc>,
-}
-
-impl AgentEmployment {
-    pub fn new(agent_id: AgentId, user_id: UserId) -> Self;
 }
 ```
 
@@ -174,26 +159,25 @@ use crate::error::Result;
 pub trait AgentRepository: Send + Sync {
     async fn find_by_id(&self, id: &AgentId) -> Result<Option<Agent>>;
     async fn find_by_tenant(&self, tenant_id: &TenantId) -> Result<Vec<Agent>>;
+    async fn find_by_tenant_active(&self, tenant_id: &TenantId) -> Result<Vec<Agent>>;
     async fn find_by_creator(&self, creator_id: &UserId) -> Result<Vec<Agent>>;
-    async fn find_employed_by_user(&self, user_id: &UserId) -> Result<Vec<Agent>>;
+    async fn find_by_employer(&self, employer_id: &UserId) -> Result<Vec<Agent>>;
     async fn save(&self, agent: &Agent) -> Result<()>;
     async fn delete(&self, id: &AgentId) -> Result<()>;
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> Result<u64>;
+    async fn count_by_tenant_active(&self, tenant_id: &TenantId) -> Result<u64>;
     async fn find_by_tenant_paginated(
         &self,
         tenant_id: &TenantId,
         offset: u64,
         limit: u64,
     ) -> Result<Vec<Agent>>;
-}
-
-#[async_trait]
-pub trait AgentEmploymentRepository: Send + Sync {
-    async fn employ(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
-    async fn terminate(&self, agent_id: &AgentId, user_id: &UserId) -> Result<()>;
-    async fn is_employed(&self, agent_id: &AgentId, user_id: &UserId) -> Result<bool>;
-    async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<UserId>>;
-    async fn find_by_user(&self, user_id: &UserId) -> Result<Vec<AgentId>>;
+    async fn find_by_tenant_active_paginated(
+        &self,
+        tenant_id: &TenantId,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<Agent>>;
 }
 
 #[async_trait]
@@ -231,6 +215,8 @@ pub struct Model {
     pub preset_questions: Json,    // Array of strings
     pub source_agent_id: Option<Uuid>,
     pub creator_id: Uuid,
+    pub employer_id: Option<Uuid>,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -250,47 +236,17 @@ pub enum Relation {
     )]
     Creator,
     #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::EmployerId",
+        to = "super::user::Column::Id"
+    )]
+    Employer,
+    #[sea_orm(
         belongs_to = "Entity",
         from = "Column::SourceAgentId",
         to = "Column::Id"
     )]
     SourceAgent,
-}
-
-impl ActiveModelBehavior for ActiveModel {}
-```
-
-```rust
-// src/infrastructure/database/entities/agent_employment.rs
-
-use sea_orm::entity::prelude::*;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "agent_employments")]
-pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub agent_id: Uuid,
-    #[sea_orm(primary_key, auto_increment = false)]
-    pub user_id: Uuid,
-    pub employed_at: DateTime<Utc>,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::agent::Entity",
-        from = "Column::AgentId",
-        to = "super::agent::Column::Id"
-    )]
-    Agent,
-    #[sea_orm(
-        belongs_to = "super::user::Entity",
-        from = "Column::UserId",
-        to = "super::user::Column::Id"
-    )]
-    User,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -339,7 +295,6 @@ impl ActiveModelBehavior for ActiveModel {}
 
 pub struct AgentApplicationService {
     agent_repo: Arc<dyn AgentRepository>,
-    employment_repo: Arc<dyn AgentEmploymentRepository>,
     allocation_repo: Arc<dyn AgentAllocationRepository>,
     vector_config_repo: Arc<dyn VectorConfigRepository>,
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
@@ -352,15 +307,15 @@ impl AgentApplicationService {
     pub async fn get_agent(&self, id: AgentId, user_id: UserId) -> Result<AgentDetailDto>;
     pub async fn update_agent(&self, id: AgentId, dto: UpdateAgentDto, user_id: UserId) -> Result<AgentDto>;
     pub async fn delete_agent(&self, id: AgentId, user_id: UserId) -> Result<()>;
-    pub async fn list_agents(&self, tenant_id: TenantId, user_id: UserId, pagination: PaginationParams) -> Result<PaginatedResponse<AgentCardDto>>;
+    pub async fn list_agents(&self, tenant_id: TenantId, user_id: UserId, pagination: PaginationParams, include_fired: bool) -> Result<PaginatedResponse<AgentCardDto>>;
     
     // Copy operation
     pub async fn copy_agent(&self, source_id: AgentId, user_id: UserId) -> Result<AgentDto>;
     
-    // Employment operations
-    pub async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
-    pub async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
-    pub async fn list_employed_agents(&self, user_id: UserId, pagination: PaginationParams) -> Result<PaginatedResponse<AgentCardDto>>;
+    // Employment operations (now creates copies)
+    pub async fn employ_agent(&self, agent_id: AgentId, employer_id: UserId) -> Result<AgentDto>;
+    pub async fn fire_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+    pub async fn list_employed_agents(&self, employer_id: UserId, pagination: PaginationParams, include_fired: bool) -> Result<PaginatedResponse<AgentCardDto>>;
     
     // Allocation operations
     pub async fn allocate_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
@@ -414,6 +369,8 @@ pub struct AgentDto {
     pub preset_questions: Vec<String>,
     pub source_agent_id: Option<Uuid>,
     pub creator_id: Uuid,
+    pub employer_id: Option<Uuid>,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -425,9 +382,11 @@ pub struct AgentCardDto {
     pub avatar: Option<String>,
     pub system_prompt_preview: String,  // First 200 chars
     pub creator_name: String,
-    pub is_employed: bool,
+    pub is_employer: bool,
     pub is_allocated: bool,
     pub is_creator: bool,
+    pub is_fired: bool,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -445,9 +404,12 @@ pub struct AgentDetailDto {
     pub preset_questions: Vec<String>,
     pub source_agent: Option<AgentSourceDto>,
     pub creator: UserSummaryDto,
-    pub is_employed: bool,
+    pub employer: Option<UserSummaryDto>,
+    pub is_employer: bool,
     pub is_allocated: bool,
     pub is_creator: bool,
+    pub is_fired: bool,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -535,9 +497,9 @@ pub async fn employ_agent(
     State(service): State<Arc<AgentApplicationService>>,
     Extension(user_id): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
-) -> Result<StatusCode>;
+) -> Result<Json<AgentDto>>;
 
-pub async fn terminate_employment(
+pub async fn fire_agent(
     State(service): State<Arc<AgentApplicationService>>,
     Extension(user_id): Extension<UserId>,
     Path(agent_id): Path<Uuid>,
@@ -625,6 +587,8 @@ CREATE TABLE agents (
     preset_questions JSONB NOT NULL DEFAULT '[]',
     source_agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
     creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    employer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    fired_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -633,23 +597,10 @@ CREATE TABLE agents (
 
 CREATE INDEX idx_agents_tenant_id ON agents(tenant_id);
 CREATE INDEX idx_agents_creator_id ON agents(creator_id);
+CREATE INDEX idx_agents_employer_id ON agents(employer_id);
 CREATE INDEX idx_agents_source_agent_id ON agents(source_agent_id);
+CREATE INDEX idx_agents_fired_at ON agents(fired_at);
 CREATE INDEX idx_agents_created_at ON agents(created_at DESC);
-```
-
-#### agent_employments table
-
-```sql
-CREATE TABLE agent_employments (
-    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    employed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    PRIMARY KEY (agent_id, user_id)
-);
-
-CREATE INDEX idx_agent_employments_user_id ON agent_employments(user_id);
-CREATE INDEX idx_agent_employments_agent_id ON agent_employments(agent_id);
 ```
 
 #### agent_allocations table
@@ -682,7 +633,8 @@ pub enum PlatformError {
     AgentUnauthorized(String),
     AgentValidationError(String),
     AgentAlreadyEmployed(String),
-    AgentNotEmployed(String),
+    AgentAlreadyFired(String),
+    AgentNotEmployer(String),
     AgentAlreadyAllocated(String),
     AgentNotAllocated(String),
     PresetQuestionsLimitExceeded,
@@ -738,8 +690,8 @@ PUT    /api/v1/agents/{id}                      - 更新Agent
 DELETE /api/v1/agents/{id}                      - 删除Agent
 POST   /api/v1/agents/{id}/copy                 - 复制Agent
 
-POST   /api/v1/agents/{id}/employ               - 雇佣Agent
-DELETE /api/v1/agents/{id}/employ               - 终止雇佣
+POST   /api/v1/agents/{id}/employ               - 雇佣Agent（创建副本）
+POST   /api/v1/agents/{id}/fire                 - 解雇Agent
 GET    /api/v1/agents/employed                 - 列出已雇佣的Agents
 
 POST   /api/v1/agents/{id}/allocate               - 分配Agent
@@ -760,7 +712,8 @@ DELETE /api/v1/agents/{id}/flows/{flow_id}               - 移除Flow
 
 - 所有修改操作（UPDATE, DELETE, 资源管理）必须验证 `agent.creator_id == user_id`
 - 查看操作允许同租户内所有用户访问
-- 雇佣操作允许任何用户执行
+- 雇佣操作允许任何用户执行，会创建Agent副本
+- 解雇操作必须验证 `agent.employer_id == user_id`
 
 ### 2. 数据验证
 
@@ -769,12 +722,14 @@ DELETE /api/v1/agents/{id}/flows/{flow_id}               - 移除Flow
 - 预设问题：最多3个
 - Avatar：可选，URL格式
 
-### 3. 复制功能
+### 3. 复制和雇佣功能
 
 - 复制时创建新的Agent ID
 - 设置 `source_agent_id` 指向原Agent
 - 设置 `creator_id` 为执行复制的用户
 - 复制所有配置属性和资源关联
+- 雇佣操作实际上是复制Agent并设置 `employer_id`
+- 雇佣的Agent的 `creator_id` 保持为原创建者，`employer_id` 设置为雇佣者
 
 ### 4. 卡片样式数据
 
@@ -782,17 +737,20 @@ DELETE /api/v1/agents/{id}/flows/{flow_id}               - 移除Flow
 - Agent基本信息（ID, 名称, 头像）
 - 系统提示词预览（前200字符）
 - 创建者信息
-- 当前用户是否已雇佣
+- 当前用户是否为雇佣者（employer_id == user_id）
 - 当前用户是否为创建者
+- 是否已被解雇（fired_at不为空）
 
 ### 5. 级联删除
 
-- 删除Agent时自动删除所有雇佣关系
+- 删除Agent时自动删除所有分配关系
 - 删除用户时自动删除其创建的Agents
+- 删除雇佣者时将Agent的employer_id设置为NULL
 - 删除租户时自动删除所有Agents
 
 ### 6. 性能优化
 
-- 使用索引优化查询性能
+- 使用索引优化查询性能（包括employer_id和fired_at）
 - 列表查询支持分页
 - 详情查询使用JOIN减少数据库往返
+- 默认列表查询过滤掉已解雇的Agent（fired_at IS NULL）

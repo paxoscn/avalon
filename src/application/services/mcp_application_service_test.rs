@@ -159,7 +159,6 @@ mod tests {
         );
 
         let request = CreateMCPToolRequest {
-            tenant_id,
             name: "test-tool".to_string(),
             description: Some("Test tool".to_string()),
             config: ToolConfig::HTTP(HTTPToolConfig::new(
@@ -168,7 +167,7 @@ mod tests {
             )),
         };
 
-        let result = service.create_tool(request, user_id).await;
+        let result = service.create_tool(request, tenant_id, user_id).await;
         assert!(result.is_ok());
 
         let response = result.unwrap();
@@ -205,7 +204,6 @@ mod tests {
         );
 
         let request = CreateMCPToolRequest {
-            tenant_id,
             name: "test-tool".to_string(),
             description: Some("Test tool".to_string()),
             config: ToolConfig::HTTP(HTTPToolConfig::new(
@@ -214,7 +212,7 @@ mod tests {
             )),
         };
 
-        let result = service.create_tool(request, user_id).await;
+        let result = service.create_tool(request, tenant_id, user_id).await;
         assert!(result.is_err());
 
         match result.unwrap_err() {
@@ -255,7 +253,6 @@ mod tests {
         );
 
         let request = CreateMCPToolRequest {
-            tenant_id,
             name: "test-tool".to_string(),
             description: Some("Test tool".to_string()),
             config: ToolConfig::HTTP(HTTPToolConfig::new(
@@ -264,7 +261,7 @@ mod tests {
             )),
         };
 
-        let result = service.create_tool(request, user_id).await;
+        let result = service.create_tool(request, tenant_id, user_id).await;
         assert!(result.is_err());
 
         match result.unwrap_err() {

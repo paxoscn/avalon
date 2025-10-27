@@ -9,14 +9,17 @@ pub trait AgentRepository: Send + Sync {
     /// Find an agent by ID
     async fn find_by_id(&self, id: &AgentId) -> Result<Option<Agent>>;
     
-    /// Find all agents by tenant
+    /// Find all agents by tenant (including fired agents)
     async fn find_by_tenant(&self, tenant_id: &TenantId) -> Result<Vec<Agent>>;
+    
+    /// Find all active (non-fired) agents by tenant
+    async fn find_by_tenant_active(&self, tenant_id: &TenantId) -> Result<Vec<Agent>>;
     
     /// Find agents created by a specific user
     async fn find_by_creator(&self, creator_id: &UserId) -> Result<Vec<Agent>>;
     
-    /// Find agents employed by a specific user
-    async fn find_employed_by_user(&self, user_id: &UserId) -> Result<Vec<Agent>>;
+    /// Find agents employed by a specific user (employer_id matches user_id)
+    async fn find_by_employer(&self, employer_id: &UserId) -> Result<Vec<Agent>>;
     
     /// Find agents allocated to a specific user
     async fn find_allocated_to_user(&self, user_id: &UserId) -> Result<Vec<Agent>>;
@@ -27,11 +30,22 @@ pub trait AgentRepository: Send + Sync {
     /// Delete an agent by ID
     async fn delete(&self, id: &AgentId) -> Result<()>;
     
-    /// Count agents by tenant
+    /// Count all agents by tenant (including fired agents)
     async fn count_by_tenant(&self, tenant_id: &TenantId) -> Result<u64>;
     
-    /// Find agents with pagination
+    /// Count active (non-fired) agents by tenant
+    async fn count_by_tenant_active(&self, tenant_id: &TenantId) -> Result<u64>;
+    
+    /// Find agents with pagination (including fired agents)
     async fn find_by_tenant_paginated(
+        &self,
+        tenant_id: &TenantId,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<Agent>>;
+    
+    /// Find active (non-fired) agents with pagination
+    async fn find_by_tenant_active_paginated(
         &self,
         tenant_id: &TenantId,
         offset: u64,

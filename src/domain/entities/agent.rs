@@ -17,6 +17,8 @@ pub struct Agent {
     pub preset_questions: Vec<String>,
     pub source_agent_id: Option<AgentId>,
     pub creator_id: UserId,
+    pub employer_id: Option<UserId>,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -57,6 +59,8 @@ impl Agent {
             preset_questions: Vec::new(),
             source_agent_id: None,
             creator_id,
+            employer_id: None,
+            fired_at: None,
             created_at: now,
             updated_at: now,
         })
@@ -181,8 +185,75 @@ impl Agent {
             preset_questions: self.preset_questions.clone(),
             source_agent_id: Some(self.id),
             creator_id: new_creator_id,
+            employer_id: None,
+            fired_at: None,
             created_at: now,
             updated_at: now,
+        }
+    }
+
+    pub fn copy_for_employment(&self, employer_id: UserId) -> Self {
+        let now = Utc::now();
+
+        Agent {
+            id: AgentId::new(),
+            tenant_id: self.tenant_id,
+            name: self.name.clone(),
+            avatar: self.avatar.clone(),
+            greeting: self.greeting.clone(),
+            knowledge_base_ids: self.knowledge_base_ids.clone(),
+            mcp_tool_ids: self.mcp_tool_ids.clone(),
+            flow_ids: self.flow_ids.clone(),
+            system_prompt: self.system_prompt.clone(),
+            additional_settings: self.additional_settings.clone(),
+            preset_questions: self.preset_questions.clone(),
+            source_agent_id: Some(self.id),
+            creator_id: self.creator_id,
+            employer_id: Some(employer_id),
+            fired_at: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    pub fn employ(&mut self, employer_id: UserId) -> Result<(), String> {
+        if self.is_employed() {
+            return Err("Agent is already employed".to_string());
+        }
+        if self.is_fired() {
+            return Err("Agent has been fired and cannot be employed again".to_string());
+        }
+
+        self.employer_id = Some(employer_id);
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn fire(&mut self) -> Result<(), String> {
+        if !self.is_employed() {
+            return Err("Agent is not employed".to_string());
+        }
+        if self.is_fired() {
+            return Err("Agent has already been fired".to_string());
+        }
+
+        self.fired_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn is_employed(&self) -> bool {
+        self.employer_id.is_some()
+    }
+
+    pub fn is_fired(&self) -> bool {
+        self.fired_at.is_some()
+    }
+
+    pub fn is_employer(&self, user_id: &UserId) -> bool {
+        match &self.employer_id {
+            Some(employer) => employer == user_id,
+            None => false,
         }
     }
 

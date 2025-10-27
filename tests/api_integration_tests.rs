@@ -2,15 +2,17 @@
 // These tests require a running database and should be run with:
 // cargo test --test api_integration_tests -- --test-threads=1
 
-use agent_platform::config::Config;
+use agent_platform::config::AppConfig;
 use agent_platform::infrastructure::database;
-use agent_platform::presentation::server::create_app;
+use agent_platform::infrastructure::RedisCache;
+use agent_platform::presentation::server::Server;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use sea_orm::{Database, DatabaseConnection};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 use uuid::Uuid;
+use std::sync::Arc;
 
 #[cfg(test)]
 mod test_helpers {
@@ -20,7 +22,8 @@ mod test_helpers {
     use agent_platform::infrastructure::database::entities::{tenant, user};
 
     pub struct TestContext {
-        pub db: DatabaseConnection,
+        pub db: Arc<DatabaseConnection>,
+        pub server: Server,
         pub tenant_id: Uuid,
         pub user_id: Uuid,
         pub auth_token: String,
@@ -32,12 +35,16 @@ mod test_helpers {
     impl TestContext {
         pub async fn setup() -> Self {
             // Load test configuration
-            let config = Config::from_env().expect("Failed to load config");
+            let config = AppConfig::load().expect("Failed to load config");
             
             // Connect to test database
             let db = Database::connect(&config.database_url)
                 .await
                 .expect("Failed to connect to test database");
+
+            let database = database::Database::new(&config.database_url).await.expect("Failed to load database");
+            let cache = RedisCache::new(&config.redis_url).await.expect("Failed to load redis");
+            let server = Server::new(config, Arc::new(database), Arc::new(cache));
 
             // Create test tenant 1
             let tenant_id = Uuid::new_v4();
@@ -88,7 +95,8 @@ mod test_helpers {
             let auth_token2 = format!("test_token_{}", user2_id);
 
             Self {
-                db,
+                db: Arc::new(db),
+                server,
                 tenant_id,
                 user_id,
                 auth_token,
@@ -155,8 +163,8 @@ mod tests {
     #[ignore] // Remove when test database is configured
     async fn test_complete_user_flow_login_to_execution() {
         // Requirement 10.1, 10.4, 2.1, 2.2: Complete user flow from login to flow execution
-        let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let ctx: TestContext = TestContext::setup().await;
+        let app = ctx.server.create_app();
 
         // Step 1: Login with valid credentials
         let (status, response) = make_request(
@@ -241,7 +249,7 @@ mod tests {
     async fn test_multi_tenant_isolation() {
         // Requirement 10.4: Test multi-tenant isolation
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // User 1 creates a flow
         let (status, response) = make_request(
@@ -292,7 +300,7 @@ mod tests {
     async fn test_permission_control() {
         // Requirement 10.4: Test permission control
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // Attempt to access protected endpoint without token
         let (status, _) = make_request(
@@ -324,7 +332,7 @@ mod tests {
     async fn test_data_consistency_and_transactions() {
         // Requirement 2.1, 2.2: Verify data consistency and transaction integrity
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // Create a flow with version
         let (status, response) = make_request(
@@ -381,7 +389,7 @@ mod tests {
     async fn test_concurrent_flow_executions() {
         // Requirement 2.1, 2.2: Test concurrent executions
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // Create a flow
         let (status, response) = make_request(
@@ -436,7 +444,7 @@ mod tests {
     async fn test_session_context_persistence() {
         // Requirement 2.1: Test session context storage and retrieval
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // Create a session
         let (status, response) = make_request(
@@ -487,7 +495,7 @@ mod tests {
     async fn test_audit_trail_completeness() {
         // Requirement 10.1: Verify audit logging
         let ctx = TestContext::setup().await;
-        let app = create_app(ctx.db.clone()).await;
+        let app = ctx.server.create_app();
 
         // Perform various operations
         let operations = vec![

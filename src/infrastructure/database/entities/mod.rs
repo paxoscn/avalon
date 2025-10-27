@@ -12,7 +12,6 @@ pub mod llm_config;
 pub mod vector_config;
 pub mod audit_log;
 pub mod agent;
-pub mod agent_employment;
 pub mod agent_allocation;
 
 pub use tenant::Entity as Tenant;
@@ -29,5 +28,4 @@ pub use llm_config::Entity as LlmConfig;
 pub use vector_config::Entity as VectorConfig;
 pub use audit_log::Entity as AuditLog;
 pub use agent::Entity as Agent;
-pub use agent_employment::Entity as AgentEmployment;
 pub use agent_allocation::Entity as AgentAllocation;

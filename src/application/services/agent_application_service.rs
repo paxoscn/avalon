@@ -6,7 +6,7 @@ use crate::{
     domain::{
         entities::Agent,
         repositories::{
-            AgentEmploymentRepository, AgentAllocationRepository, AgentRepository, FlowRepository, MCPToolRepository,
+            AgentAllocationRepository, AgentRepository, FlowRepository, MCPToolRepository,
             UserRepository, VectorConfigRepository,
         },
         value_objects::{AgentId, ConfigId, FlowId, MCPToolId, TenantId, UserId},
@@ -45,6 +45,7 @@ pub trait AgentApplicationService: Send + Sync {
         tenant_id: TenantId,
         user_id: UserId,
         params: PaginationParams,
+        include_fired: bool,
     ) -> Result<PaginatedResponse<AgentCardDto>>;
 
     /// List agents created by the user
@@ -62,17 +63,18 @@ pub trait AgentApplicationService: Send + Sync {
         tenant_id: TenantId,
     ) -> Result<AgentDto>;
 
-    /// Employ an agent
-    async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+    /// Employ an agent (creates a copy with employer_id set)
+    async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<AgentDto>;
 
-    /// Terminate employment
-    async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+    /// Fire an agent (sets fired_at timestamp)
+    async fn fire_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
 
     /// List employed agents
     async fn list_employed_agents(
         &self,
         user_id: UserId,
         params: PaginationParams,
+        include_fired: bool,
     ) -> Result<PaginatedResponse<AgentCardDto>>;
 
     /// Allocate an agent
@@ -130,7 +132,6 @@ pub trait AgentApplicationService: Send + Sync {
 /// Agent application service implementation
 pub struct AgentApplicationServiceImpl {
     agent_repo: Arc<dyn AgentRepository>,
-    employment_repo: Arc<dyn AgentEmploymentRepository>,
     allocation_repo: Arc<dyn AgentAllocationRepository>,
     vector_config_repo: Arc<dyn VectorConfigRepository>,
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
@@ -141,7 +142,6 @@ pub struct AgentApplicationServiceImpl {
 impl AgentApplicationServiceImpl {
     pub fn new(
         agent_repo: Arc<dyn AgentRepository>,
-        employment_repo: Arc<dyn AgentEmploymentRepository>,
         allocation_repo: Arc<dyn AgentAllocationRepository>,
         vector_config_repo: Arc<dyn VectorConfigRepository>,
         mcp_tool_repo: Arc<dyn MCPToolRepository>,
@@ -150,7 +150,6 @@ impl AgentApplicationServiceImpl {
     ) -> Self {
         Self {
             agent_repo,
-            employment_repo,
             allocation_repo,
             vector_config_repo,
             mcp_tool_repo,
@@ -182,6 +181,8 @@ impl AgentApplicationServiceImpl {
             preset_questions: agent.preset_questions.clone(),
             source_agent_id: agent.source_agent_id.map(|id| id.0),
             creator_id: agent.creator_id.0,
+            employer_id: agent.employer_id.map(|id| id.0),
+            fired_at: agent.fired_at,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         }
@@ -196,8 +197,8 @@ impl AgentApplicationServiceImpl {
             .await?
             .ok_or_else(|| PlatformError::NotFound("Creator not found".to_string()))?;
 
-        // Check if user has employed this agent
-        let is_employed = self.employment_repo.is_employed(&agent.id, user_id).await?;
+        // Check if user is the employer
+        let is_employer = agent.is_employer(user_id);
 
         // Check if user has been allocated this agent
         let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
@@ -219,9 +220,11 @@ impl AgentApplicationServiceImpl {
                 .nickname
                 .clone()
                 .unwrap_or(creator.username.0.clone()),
-            is_employed,
+            is_employer,
             is_allocated,
             is_creator: agent.is_creator(user_id),
+            is_fired: agent.is_fired(),
+            fired_at: agent.fired_at,
             created_at: agent.created_at,
         })
     }
@@ -234,6 +237,22 @@ impl AgentApplicationServiceImpl {
             .find_by_id(agent.creator_id)
             .await?
             .ok_or_else(|| PlatformError::NotFound("Creator not found".to_string()))?;
+
+        // Get employer information if exists
+        let employer = if let Some(employer_id) = agent.employer_id {
+            let employer_user = self
+                .user_repo
+                .find_by_id(employer_id)
+                .await?
+                .ok_or_else(|| PlatformError::NotFound("Employer not found".to_string()))?;
+            Some(UserSummaryDto {
+                id: employer_user.id.0,
+                username: employer_user.username.0,
+                nickname: employer_user.nickname,
+            })
+        } else {
+            None
+        };
 
         // Get knowledge bases
         let mut knowledge_bases = Vec::new();
@@ -285,8 +304,8 @@ impl AgentApplicationServiceImpl {
             None
         };
 
-        // Check if user has employed this agent
-        let is_employed = self.employment_repo.is_employed(&agent.id, user_id).await?;
+        // Check if user is the employer
+        let is_employer = agent.is_employer(user_id);
 
         // Check if user has been allocated this agent
         let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
@@ -309,9 +328,12 @@ impl AgentApplicationServiceImpl {
                 username: creator.username.0,
                 nickname: creator.nickname,
             },
-            is_employed,
+            employer,
+            is_employer,
             is_allocated,
             is_creator: agent.is_creator(user_id),
+            is_fired: agent.is_fired(),
+            fired_at: agent.fired_at,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         })
@@ -451,17 +473,28 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         tenant_id: TenantId,
         user_id: UserId,
         params: PaginationParams,
+        include_fired: bool,
     ) -> Result<PaginatedResponse<AgentCardDto>> {
         let page = params.get_page();
         let limit = params.get_limit();
         let offset = params.get_offset();
 
-        // Get agents with pagination
-        let agents = self
-            .agent_repo
-            .find_by_tenant_paginated(&tenant_id, offset, limit)
-            .await?;
-        let total = self.agent_repo.count_by_tenant(&tenant_id).await?;
+        // Get agents with pagination (filter by fired status)
+        let (agents, total) = if include_fired {
+            let agents = self
+                .agent_repo
+                .find_by_tenant_paginated(&tenant_id, offset, limit)
+                .await?;
+            let total = self.agent_repo.count_by_tenant(&tenant_id).await?;
+            (agents, total)
+        } else {
+            let agents = self
+                .agent_repo
+                .find_by_tenant_active_paginated(&tenant_id, offset, limit)
+                .await?;
+            let total = self.agent_repo.count_by_tenant_active(&tenant_id).await?;
+            (agents, total)
+        };
 
         // Convert to card DTOs
         let mut cards = Vec::new();
@@ -536,9 +569,9 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(self.agent_to_dto(&copied_agent))
     }
 
-    async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+    async fn employ_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<AgentDto> {
         // Verify agent exists
-        let _agent = self
+        let source_agent = self
             .agent_repo
             .find_by_id(&agent_id)
             .await?
@@ -546,15 +579,23 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                 PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
             })?;
 
-        // Create employment relationship
-        self.employment_repo.employ(&agent_id, &user_id).await?;
+        // Create a copy of the agent with employer_id set
+        let employed_agent = source_agent.copy_for_employment(user_id);
 
-        Ok(())
+        // Validate the employed agent
+        employed_agent
+            .validate()
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
+
+        // Save the employed agent
+        self.agent_repo.save(&employed_agent).await?;
+
+        Ok(self.agent_to_dto(&employed_agent))
     }
 
-    async fn terminate_employment(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
-        // Verify agent exists
-        let _agent = self
+    async fn fire_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+        // Get the agent
+        let mut agent = self
             .agent_repo
             .find_by_id(&agent_id)
             .await?
@@ -562,8 +603,20 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                 PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
             })?;
 
-        // Terminate employment relationship
-        self.employment_repo.terminate(&agent_id, &user_id).await?;
+        // Verify the user is the employer
+        if !agent.is_employer(&user_id) {
+            return Err(PlatformError::AgentNotEmployer(
+                "Only the employer can fire this agent".to_string(),
+            ));
+        }
+
+        // Fire the agent (sets fired_at timestamp)
+        agent
+            .fire()
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
+
+        // Save the updated agent
+        self.agent_repo.save(&agent).await?;
 
         Ok(())
     }
@@ -572,9 +625,15 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         &self,
         user_id: UserId,
         params: PaginationParams,
+        include_fired: bool,
     ) -> Result<PaginatedResponse<AgentCardDto>> {
-        // Get all employed agents (no pagination at repository level for now)
-        let agents = self.agent_repo.find_employed_by_user(&user_id).await?;
+        // Get all agents employed by the user
+        let mut agents = self.agent_repo.find_by_employer(&user_id).await?;
+
+        // Filter out fired agents if not including them
+        if !include_fired {
+            agents.retain(|agent| !agent.is_fired());
+        }
 
         let total = agents.len() as u64;
         let page = params.get_page();

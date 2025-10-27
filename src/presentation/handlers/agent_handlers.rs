@@ -73,7 +73,8 @@ pub async fn list_agents(
         limit: query.limit,
     };
 
-    let response = service.list_agents(user.tenant_id, user.user_id, params).await?;
+    let include_fired = query.include_fired.unwrap_or(false);
+    let response = service.list_agents(user.tenant_id, user.user_id, params, include_fired).await?;
     Ok(Json(response))
 }
 
@@ -120,17 +121,17 @@ pub async fn employ_agent(
     user: AuthenticatedUser,
     Path(agent_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    service.employ_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
-    Ok(StatusCode::NO_CONTENT)
+    let agent = service.employ_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
+    Ok((StatusCode::CREATED, Json(agent)))
 }
 
-/// Terminate employment with an agent
-pub async fn terminate_employment(
+/// Fire an agent
+pub async fn fire_agent(
     State(service): State<Arc<dyn AgentApplicationService>>,
     user: AuthenticatedUser,
     Path(agent_id): Path<Uuid>,
 ) -> Result<impl IntoResponse> {
-    service.terminate_employment(AgentId::from_uuid(agent_id), user.user_id).await?;
+    service.fire_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -145,7 +146,8 @@ pub async fn list_employed_agents(
         limit: query.limit,
     };
 
-    let response = service.list_employed_agents(user.user_id, params).await?;
+    let include_fired = query.include_fired.unwrap_or(false);
+    let response = service.list_employed_agents(user.user_id, params, include_fired).await?;
     Ok(Json(response))
 }
 

@@ -22,3 +22,4 @@ pub use flow_handlers::*;
 pub use config_handlers::*;
 pub use session_audit_handlers::*;
 pub use health_handlers::*;
+pub use agent_handlers::*;

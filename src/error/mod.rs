@@ -40,11 +40,11 @@ pub enum PlatformError {
     #[error("Agent validation error: {0}")]
     AgentValidationError(String),
     
-    #[error("Agent already employed: {0}")]
-    AgentAlreadyEmployed(String),
+    #[error("Agent already fired: {0}")]
+    AgentAlreadyFired(String),
     
-    #[error("Agent not employed: {0}")]
-    AgentNotEmployed(String),
+    #[error("Agent not employer: {0}")]
+    AgentNotEmployer(String),
     
     #[error("Agent already allocated: {0}")]
     AgentAlreadyAllocated(String),
@@ -114,8 +114,8 @@ impl IntoResponse for PlatformError {
             PlatformError::AgentNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
             PlatformError::AgentUnauthorized(_) => (StatusCode::FORBIDDEN, self.to_string()),
             PlatformError::AgentValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            PlatformError::AgentAlreadyEmployed(_) => (StatusCode::CONFLICT, self.to_string()),
-            PlatformError::AgentNotEmployed(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            PlatformError::AgentAlreadyFired(_) => (StatusCode::CONFLICT, self.to_string()),
+            PlatformError::AgentNotEmployer(_) => (StatusCode::FORBIDDEN, self.to_string()),
             PlatformError::AgentAlreadyAllocated(_) => (StatusCode::CONFLICT, self.to_string()),
             PlatformError::AgentNotAllocated(_) => (StatusCode::NOT_FOUND, self.to_string()),
             PlatformError::PresetQuestionsLimitExceeded => (StatusCode::BAD_REQUEST, self.to_string()),
@@ -206,22 +206,22 @@ macro_rules! agent_validation_error {
 }
 
 #[macro_export]
-macro_rules! agent_already_employed {
+macro_rules! agent_already_fired {
     ($msg:expr) => {
-        $crate::error::PlatformError::AgentAlreadyEmployed($msg.to_string())
+        $crate::error::PlatformError::AgentAlreadyFired($msg.to_string())
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::error::PlatformError::AgentAlreadyEmployed(format!($fmt, $($arg)*))
+        $crate::error::PlatformError::AgentAlreadyFired(format!($fmt, $($arg)*))
     };
 }
 
 #[macro_export]
-macro_rules! agent_not_employed {
+macro_rules! agent_not_employer {
     ($msg:expr) => {
-        $crate::error::PlatformError::AgentNotEmployed($msg.to_string())
+        $crate::error::PlatformError::AgentNotEmployer($msg.to_string())
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::error::PlatformError::AgentNotEmployed(format!($fmt, $($arg)*))
+        $crate::error::PlatformError::AgentNotEmployer(format!($fmt, $($arg)*))
     };
 }
 

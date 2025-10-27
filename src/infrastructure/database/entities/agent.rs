@@ -19,6 +19,8 @@ pub struct Model {
     pub preset_questions: Json,
     pub source_agent_id: Option<Uuid>,
     pub creator_id: Uuid,
+    pub employer_id: Option<Uuid>,
+    pub fired_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -37,6 +39,12 @@ pub enum Relation {
         to = "super::user::Column::Id"
     )]
     Creator,
+    #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::EmployerId",
+        to = "super::user::Column::Id"
+    )]
+    Employer,
     #[sea_orm(
         belongs_to = "Entity",
         from = "Column::SourceAgentId",
