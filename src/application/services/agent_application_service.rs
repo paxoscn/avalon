@@ -201,7 +201,10 @@ impl AgentApplicationServiceImpl {
         let is_employer = agent.is_employer(user_id);
 
         // Check if user has been allocated this agent
-        let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
+        let is_allocated = self
+            .allocation_repo
+            .is_allocated(&agent.id, user_id)
+            .await?;
 
         // Create preview of system prompt (first 200 characters)
         let system_prompt_preview = if agent.system_prompt.len() > 200 {
@@ -308,7 +311,10 @@ impl AgentApplicationServiceImpl {
         let is_employer = agent.is_employer(user_id);
 
         // Check if user has been allocated this agent
-        let is_allocated = self.allocation_repo.is_allocated(&agent.id, user_id).await?;
+        let is_allocated = self
+            .allocation_repo
+            .is_allocated(&agent.id, user_id)
+            .await?;
 
         Ok(AgentDetailDto {
             id: agent.id.0,
@@ -477,28 +483,33 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     ) -> Result<PaginatedResponse<AgentCardDto>> {
         let page = params.get_page();
         let limit = params.get_limit();
-        let offset = params.get_offset();
+        let offset = params.get_offset() as usize;
 
-        // Get agents with pagination (filter by fired status)
-        let (agents, total) = if include_fired {
-            let agents = self
-                .agent_repo
-                .find_by_tenant_paginated(&tenant_id, offset, limit)
-                .await?;
-            let total = self.agent_repo.count_by_tenant(&tenant_id).await?;
-            (agents, total)
+        // Get all agents by tenant (filter by fired status)
+        let agents = if include_fired {
+            self.agent_repo.find_by_tenant(&tenant_id).await?
         } else {
-            let agents = self
-                .agent_repo
-                .find_by_tenant_active_paginated(&tenant_id, offset, limit)
-                .await?;
-            let total = self.agent_repo.count_by_tenant_active(&tenant_id).await?;
-            (agents, total)
+            self.agent_repo.find_by_tenant_active(&tenant_id).await?
         };
+
+        // Filter out employed agents (those with employer_id set)
+        let visible_agents: Vec<_> = agents
+            .into_iter()
+            .filter(|agent| agent.employer_id.is_none())
+            .collect();
+
+        let total = visible_agents.len() as u64;
+
+        // Apply pagination manually
+        let paginated_agents: Vec<_> = visible_agents
+            .into_iter()
+            .skip(offset)
+            .take(limit as usize)
+            .collect();
 
         // Convert to card DTOs
         let mut cards = Vec::new();
-        for agent in agents {
+        for agent in paginated_agents {
             cards.push(self.agent_to_card_dto(&agent, &user_id).await?);
         }
 
@@ -513,13 +524,19 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         // Get all agents created by the user
         let agents = self.agent_repo.find_by_creator(&user_id).await?;
 
-        let total = agents.len() as u64;
+        // Filter out agents that have a source_agent_id (copied or employed agents)
+        let original_agents: Vec<_> = agents
+            .into_iter()
+            .filter(|agent| agent.source_agent_id.is_none())
+            .collect();
+
+        let total = original_agents.len() as u64;
         let page = params.get_page();
         let limit = params.get_limit();
         let offset = params.get_offset() as usize;
 
         // Apply pagination manually
-        let paginated_agents: Vec<_> = agents
+        let paginated_agents: Vec<_> = original_agents
             .into_iter()
             .skip(offset)
             .take(limit as usize)
