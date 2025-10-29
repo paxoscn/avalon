@@ -28,7 +28,7 @@ export function MCPToolListPage() {
 
   const handleToggleStatus = async (tool: MCPTool) => {
     try {
-      const newStatus = tool.status === 'active' ? 'inactive' : 'active';
+      const newStatus = tool.status.toLowerCase() === 'active' ? 'inactive' : 'active';
       await mcpService.toggleToolStatus(tool.id, newStatus);
       await loadTools();
     } catch (err: any) {
@@ -122,7 +122,7 @@ export function MCPToolListPage() {
                   </div>
                   <span
                     className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      tool.status === 'active'
+                      tool.status.toLowerCase() === 'active'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}
@@ -155,7 +155,7 @@ export function MCPToolListPage() {
                     onClick={() => handleToggleStatus(tool)}
                     className="flex-1"
                   >
-                    {tool.status === 'active' ? 'Deactivate' : 'Activate'}
+                    {tool.status.toLowerCase() === 'active' ? 'Deactivate' : 'Activate'}
                   </Button>
                   <Button
                     variant="secondary"
