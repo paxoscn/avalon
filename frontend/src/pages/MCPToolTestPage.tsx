@@ -219,10 +219,10 @@ export function MCPToolTestPage() {
         </div>
 
         <div className="mt-6">
-          <Button onClick={handleTest} disabled={testing || tool.status !== 'active'}>
+          <Button onClick={handleTest} disabled={testing || tool.status.toLowerCase() !== 'active'}>
             {testing ? 'Testing...' : 'Run Test'}
           </Button>
-          {tool.status !== 'active' && (
+          {tool.status.toLowerCase() !== 'active' && (
             <p className="mt-2 text-sm text-amber-600">
               Tool must be active to run tests
             </p>
