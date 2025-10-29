@@ -2,6 +2,7 @@ pub mod auth_handlers;
 pub mod vector_config_handlers;
 pub mod vector_storage_handlers;
 pub mod mcp_handlers;
+pub mod mcp_server_handlers;
 pub mod audit_handlers;
 pub mod execution_history_handlers;
 pub mod flow_handlers;

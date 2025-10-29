@@ -409,6 +409,206 @@ Get audit statistics.
 - `start_date`: ISO 8601 timestamp (optional)
 - `end_date`: ISO 8601 timestamp (optional)
 
+### MCP Tools
+
+#### POST /mcp-tools
+Create a new MCP tool.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "description": "string (optional)",
+  "config": {
+    "HTTP": {
+      "endpoint": "string",
+      "method": "string",
+      "headers": "object (optional)",
+      "parameters": [
+        {
+          "name": "string",
+          "parameter_type": "string",
+          "description": "string (optional)",
+          "required": "boolean",
+          "position": "body|header|path",
+          "default_value": "any (optional)"
+        }
+      ],
+      "timeout_seconds": "number (optional)",
+      "retry_count": "number (optional)",
+      "response_template": "string (optional)"
+    }
+  }
+}
+```
+
+**Parameter Position Values:**
+- `body`: Parameter is sent in the request body (default)
+- `header`: Parameter is sent as an HTTP header
+- `path`: Parameter is embedded in the URL path
+
+**Response Template:**
+Optional Handlebars template to transform JSON responses into text format. Supports:
+- Variable access: `{{ .field_name }}`
+- Nested fields: `{{ .data.user.name }}`
+- Loops: `{{- range $index, $item := .items }}...{{- end }}`
+- Conditionals: `{{- if .condition }}...{{- end }}`
+
+#### GET /mcp-tools
+List all MCP tools for the authenticated tenant.
+
+**Query Parameters:**
+- `page`: number (default: 1, min: 1) - Page number (1-based)
+- `limit`: number (default: 20, min: 1, max: 100) - Items per page
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "description": "string",
+      "config": "object",
+      "created_at": "timestamp",
+      "updated_at": "timestamp"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "total": 50,
+  "total_pages": 3
+}
+```
+
+#### GET /mcp-tools/{tool_id}
+Get a specific MCP tool by ID.
+
+#### PUT /mcp-tools/{tool_id}
+Update an MCP tool.
+
+#### DELETE /mcp-tools/{tool_id}
+Delete an MCP tool.
+
+#### POST /mcp-tools/{tool_id}/call
+Execute an MCP tool.
+
+**Request Body:**
+```json
+{
+  "parameters": {
+    "param1": "value1",
+    "param2": "value2"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "result": "string or object",
+  "execution_time_ms": 123
+}
+```
+
+#### GET /mcp-tools/{tool_id}/versions
+Get all versions of an MCP tool.
+
+**Query Parameters:**
+- `page`: number (default: 1, min: 1) - Page number (1-based)
+- `limit`: number (default: 20, min: 1, max: 100) - Items per page
+
+### MCP Server Interface
+
+The MCP Server provides a standard Model Context Protocol interface for external systems to discover and call tools.
+
+#### GET /api/v1/mcp/tools
+List all available tools in MCP format (tools/list).
+
+**Headers:**
+- `Authorization`: Bearer token (required)
+- `X-Tenant-ID`: Tenant identifier (required)
+
+**Query Parameters:**
+- `page`: number (optional, default: 1) - Page number
+- `limit`: number (optional, default: 20) - Items per page
+
+**Response:**
+```json
+{
+  "tools": [
+    {
+      "name": "tool-name",
+      "description": "Tool description",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "param1": {
+            "type": "string",
+            "description": "Parameter description"
+          }
+        },
+        "required": ["param1"]
+      }
+    }
+  ]
+}
+```
+
+**MCP Protocol Compliance:**
+- Tool names are returned in the format specified by the tool configuration
+- Input schemas follow JSON Schema specification
+- Parameter positions (body/header/path) are abstracted in the schema
+
+#### POST /api/v1/mcp/tools/call
+Call a tool via MCP protocol (tools/call).
+
+**Headers:**
+- `Authorization`: Bearer token (required)
+- `X-Tenant-ID`: Tenant identifier (required)
+
+**Request Body:**
+```json
+{
+  "name": "tool-name",
+  "arguments": {
+    "param1": "value1",
+    "param2": "value2"
+  }
+}
+```
+
+**Response (Success):**
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Tool execution result"
+    }
+  ],
+  "isError": false
+}
+```
+
+**Response (Error):**
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Error message"
+    }
+  ],
+  "isError": true
+}
+```
+
+**Notes:**
+- If a response template is configured, the result will be formatted text
+- If no template is configured, the result will be JSON stringified
+- All tool calls are logged in the audit system
+
 ### Execution History
 
 #### GET /execution-history
@@ -697,6 +897,14 @@ All dates should be provided in ISO 8601 format:
 ```
 2025-10-14T12:00:00Z
 ```
+
+## Additional Documentation
+
+For detailed information about specific features:
+
+- **MCP Tools**: See [MCP Tools Guide](mcp_tools_guide.md) for comprehensive documentation on parameter positioning, path parameters, response templates, and the MCP Server interface
+- **MCP Quick Reference**: See [MCP Tools Quick Reference](mcp_tools_quick_reference.md) for syntax examples and common patterns
+- **User Guide**: See [User Guide](user_guide.md) for general platform usage and best practices
 
 ## Testing
 

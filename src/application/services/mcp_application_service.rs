@@ -22,7 +22,12 @@ use crate::{
         MCPToolStatsResponse,
     },
     error::{PlatformError, Result},
-    infrastructure::mcp::MCPProxyService,
+    infrastructure::mcp::{
+        MCPProxyService,
+        mcp_server_handler::MCPServerHandler,
+        mcp_protocol::{MCPToolListResponse, MCPToolCallResponse},
+        template_engine::ResponseTemplateEngine,
+    },
 };
 
 /// MCP工具管理应用服务接口
@@ -123,6 +128,23 @@ pub trait MCPApplicationService: Send + Sync {
         &self,
         config: &ToolConfig,
     ) -> Result<ConfigValidationResult>;
+
+    /// 获取MCP格式的工具列表（用于MCP Server接口）
+    async fn list_tools_for_mcp(
+        &self,
+        tenant_id: TenantId,
+        page: Option<u64>,
+        limit: Option<u64>,
+    ) -> Result<MCPToolListResponse>;
+
+    /// 通过MCP格式调用工具（用于MCP Server接口）
+    async fn call_tool_via_mcp(
+        &self,
+        tenant_id: TenantId,
+        user_id: UserId,
+        tool_name: String,
+        arguments: serde_json::Value,
+    ) -> Result<MCPToolCallResponse>;
 }
 
 /// MCP工具管理应用服务实现
@@ -131,6 +153,8 @@ pub struct MCPApplicationServiceImpl {
     version_repository: Arc<dyn MCPToolVersionRepository>,
     domain_service: Arc<dyn MCPToolDomainService>,
     proxy_service: Arc<dyn MCPProxyService>,
+    mcp_server_handler: Arc<MCPServerHandler>,
+    template_engine: Arc<ResponseTemplateEngine>,
 }
 
 impl MCPApplicationServiceImpl {
@@ -140,11 +164,19 @@ impl MCPApplicationServiceImpl {
         domain_service: Arc<dyn MCPToolDomainService>,
         proxy_service: Arc<dyn MCPProxyService>,
     ) -> Self {
+        let mcp_server_handler = Arc::new(MCPServerHandler::new(
+            tool_repository.clone(),
+            proxy_service.clone(),
+        ));
+        let template_engine = Arc::new(ResponseTemplateEngine::new());
+
         Self {
             tool_repository,
             version_repository,
             domain_service,
             proxy_service,
+            mcp_server_handler,
+            template_engine,
         }
     }
 
@@ -218,7 +250,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         tenant_id: TenantId,
         user_id: UserId,
     ) -> Result<MCPToolResponse> {
-        // 验证配置
+        // 验证配置（包括路径参数一致性和header命名规范）
         let validation_result = self.domain_service
             .validate_tool_config(&request.config)
             .await?;
@@ -227,6 +259,16 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
             return Err(PlatformError::ValidationError(
                 validation_result.errors.join(", ")
             ));
+        }
+
+        // 验证响应模板语法（如果配置了模板）
+        if let ToolConfig::HTTP(ref http_config) = request.config {
+            if let Some(ref template) = http_config.response_template {
+                self.template_engine.validate_template(template)
+                    .map_err(|e| PlatformError::ValidationError(
+                        format!("Invalid response template: {}", e)
+                    ))?;
+            }
         }
 
         // 检查名称唯一性
@@ -298,7 +340,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         }
 
         if let Some(config) = request.config {
-            // 验证新配置
+            // 验证新配置（包括路径参数一致性和header命名规范）
             let validation_result = self.domain_service
                 .validate_tool_config(&config)
                 .await?;
@@ -309,7 +351,20 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
                 ));
             }
 
+            // 验证响应模板语法（如果配置了模板）
+            if let ToolConfig::HTTP(ref http_config) = config {
+                if let Some(ref template) = http_config.response_template {
+                    self.template_engine.validate_template(template)
+                        .map_err(|e| PlatformError::ValidationError(
+                            format!("Invalid response template: {}", e)
+                        ))?;
+                }
+            }
+
             tool.update_config(config);
+
+            // 清除模板缓存（配置更新时）
+            self.template_engine.clear_cache(&tool.id.to_string());
 
             // 注掉: 在tool_repository中处理
             // // 创建新版本
@@ -338,6 +393,9 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
 
         // 验证访问权限
         self.validate_tool_access(&tool, user_id).await?;
+
+        // 清除模板缓存（工具删除时）
+        self.template_engine.clear_cache(&tool_id.to_string());
 
         // 从代理服务注销
         self.proxy_service.unregister_tool(tool_id).await?;
@@ -603,6 +661,29 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         config: &ToolConfig,
     ) -> Result<ConfigValidationResult> {
         self.domain_service.validate_tool_config(config).await
+    }
+
+    async fn list_tools_for_mcp(
+        &self,
+        tenant_id: TenantId,
+        page: Option<u64>,
+        limit: Option<u64>,
+    ) -> Result<MCPToolListResponse> {
+        self.mcp_server_handler
+            .handle_list_tools(tenant_id, page, limit)
+            .await
+    }
+
+    async fn call_tool_via_mcp(
+        &self,
+        tenant_id: TenantId,
+        user_id: UserId,
+        tool_name: String,
+        arguments: serde_json::Value,
+    ) -> Result<MCPToolCallResponse> {
+        self.mcp_server_handler
+            .handle_call_tool(tenant_id, user_id, tool_name, arguments)
+            .await
     }
 }
 

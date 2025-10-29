@@ -12,7 +12,12 @@ A comprehensive, production-ready agent platform built with Rust, featuring flow
 - **🔄 Flow Execution**: Execute complex agent workflows with support for Dify DSL import
 - **🤖 Multi-Model Support**: Integrate with various LLM providers (OpenAI, Claude, Local LLMs)
 - **📊 Vector Database Integration**: Support for Pinecone, Weaviate, ChromaDB, Qdrant, and Milvus
-- **🔧 MCP Tool Support**: Convert HTTP APIs to MCP tools with version management
+- **🔧 Enhanced MCP Tool Support**: 
+  - Parameter positioning (body/header/path)
+  - RESTful path parameters with URL placeholders
+  - Response templates for formatted output
+  - Standard MCP Server protocol interface
+  - Version management and rollback
 - **🏢 Multi-Tenant Architecture**: Secure tenant isolation with JWT authentication
 - **📝 Version Management**: Full version control for flows and tools with rollback support
 - **📈 Audit & Monitoring**: Comprehensive audit logging and execution history
@@ -319,7 +324,53 @@ curl -X POST http://localhost:8080/api/flows/{id}/execute \
   -d '{"variables": {}}'
 ```
 
-See [API Documentation](docs/api_documentation.md) for complete API reference.
+### MCP Tools
+
+```bash
+# Create an MCP tool with path parameters and response template
+curl -X POST http://localhost:8080/api/mcp-tools \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "get_user_orders",
+    "description": "Get orders for a user",
+    "config": {
+      "HTTP": {
+        "endpoint": "https://api.example.com/users/{userId}/orders",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "userId",
+            "parameter_type": "String",
+            "required": true,
+            "position": "path"
+          },
+          {
+            "name": "Authorization",
+            "parameter_type": "String",
+            "required": true,
+            "position": "header"
+          }
+        ],
+        "response_template": "Orders for user {{ .userId }}:\n{{- range .orders }}\n- Order #{{ .id }}: {{ .status }}\n{{- end }}"
+      }
+    }
+  }'
+
+# Call tool via MCP Server interface
+curl -X POST http://localhost:8080/api/v1/mcp/tools/call \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "get_user_orders",
+    "arguments": {
+      "userId": "user123",
+      "Authorization": "Bearer api-token"
+    }
+  }'
+```
+
+See [API Documentation](docs/api_documentation.md) for complete API reference and [MCP Tools Guide](docs/mcp_tools_guide.md) for detailed MCP tools documentation.
 
 ## 💻 Development
 
@@ -416,14 +467,23 @@ curl http://localhost:8080/metrics/prometheus
 
 ## 📖 Documentation
 
+### General Documentation
 - [User Guide](docs/user_guide.md) - Complete user documentation
 - [API Documentation](docs/api_documentation.md) - REST API reference
 - [Deployment Guide](docs/deployment_guide.md) - Deployment instructions
+- [Testing Guide](docs/testing_guide.md) - Testing strategies
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+
+### MCP Tools Documentation
+- [MCP Tools Guide](docs/mcp_tools_guide.md) - Comprehensive guide to MCP tools features
+- [MCP Tools Quick Reference](docs/mcp_tools_quick_reference.md) - Quick syntax and examples
+- [MCP Tools Migration Guide](docs/mcp_tools_migration_guide.md) - Upgrade guide for v2.0 features
+
+### Configuration & Integration
 - [CORS Configuration](docs/cors_configuration.md) - CORS setup and troubleshooting
 - [Routes Integration](docs/routes_integration_summary.md) - Route modules status and integration guide
 - [Adding Routes](docs/adding_routes.md) - How to integrate route modules
-- [Testing Guide](docs/testing_guide.md) - Testing strategies
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+- [Pagination Guide](docs/pagination_guide.md) - API pagination standards
 
 ## 🤝 Contributing
 

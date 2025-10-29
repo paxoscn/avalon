@@ -111,7 +111,14 @@ The dashboard provides:
 
 ### What are MCP Tools?
 
-MCP (Model Context Protocol) tools allow you to integrate external HTTP APIs as callable tools within your flows.
+MCP (Model Context Protocol) tools allow you to integrate external HTTP APIs as callable tools within your flows. The enhanced MCP tools system supports:
+
+- **Parameter Positioning**: Place parameters in body, headers, or URL path
+- **Path Parameters**: Use RESTful URL patterns like `/users/{userId}`
+- **Response Templates**: Transform JSON responses into readable text
+- **MCP Server Interface**: Standard protocol for external integrations
+
+For detailed information, see the [MCP Tools Guide](mcp_tools_guide.md).
 
 ### Configuring an MCP Tool
 
@@ -120,47 +127,176 @@ MCP (Model Context Protocol) tools allow you to integrate external HTTP APIs as 
 3. Fill in the configuration:
    ```json
    {
-     "name": "weather_api",
-     "description": "Get weather information",
-     "endpoint": "https://api.weather.com/v1/current",
-     "method": "GET",
-     "headers": {
-       "Authorization": "Bearer YOUR_API_KEY"
-     },
-     "parameters": [
-       {
-         "name": "city",
-         "type": "string",
-         "required": true,
-         "description": "City name"
+     "name": "get_user_orders",
+     "description": "Get orders for a specific user",
+     "config": {
+       "HTTP": {
+         "endpoint": "https://api.example.com/users/{userId}/orders",
+         "method": "GET",
+         "headers": {
+           "Content-Type": "application/json"
+         },
+         "parameters": [
+           {
+             "name": "userId",
+             "parameter_type": "String",
+             "description": "User ID",
+             "required": true,
+             "position": "path"
+           },
+           {
+             "name": "Authorization",
+             "parameter_type": "String",
+             "description": "API token",
+             "required": true,
+             "position": "header"
+           },
+           {
+             "name": "status",
+             "parameter_type": "String",
+             "description": "Filter by order status",
+             "required": false,
+             "position": "body"
+           }
+         ],
+         "timeout_seconds": 30,
+         "retry_count": 3,
+         "response_template": "Orders for user {{ .userId }}:\n{{- range $index, $order := .orders }}\n- Order #{{ .id }}: {{ .status }} (${{ .total }})\n{{- end }}"
        }
-     ]
+     }
    }
    ```
 4. Click **Test Connection** to verify
 5. Click **Save**
 
+### Parameter Positions
+
+#### Body Parameters (Default)
+Sent in the request body as JSON:
+```json
+{
+  "name": "query",
+  "parameter_type": "String",
+  "position": "body"
+}
+```
+
+#### Header Parameters
+Sent as HTTP headers (useful for authentication):
+```json
+{
+  "name": "Authorization",
+  "parameter_type": "String",
+  "position": "header"
+}
+```
+
+#### Path Parameters
+Embedded in the URL (for RESTful APIs):
+```json
+{
+  "name": "userId",
+  "parameter_type": "String",
+  "position": "path"
+}
+```
+
+Use `{parameterName}` syntax in the endpoint:
+```
+https://api.example.com/users/{userId}/profile
+```
+
+### Response Templates
+
+Transform JSON responses into readable text using Handlebars syntax:
+
+**Simple Variables:**
+```handlebars
+User: {{ .name }}
+Email: {{ .email }}
+```
+
+**Loops:**
+```handlebars
+Items:
+{{- range $index, $item := .items }}
+- {{ .name }}: ${{ .price }}
+{{- end }}
+```
+
+**Conditionals:**
+```handlebars
+{{- if .error }}
+Error: {{ .error }}
+{{- else }}
+Success: {{ .message }}
+{{- end }}
+```
+
+**Benefits:**
+- Convert complex JSON to human-readable text
+- Extract only relevant information
+- Format data consistently
+- Improve user experience
+
 ### Testing an MCP Tool
 
 1. Open the tool configuration
 2. Click **Test** tab
-3. Provide test parameters
+3. Provide test parameters:
+   - Path parameters: Will be substituted in the URL
+   - Header parameters: Will be sent as HTTP headers
+   - Body parameters: Will be sent in the request body
 4. Click **Run Test**
-5. View the response and execution time
+5. View the response:
+   - If a template is configured, see the formatted text output
+   - If no template, see the raw JSON response
+   - Check execution time and any errors
 
 ### Using MCP Tools in Flows
 
-MCP tools can be called from flow nodes:
+MCP tools can be called from flow nodes. The system automatically handles parameter positioning:
 
 ```json
 {
   "type": "mcp_tool",
-  "tool_id": "weather_api",
+  "tool_id": "get_user_orders",
   "parameters": {
-    "city": "{{user_input.city}}"
+    "userId": "{{user_input.user_id}}",
+    "Authorization": "Bearer {{config.api_token}}",
+    "status": "pending"
   }
 }
 ```
+
+### MCP Server Interface
+
+External systems can access your tools via the standard MCP protocol:
+
+**List Available Tools:**
+```bash
+GET /api/v1/mcp/tools
+Authorization: Bearer <token>
+```
+
+**Call a Tool:**
+```bash
+POST /api/v1/mcp/tools/call
+{
+  "name": "get_user_orders",
+  "arguments": {
+    "userId": "user123",
+    "Authorization": "Bearer token",
+    "status": "pending"
+  }
+}
+```
+
+This enables integration with:
+- External AI agents
+- Third-party applications
+- Custom automation scripts
+- Multi-tenant systems
 
 ## LLM Configuration
 
@@ -346,6 +482,36 @@ Sessions maintain context across messages:
 4. **Test incrementally**: Test each node before building the complete flow
 5. **Version control**: Use meaningful change logs when creating versions
 
+### MCP Tool Configuration
+
+1. **Choose the right parameter position**:
+   - Use `header` for authentication tokens and API keys
+   - Use `path` for resource identifiers (user IDs, order IDs, etc.)
+   - Use `body` for complex data and search queries
+
+2. **Design clear parameter schemas**:
+   - Provide descriptive parameter names and descriptions
+   - Mark required parameters appropriately
+   - Set sensible default values for optional parameters
+
+3. **Use response templates effectively**:
+   - Keep templates simple and focused on readability
+   - Use conditionals to handle missing or null data
+   - Test templates with various API responses
+   - Consider the end user's reading experience
+
+4. **Validate configurations**:
+   - Ensure all path parameters have corresponding placeholders in the endpoint
+   - Test tools with various input combinations
+   - Verify header names follow HTTP conventions
+   - Check that response templates compile without errors
+
+5. **Handle errors gracefully**:
+   - Set appropriate timeout values (typically 10-30 seconds)
+   - Use retry counts for transient failures (2-3 retries recommended)
+   - Templates automatically fall back to JSON on rendering errors
+   - Monitor tool execution logs for failures
+
 ### Performance Optimization
 
 1. **Cache frequently used data**: Use session context to avoid redundant API calls
@@ -406,6 +572,48 @@ Sessions maintain context across messages:
 3. Adjust similarity threshold
 4. Test with simpler queries
 5. Verify vector DB connection
+
+#### MCP Tool Path Parameter Error
+
+**Symptoms**: "Path parameter not found in endpoint" error
+
+**Solutions**:
+1. Check endpoint URL contains `{parameterName}` placeholder
+2. Verify parameter position is set to "path"
+3. Ensure parameter name matches placeholder exactly (case-sensitive)
+4. Example: endpoint `/users/{userId}` requires parameter named "userId"
+
+#### MCP Tool Template Rendering Error
+
+**Symptoms**: Template error message or unexpected output
+
+**Solutions**:
+1. Verify Handlebars syntax is correct (matching `{{` and `}}`)
+2. Check that variable names match JSON response fields
+3. Test with raw JSON first to see actual response structure
+4. Use the test interface to debug template output
+5. Simplify template to isolate the issue
+
+#### MCP Server Tool Not Found
+
+**Symptoms**: Tool doesn't appear in MCP tools list
+
+**Solutions**:
+1. Verify tool is created for the correct tenant
+2. Check authentication token is valid and not expired
+3. Ensure tool is not archived or deleted
+4. Verify you have permission to access the tool
+5. Try refreshing the tool list
+
+#### Header Parameter Validation Error
+
+**Symptoms**: "Invalid header name" error
+
+**Solutions**:
+1. Use valid HTTP header naming conventions
+2. Allowed characters: letters, numbers, hyphens
+3. Common valid headers: `Authorization`, `Content-Type`, `X-Custom-Header`
+4. Invalid examples: `invalid header` (space), `header@name` (special char)
 
 #### Session Context Lost
 
@@ -504,10 +712,18 @@ PUT /api/flows/{id}
 DELETE /api/flows/{id}
 POST /api/flows/{id}/execute
 
-# MCP Tools
-GET /api/mcp/tools
-POST /api/mcp/tools
-POST /api/mcp/tools/{id}/call
+# MCP Tools (Management)
+GET /api/mcp-tools
+POST /api/mcp-tools
+GET /api/mcp-tools/{id}
+PUT /api/mcp-tools/{id}
+DELETE /api/mcp-tools/{id}
+POST /api/mcp-tools/{id}/call
+GET /api/mcp-tools/{id}/versions
+
+# MCP Server (Protocol Interface)
+GET /api/v1/mcp/tools          # List tools in MCP format
+POST /api/v1/mcp/tools/call    # Call tool via MCP protocol
 
 # Sessions
 GET /api/sessions

@@ -34,6 +34,21 @@ pub enum ParameterType {
     Array,
 }
 
+/// 参数位置枚举
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ParameterPosition {
+    Body,    // 请求体参数
+    Header,  // HTTP头参数
+    Path,    // 路径参数
+}
+
+impl Default for ParameterPosition {
+    fn default() -> Self {
+        ParameterPosition::Body
+    }
+}
+
 /// 参数模式定义
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParameterSchema {
@@ -43,6 +58,8 @@ pub struct ParameterSchema {
     pub required: bool,
     pub default_value: Option<serde_json::Value>,
     pub enum_values: Option<Vec<serde_json::Value>>,
+    #[serde(default)]
+    pub position: ParameterPosition,
 }
 
 impl ParameterSchema {
@@ -54,6 +71,7 @@ impl ParameterSchema {
             required,
             default_value: None,
             enum_values: None,
+            position: ParameterPosition::default(),
         }
     }
 
@@ -69,6 +87,11 @@ impl ParameterSchema {
 
     pub fn with_enum_values(mut self, enum_values: Vec<serde_json::Value>) -> Self {
         self.enum_values = Some(enum_values);
+        self
+    }
+
+    pub fn with_position(mut self, position: ParameterPosition) -> Self {
+        self.position = position;
         self
     }
 
@@ -122,6 +145,7 @@ pub struct HTTPToolConfig {
     pub parameters: Vec<ParameterSchema>,
     pub timeout_seconds: Option<u64>,
     pub retry_count: Option<u32>,
+    pub response_template: Option<String>,
 }
 
 impl HTTPToolConfig {
@@ -133,6 +157,7 @@ impl HTTPToolConfig {
             parameters: Vec::new(),
             timeout_seconds: Some(30),
             retry_count: Some(3),
+            response_template: None,
         }
     }
 
@@ -153,6 +178,11 @@ impl HTTPToolConfig {
 
     pub fn with_retry_count(mut self, retry_count: u32) -> Self {
         self.retry_count = Some(retry_count);
+        self
+    }
+
+    pub fn with_response_template(mut self, response_template: String) -> Self {
+        self.response_template = Some(response_template);
         self
     }
 
@@ -181,6 +211,76 @@ impl HTTPToolConfig {
         if let Some(retry_count) = self.retry_count {
             if retry_count > 10 {
                 return Err("Retry count cannot exceed 10".to_string());
+            }
+        }
+
+        // 验证路径参数一致性
+        self.validate_path_parameters()?;
+
+        // 验证header参数命名规范
+        self.validate_header_parameters()?;
+
+        Ok(())
+    }
+
+    /// 验证路径参数与endpoint的一致性
+    fn validate_path_parameters(&self) -> Result<(), String> {
+        // 提取endpoint中的所有路径参数占位符 {paramName}
+        let placeholder_regex = regex::Regex::new(r"\{([^}]+)\}")
+            .map_err(|e| format!("Failed to compile regex: {}", e))?;
+        
+        let mut placeholders = std::collections::HashSet::new();
+        for cap in placeholder_regex.captures_iter(&self.endpoint) {
+            if let Some(param_name) = cap.get(1) {
+                placeholders.insert(param_name.as_str().to_string());
+            }
+        }
+
+        // 收集所有position为path的参数
+        let mut path_params = std::collections::HashSet::new();
+        for param in &self.parameters {
+            if param.position == ParameterPosition::Path {
+                path_params.insert(param.name.clone());
+            }
+        }
+
+        // 验证每个占位符都有对应的path参数
+        for placeholder in &placeholders {
+            if !path_params.contains(placeholder) {
+                return Err(format!(
+                    "Path parameter '{}' in endpoint has no corresponding parameter definition with position=path",
+                    placeholder
+                ));
+            }
+        }
+
+        // 验证每个path参数都在endpoint中有对应的占位符
+        for path_param in &path_params {
+            if !placeholders.contains(path_param) {
+                return Err(format!(
+                    "Parameter '{}' has position=path but is not used in endpoint URL",
+                    path_param
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证header参数命名规范
+    fn validate_header_parameters(&self) -> Result<(), String> {
+        // HTTP header名称规范：字母、数字、连字符
+        let header_name_regex = regex::Regex::new(r"^[a-zA-Z0-9\-]+$")
+            .map_err(|e| format!("Failed to compile regex: {}", e))?;
+
+        for param in &self.parameters {
+            if param.position == ParameterPosition::Header {
+                if !header_name_regex.is_match(&param.name) {
+                    return Err(format!(
+                        "Header parameter '{}' has invalid name. Header names must contain only letters, numbers, and hyphens",
+                        param.name
+                    ));
+                }
             }
         }
 
@@ -283,6 +383,24 @@ mod tests {
     }
 
     #[test]
+    fn test_parameter_position_default() {
+        let param = ParameterSchema::new("test".to_string(), ParameterType::String, true);
+        assert_eq!(param.position, ParameterPosition::Body);
+    }
+
+    #[test]
+    fn test_parameter_position_serialization() {
+        let param = ParameterSchema::new("test".to_string(), ParameterType::String, true)
+            .with_position(ParameterPosition::Path);
+        
+        let json = serde_json::to_string(&param).unwrap();
+        assert!(json.contains("\"position\":\"path\""));
+        
+        let deserialized: ParameterSchema = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.position, ParameterPosition::Path);
+    }
+
+    #[test]
     fn test_http_tool_config_validation() {
         let config = HTTPToolConfig::new(
             "https://api.example.com/test".to_string(),
@@ -328,5 +446,129 @@ mod tests {
             "unknown": "value"
         });
         assert!(config.validate_call_parameters(&unknown_params).is_err());
+    }
+
+    #[test]
+    fn test_path_parameter_validation_success() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/users/{userId}/orders/{orderId}".to_string(),
+            HttpMethod::GET,
+        )
+        .with_parameter(
+            ParameterSchema::new("userId".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Path)
+        )
+        .with_parameter(
+            ParameterSchema::new("orderId".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Path)
+        );
+        
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_path_parameter_validation_missing_placeholder() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/users/{userId}".to_string(),
+            HttpMethod::GET,
+        )
+        .with_parameter(
+            ParameterSchema::new("userId".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Path)
+        )
+        .with_parameter(
+            ParameterSchema::new("orderId".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Path)
+        );
+        
+        let result = config.validate();
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("orderId"));
+        assert!(error_msg.contains("not used in endpoint"));
+    }
+
+    #[test]
+    fn test_path_parameter_validation_missing_definition() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/users/{userId}/orders/{orderId}".to_string(),
+            HttpMethod::GET,
+        )
+        .with_parameter(
+            ParameterSchema::new("userId".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Path)
+        );
+        
+        let result = config.validate();
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("orderId"));
+        assert!(error_msg.contains("no corresponding parameter definition"));
+    }
+
+    #[test]
+    fn test_header_parameter_validation_success() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/test".to_string(),
+            HttpMethod::GET,
+        )
+        .with_parameter(
+            ParameterSchema::new("Authorization".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Header)
+        )
+        .with_parameter(
+            ParameterSchema::new("X-Custom-Header".to_string(), ParameterType::String, false)
+                .with_position(ParameterPosition::Header)
+        );
+        
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_header_parameter_validation_invalid_name() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/test".to_string(),
+            HttpMethod::GET,
+        )
+        .with_parameter(
+            ParameterSchema::new("Invalid Header!".to_string(), ParameterType::String, true)
+                .with_position(ParameterPosition::Header)
+        );
+        
+        let result = config.validate();
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err();
+        assert!(error_msg.contains("Invalid Header!"));
+        assert!(error_msg.contains("invalid name"));
+    }
+
+    #[test]
+    fn test_response_template_field() {
+        let config = HTTPToolConfig::new(
+            "https://api.example.com/test".to_string(),
+            HttpMethod::GET,
+        )
+        .with_response_template("Result: {{ .data }}".to_string());
+        
+        assert_eq!(config.response_template, Some("Result: {{ .data }}".to_string()));
+    }
+    
+    #[test]
+    fn test_template_syntax_validation() {
+        use crate::infrastructure::mcp::template_engine::ResponseTemplateEngine;
+        
+        let engine = ResponseTemplateEngine::new();
+        
+        // Valid template
+        let valid_template = "Hello {{ name }}!";
+        assert!(engine.validate_template(valid_template).is_ok());
+        
+        // Invalid template - missing closing brace
+        let invalid_template = "Hello {{ name }";
+        assert!(engine.validate_template(invalid_template).is_err());
+        
+        // Invalid template - unclosed block
+        let invalid_block = "{{#if condition}}text";
+        assert!(engine.validate_template(invalid_block).is_err());
     }
 }

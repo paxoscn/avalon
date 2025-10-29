@@ -55,6 +55,15 @@ jsonwebtoken = "9.3"
 # Random number generation
 rand = "0.8"
 
+# Regular expressions
+regex = "1.10"
+
+# URL encoding
+percent-encoding = "2.3"
+
+# Template engine
+handlebars = "5.1"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12"

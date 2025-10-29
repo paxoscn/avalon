@@ -44,3 +44,25 @@ Agent只能有一个雇佣者, 用agents表的employer_id表示(空表示无人�
 agent_employments表废弃.
 当进行雇佣时, 首先对原Agent执行复制, 再填充其employer_id.
 当解雇时, 填充fired_at字段.
+
+---
+
+对MCP工具进行如下改动:
+
+ParameterSchema增加position(body / header / path), 用于标识参数的位置.
+当position为path时, HTTPToolConfig的endpoint属性中可以用{参数名}来包含该参数.
+
+HTTPToolConfig增加response_template, 用于将JSON响应翻译为工具的输出. 例如:
+```
+# Category list
+{{- range $category_index, $category := .data }}
+- **Category Name**: {{ .classifyName }}
+  **Goods list**:
+    {{- range $goods_index, $goods := .goodsList }}
+    - **Goods Name**: {{ .goodsName }}
+    {{- end }}
+{{- end }}
+```
+模板需要能支持简单的变量和循环, 性能越高越好.
+
+实现MCP server能力, 并提供工具列表和调用接口.
