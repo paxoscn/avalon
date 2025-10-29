@@ -65,8 +65,8 @@ class FlowService {
   }
 
   async getFlowVersions(id: string): Promise<FlowVersion[]> {
-    const response = await apiClient.get<{ versions: FlowVersion[] }>(`/flows/${id}/versions`);
-    return response.data.versions;
+    const response = await apiClient.get<FlowVersion[]>(`/flows/${id}/versions`);
+    return response.data;
   }
 
   async rollbackFlow(id: string, targetVersion: number): Promise<RollbackResponse> {

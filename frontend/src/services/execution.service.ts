@@ -24,12 +24,12 @@ export interface ExecutionStep {
   stepName: string;
   stepType: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-  inputData?: Record<string, any>;
-  outputData?: Record<string, any>;
-  errorMessage?: string;
-  startedAt: string;
-  completedAt?: string;
-  executionTimeMs?: number;
+  input_data?: Record<string, any>;
+  output_data?: Record<string, any>;
+  error_message?: string;
+  started_at: string;
+  completed_at?: string;
+  execution_time_ms?: number;
 }
 
 export interface ExecutionStats {

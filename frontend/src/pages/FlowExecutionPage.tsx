@@ -125,66 +125,66 @@ export const FlowExecutionPage = () => {
 
         <Card>
           <h3 className="text-sm font-medium text-gray-500 mb-2">Flow Version</h3>
-          <p className="text-2xl font-semibold text-gray-900">v{execution.flowVersion}</p>
+          <p className="text-2xl font-semibold text-gray-900">v{execution.flow_version}</p>
         </Card>
 
         <Card>
           <h3 className="text-sm font-medium text-gray-500 mb-2">Started At</h3>
-          <p className="text-sm text-gray-900">{new Date(execution.startedAt).toLocaleString()}</p>
+          <p className="text-sm text-gray-900">{new Date(execution.started_at).toLocaleString()}</p>
         </Card>
 
         <Card>
           <h3 className="text-sm font-medium text-gray-500 mb-2">Execution Time</h3>
           <p className="text-2xl font-semibold text-gray-900">
-            {execution.executionTimeMs ? `${execution.executionTimeMs}ms` : '-'}
+            {execution.execution_time_ms ? `${execution.execution_time_ms}ms` : '-'}
           </p>
         </Card>
       </div>
 
-      {execution.inputData && (
+      {execution.input_data && (
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Input Data</h2>
           <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm">
-            {JSON.stringify(execution.inputData, null, 2)}
+            {JSON.stringify(execution.input_data, null, 2)}
           </pre>
         </Card>
       )}
 
-      {execution.outputData && (
+      {execution.output_data && (
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Output Data</h2>
           <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm">
-            {JSON.stringify(execution.outputData, null, 2)}
+            {JSON.stringify(execution.output_data, null, 2)}
           </pre>
         </Card>
       )}
 
-      {execution.errorMessage && (
+      {execution.error_message && (
         <Card>
           <h2 className="text-lg font-semibold text-red-600 mb-4">Error</h2>
           <div className="bg-red-50 p-4 rounded-lg">
-            <p className="text-red-800 font-mono text-sm">{execution.errorMessage}</p>
+            <p className="text-red-800 font-mono text-sm">{execution.error_message}</p>
           </div>
         </Card>
       )}
 
-      {execution.completedAt && (
+      {execution.completed_at && (
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h2>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Started:</span>
-              <span className="text-gray-900">{new Date(execution.startedAt).toLocaleString()}</span>
+              <span className="text-gray-900">{new Date(execution.started_at).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Completed:</span>
               <span className="text-gray-900">
-                {new Date(execution.completedAt).toLocaleString()}
+                {new Date(execution.completed_at).toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Duration:</span>
-              <span className="text-gray-900">{execution.executionTimeMs}ms</span>
+              <span className="text-gray-900">{execution.execution_time_ms}ms</span>
             </div>
           </div>
         </Card>

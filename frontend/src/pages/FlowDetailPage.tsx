@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { flowService } from '../services/flow.service';
-import type { Flow, FlowExecution } from '../types';
+import type { Flow, FlowExecution, FlowVersion } from '../types';
 import { Button, Card, Loader, Alert, Modal } from '../components/common';
 
 export const FlowDetailPage = () => {
@@ -9,6 +9,7 @@ export const FlowDetailPage = () => {
   const navigate = useNavigate();
   const [flow, setFlow] = useState<Flow | null>(null);
   const [executions, setExecutions] = useState<FlowExecution[]>([]);
+  const [currentVersion, setCurrentVersion] = useState<FlowVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
@@ -28,12 +29,19 @@ export const FlowDetailPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const [flowData, executionsData] = await Promise.all([
+      const [flowData, executionsData, versionsData] = await Promise.all([
         flowService.getFlowById(id),
         flowService.getFlowExecutions(id),
+        flowService.getFlowVersions(id),
       ]);
       setFlow(flowData);
       setExecutions(executionsData);
+      
+      // Find the current version's definition
+      const currentVersionData = versionsData.find(
+        (v: FlowVersion) => v.version === flowData.current_version
+      );
+      setCurrentVersion(currentVersionData || null);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load flow details');
     } finally {
@@ -118,14 +126,14 @@ export const FlowDetailPage = () => {
           <Button variant="secondary" onClick={() => setShowCurlModal(true)}>
             Show cURL Command
           </Button>
-          {flow.status === 'active' && (
+          {flow.status === 'Active' && (
             <Button onClick={() => setShowExecuteModal(true)}>Execute Flow</Button>
           )}
         </div>
       </div>
 
       {error && (
-        <Alert variant="error" onClose={() => setError(null)}>
+        <Alert type="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -135,9 +143,9 @@ export const FlowDetailPage = () => {
           <h3 className="text-sm font-medium text-gray-500 mb-2">Status</h3>
           <span
             className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-              flow.status === 'active'
+              flow.status === 'Active'
                 ? 'text-green-600 bg-green-100'
-                : flow.status === 'draft'
+                : flow.status === 'Draft'
                 ? 'text-yellow-600 bg-yellow-100'
                 : 'text-gray-600 bg-gray-100'
             }`}
@@ -158,6 +166,31 @@ export const FlowDetailPage = () => {
           </p>
         </Card>
       </div>
+
+      <Card>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Version Definition</h2>
+        {currentVersion ? (
+          <div className="relative">
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono max-h-96 overflow-y-auto">
+              {JSON.stringify(currentVersion.definition, null, 2)}
+            </pre>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute top-2 right-2"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  JSON.stringify(currentVersion.definition, null, 2)
+                );
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">No definition available</p>
+        )}
+      </Card>
 
       <Card>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Executions</h2>
@@ -181,16 +214,16 @@ export const FlowDetailPage = () => {
                       {execution.status}
                     </span>
                     <span className="text-sm text-gray-600">
-                      {new Date(execution.startedAt).toLocaleString()}
+                      {new Date(execution.started_at).toLocaleString()}
                     </span>
                   </div>
-                  {execution.errorMessage && (
-                    <p className="text-sm text-red-600 mt-1">{execution.errorMessage}</p>
+                  {execution.error_message && (
+                    <p className="text-sm text-red-600 mt-1">{execution.error_message}</p>
                   )}
                 </div>
                 <div className="text-right">
-                  {execution.executionTimeMs && (
-                    <p className="text-sm text-gray-600">{execution.executionTimeMs}ms</p>
+                  {execution.execution_time_ms && (
+                    <p className="text-sm text-gray-600">{execution.execution_time_ms}ms</p>
                   )}
                 </div>
               </div>

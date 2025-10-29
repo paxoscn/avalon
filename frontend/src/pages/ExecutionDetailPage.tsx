@@ -158,7 +158,7 @@ export function ExecutionDetailPage() {
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Duration
               </label>
-              <p className="text-sm text-gray-900">{formatDuration(execution.executionTimeMs)}</p>
+              <p className="text-sm text-gray-900">{formatDuration(execution.execution_time_ms)}</p>
             </div>
 
             <div>
@@ -172,7 +172,7 @@ export function ExecutionDetailPage() {
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Flow Version
               </label>
-              <p className="text-sm text-gray-900">v{execution.flowVersion}</p>
+              <p className="text-sm text-gray-900">v{execution.flow_version}</p>
             </div>
 
             <div>
@@ -186,15 +186,15 @@ export function ExecutionDetailPage() {
               <label className="block text-sm font-medium text-gray-500 mb-1">
                 Started At
               </label>
-              <p className="text-sm text-gray-900">{formatDate(execution.startedAt)}</p>
+              <p className="text-sm text-gray-900">{formatDate(execution.started_at)}</p>
             </div>
 
-            {execution.completedAt && (
+            {execution.completed_at && (
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-1">
                   Completed At
                 </label>
-                <p className="text-sm text-gray-900">{formatDate(execution.completedAt)}</p>
+                <p className="text-sm text-gray-900">{formatDate(execution.completed_at)}</p>
               </div>
             )}
 
@@ -208,13 +208,13 @@ export function ExecutionDetailPage() {
             )}
           </div>
 
-          {execution.errorMessage && (
+          {execution.error_message && (
             <div>
               <label className="block text-sm font-medium text-red-500 mb-1">
                 Error Message
               </label>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-red-900">{execution.errorMessage}</p>
+                <p className="text-sm text-red-900">{execution.error_message}</p>
               </div>
             </div>
           )}
@@ -292,22 +292,22 @@ export function ExecutionDetailPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 mt-2">
                           <div>
-                            <span className="font-medium">Started:</span> {formatDate(step.startedAt)}
+                            <span className="font-medium">Started:</span> {formatDate(step.started_at)}
                           </div>
-                          {step.completedAt && (
+                          {step.completed_at && (
                             <div>
-                              <span className="font-medium">Completed:</span> {formatDate(step.completedAt)}
+                              <span className="font-medium">Completed:</span> {formatDate(step.completed_at)}
                             </div>
                           )}
-                          {step.executionTimeMs && (
+                          {step.execution_time_ms && (
                             <div>
-                              <span className="font-medium">Duration:</span> {formatDuration(step.executionTimeMs)}
+                              <span className="font-medium">Duration:</span> {formatDuration(step.execution_time_ms)}
                             </div>
                           )}
                         </div>
-                        {step.errorMessage && (
+                        {step.error_message && (
                           <div className="mt-2 text-xs text-red-600">
-                            <span className="font-medium">Error:</span> {step.errorMessage}
+                            <span className="font-medium">Error:</span> {step.error_message}
                           </div>
                         )}
                       </div>
@@ -381,10 +381,10 @@ export function ExecutionDetailPage() {
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Input Data</h2>
-              {execution.inputData ? (
+              {execution.input_data ? (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <pre className="text-xs text-gray-900 overflow-x-auto">
-                    {JSON.stringify(execution.inputData, null, 2)}
+                    {JSON.stringify(execution.input_data, null, 2)}
                   </pre>
                 </div>
               ) : (
@@ -396,10 +396,10 @@ export function ExecutionDetailPage() {
           <Card>
             <div className="p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Output Data</h2>
-              {execution.outputData ? (
+              {execution.output_data ? (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <pre className="text-xs text-gray-900 overflow-x-auto">
-                    {JSON.stringify(execution.outputData, null, 2)}
+                    {JSON.stringify(execution.output_data, null, 2)}
                   </pre>
                 </div>
               ) : (

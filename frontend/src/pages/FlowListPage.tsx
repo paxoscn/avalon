@@ -177,11 +177,10 @@ export const FlowListPage = () => {
                 setFilter(status);
                 setPage(1);
               }}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                filter === status
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filter === status
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>

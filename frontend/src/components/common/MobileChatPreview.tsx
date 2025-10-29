@@ -74,13 +74,13 @@ export function MobileChatPreview({
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
-      const errorMessage: ChatMessage = {
+      const error_message: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: '抱歉，发送消息时出现错误。',
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, error_message]);
     } finally {
       setIsTyping(false);
     }
