@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { mcpService, type CreateMCPToolRequest, type UpdateMCPToolRequest, type ParameterSchema } from '../services/mcp.service';
 import type { MCPTool } from '../types';
 import { Button, Card, Input, Loader, Alert } from '../components/common';
 
 export function MCPToolDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = id === 'new';
@@ -62,7 +64,7 @@ export function MCPToolDetailPage() {
         });
       }
     } catch (err: any) {console.log("xxx", err);
-      setError(err.response?.data?.error || 'Failed to load tool');
+      setError(err.response?.data?.error || t('mcpTools.errors.loadToolFailed'));
     } finally {
       setLoading(false);
     }
@@ -92,7 +94,7 @@ export function MCPToolDetailPage() {
           },
         };
         const newTool = await mcpService.createTool(request);
-        setSuccess('Tool created successfully');
+        setSuccess(t('mcpTools.success.created'));
         setTimeout(() => navigate(`/mcp/tools/${newTool.id}`), 1500);
       } else {
         const request: UpdateMCPToolRequest = {
@@ -112,11 +114,11 @@ export function MCPToolDetailPage() {
           changeLog: formData.changeLog || undefined,
         };
         await mcpService.updateTool(id!, request);
-        setSuccess('Tool updated successfully');
+        setSuccess(t('mcpTools.success.updated'));
         await loadTool();
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save tool');
+      setError(err.response?.data?.error || t('mcpTools.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -175,17 +177,17 @@ export function MCPToolDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            {isNew ? 'Create MCP Tool' : 'Configure MCP Tool'}
+            {isNew ? t('mcpTools.detail.createTitle') : t('mcpTools.detail.editTitle')}
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             {isNew
-              ? 'Configure a new HTTP endpoint as an MCP tool'
-              : 'Update tool configuration (creates a new version)'}
+              ? t('mcpTools.detail.createDescription')
+              : t('mcpTools.detail.editDescription')}
           </p>
         </div>
         {!isNew && (
           <Link to={`/mcp/tools/${id}/versions`}>
-            <Button variant="secondary">View Versions</Button>
+            <Button variant="secondary">{t('mcpTools.detail.viewVersions')}</Button>
           </Link>
         )}
       </div>
@@ -204,47 +206,47 @@ export function MCPToolDetailPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.detail.basicInfo')}</h2>
           <div className="space-y-4">
             <Input
-              label="Tool Name"
+              label={t('mcpTools.detail.toolName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              placeholder="my-api-tool"
+              placeholder={t('mcpTools.detail.toolNamePlaceholder')}
             />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                {t('mcpTools.detail.description')}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Describe what this tool does..."
+                placeholder={t('mcpTools.detail.descriptionPlaceholder')}
               />
             </div>
           </div>
         </Card>
 
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">HTTP Configuration</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.detail.httpConfig')}</h2>
           <div className="space-y-4">
             <Input
-              label="Endpoint URL"
+              label={t('mcpTools.detail.endpointUrl')}
               type="url"
               value={formData.endpoint}
               onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
               required
-              placeholder="https://api.example.com/endpoint"
-              helpText="Use {paramName} for path parameters, e.g., /users/{userId}"
+              placeholder={t('mcpTools.detail.endpointUrlPlaceholder')}
+              helpText={t('mcpTools.detail.endpointUrlHelp')}
             />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                HTTP Method
+                {t('mcpTools.detail.httpMethod')}
               </label>
               <select
                 value={formData.method}
@@ -266,61 +268,61 @@ export function MCPToolDetailPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Timeout (seconds)"
+                label={t('mcpTools.detail.timeout')}
                 type="number"
                 min="1"
                 max="300"
                 value={formData.timeoutSeconds}
                 onChange={(e) => setFormData({ ...formData, timeoutSeconds: parseInt(e.target.value) || 30 })}
-                helpText="1-300 seconds"
+                helpText={t('mcpTools.detail.timeoutHelp')}
               />
               <Input
-                label="Retry Count"
+                label={t('mcpTools.detail.retryCount')}
                 type="number"
                 min="0"
                 max="10"
                 value={formData.retryCount}
                 onChange={(e) => setFormData({ ...formData, retryCount: parseInt(e.target.value) || 0 })}
-                helpText="0-10 retries"
+                helpText={t('mcpTools.detail.retryCountHelp')}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Response Template (Optional)
+                {t('mcpTools.detail.responseTemplate')}
               </label>
               <textarea
                 value={formData.responseTemplate}
                 onChange={(e) => setFormData({ ...formData, responseTemplate: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                placeholder="Use Handlebars syntax: {{ data.result }}"
+                placeholder={t('mcpTools.detail.responseTemplatePlaceholder')}
               />
               <p className="mt-1 text-xs text-gray-500">
-                Transform the API response using Handlebars template syntax
+                {t('mcpTools.detail.responseTemplateHelp')}
               </p>
             </div>
           </div>
         </Card>
 
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Headers</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.detail.headers')}</h2>
           <div className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Header name"
+                placeholder={t('mcpTools.detail.headerName')}
                 value={headerKey}
                 onChange={(e) => setHeaderKey(e.target.value)}
                 className="flex-1"
               />
               <Input
-                placeholder="Header value"
+                placeholder={t('mcpTools.detail.headerValue')}
                 value={headerValue}
                 onChange={(e) => setHeaderValue(e.target.value)}
                 className="flex-1"
               />
               <Button type="button" onClick={addHeader} variant="secondary">
-                Add
+                {t('mcpTools.detail.add')}
               </Button>
             </div>
 
@@ -340,7 +342,7 @@ export function MCPToolDetailPage() {
                       onClick={() => removeHeader(key)}
                       className="text-red-600 hover:text-red-700 text-sm"
                     >
-                      Remove
+                      {t('mcpTools.detail.remove')}
                     </button>
                   </div>
                 ))}
@@ -351,9 +353,9 @@ export function MCPToolDetailPage() {
 
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">Parameters</h2>
+            <h2 className="text-lg font-medium text-gray-900">{t('mcpTools.detail.parameters')}</h2>
             <Button type="button" onClick={addParameter} variant="secondary" size="sm">
-              Add Parameter
+              {t('mcpTools.detail.addParameter')}
             </Button>
           </div>
 
@@ -362,15 +364,15 @@ export function MCPToolDetailPage() {
               <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <Input
-                    label="Name"
+                    label={t('mcpTools.detail.parameterName')}
                     value={param.name}
                     onChange={(e) => updateParameter(index, 'name', e.target.value)}
                     required
-                    placeholder="parameterName"
+                    placeholder={t('mcpTools.detail.parameterNamePlaceholder')}
                   />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Type
+                      {t('mcpTools.detail.parameterType')}
                     </label>
                     <select
                       value={param.parameter_type}
@@ -386,30 +388,30 @@ export function MCPToolDetailPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Position
+                      {t('mcpTools.detail.parameterPosition')}
                     </label>
                     <select
                       value={param.position || 'body'}
                       onChange={(e) => updateParameter(index, 'position', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="body">Body</option>
-                      <option value="header">Header</option>
-                      <option value="path">Path</option>
+                      <option value="body">{t('mcpTools.detail.body')}</option>
+                      <option value="header">{t('mcpTools.detail.header')}</option>
+                      <option value="path">{t('mcpTools.detail.path')}</option>
                     </select>
                   </div>
                 </div>
 
                 <Input
-                  label="Description"
+                  label={t('mcpTools.detail.parameterDescription')}
                   value={param.description || ''}
                   onChange={(e) => updateParameter(index, 'description', e.target.value)}
-                  placeholder="Parameter description"
+                  placeholder={t('mcpTools.detail.parameterDescriptionPlaceholder')}
                 />
 
                 <div className="grid grid-cols-2 gap-3">
                   <Input
-                    label="Default Value (JSON)"
+                    label={t('mcpTools.detail.defaultValue')}
                     value={param.default_value ? JSON.stringify(param.default_value) : ''}
                     onChange={(e) => {
                       try {
@@ -419,10 +421,10 @@ export function MCPToolDetailPage() {
                         // Invalid JSON, ignore
                       }
                     }}
-                    placeholder='e.g., "default" or 123'
+                    placeholder={t('mcpTools.detail.defaultValuePlaceholder')}
                   />
                   <Input
-                    label="Enum Values (JSON array)"
+                    label={t('mcpTools.detail.enumValues')}
                     value={param.enum_values ? JSON.stringify(param.enum_values) : ''}
                     onChange={(e) => {
                       try {
@@ -432,7 +434,7 @@ export function MCPToolDetailPage() {
                         // Invalid JSON, ignore
                       }
                     }}
-                    placeholder='e.g., ["option1", "option2"]'
+                    placeholder={t('mcpTools.detail.enumValuesPlaceholder')}
                   />
                 </div>
 
@@ -444,14 +446,14 @@ export function MCPToolDetailPage() {
                       onChange={(e) => updateParameter(index, 'required', e.target.checked)}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Required</span>
+                    <span className="ml-2 text-sm text-gray-700">{t('mcpTools.detail.required')}</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => removeParameter(index)}
                     className="text-red-600 hover:text-red-700 text-sm"
                   >
-                    Remove Parameter
+                    {t('mcpTools.detail.removeParameter')}
                   </button>
                 </div>
               </div>
@@ -459,7 +461,7 @@ export function MCPToolDetailPage() {
 
             {formData.parameters.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-4">
-                No parameters defined. Click "Add Parameter" to add one.
+                {t('mcpTools.detail.noParameters')}
               </p>
             )}
           </div>
@@ -467,27 +469,27 @@ export function MCPToolDetailPage() {
 
         {!isNew && (
           <Card>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Change Log</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.detail.changeLog')}</h2>
             <textarea
               value={formData.changeLog}
               onChange={(e) => setFormData({ ...formData, changeLog: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe the changes made in this version..."
+              placeholder={t('mcpTools.detail.changeLogPlaceholder')}
             />
           </Card>
         )}
 
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : isNew ? 'Create Tool' : 'Update Tool'}
+            {saving ? t('mcpTools.detail.saving') : isNew ? t('mcpTools.createTool') : t('mcpTools.detail.updateTool')}
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={() => navigate('/mcp/tools')}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </form>

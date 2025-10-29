@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { mcpService } from '../services/mcp.service';
 import type { MCPTool, MCPToolVersion, TestToolResponse } from '../types';
 import { Button, Card, Input, Loader, Alert } from '../components/common';
 
 export function MCPToolTestPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
 
   const [tool, setTool] = useState<MCPTool | null>(null);
@@ -67,7 +69,7 @@ export function MCPToolTestPage() {
         // setParameters(initialParams);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load tool');
+      setError(err.response?.data?.error || t('mcpTools.errors.loadToolFailed'));
     } finally {
       setLoading(false);
     }
@@ -82,12 +84,12 @@ export function MCPToolTestPage() {
       const result = await mcpService.testTool(id!, parameters);
       setTestResult(result);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Tool test failed');
+      setError(err.response?.data?.error || t('mcpTools.errors.testFailed'));
       setTestResult({
         result: null,
         executionTime: 0,
         success: false,
-        error: err.response?.data?.error || 'Tool test failed',
+        error: err.response?.data?.error || t('mcpTools.errors.testFailed'),
       });
     } finally {
       setTesting(false);
@@ -136,7 +138,7 @@ export function MCPToolTestPage() {
   if (!tool || !version) {
     return (
       <Alert type="error">
-        Tool not found or has no versions configured.
+        {t('mcpTools.errors.toolNotFound')}
       </Alert>
     );
   }
@@ -145,13 +147,13 @@ export function MCPToolTestPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Test MCP Tool</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('mcpTools.test.title')}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Test the tool with different parameters
+            {t('mcpTools.test.description')}
           </p>
         </div>
         <Link to={`/mcp/tools/${id}`}>
-          <Button variant="secondary">Back to Configuration</Button>
+          <Button variant="secondary">{t('mcpTools.test.backToConfig')}</Button>
         </Link>
       </div>
 
@@ -162,26 +164,26 @@ export function MCPToolTestPage() {
       )}
 
       <Card>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Tool Information</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.test.toolInfo')}</h2>
         <div className="space-y-2 text-sm">
           <div className="flex">
-            <span className="font-medium w-32">Name:</span>
+            <span className="font-medium w-32">{t('mcpTools.test.name')}:</span>
             <span className="text-gray-600">{tool.name}</span>
           </div>
           <div className="flex">
-            <span className="font-medium w-32">Version:</span>
+            <span className="font-medium w-32">{t('mcpTools.version')}:</span>
             <span className="text-gray-600">{tool.current_version}</span>
           </div>
           <div className="flex">
-            <span className="font-medium w-32">Endpoint:</span>
+            <span className="font-medium w-32">{t('mcpTools.test.endpoint')}:</span>
             <span className="text-gray-600 break-all">{version.config.HTTP.endpoint}</span>
           </div>
           <div className="flex">
-            <span className="font-medium w-32">Method:</span>
+            <span className="font-medium w-32">{t('mcpTools.test.method')}:</span>
             <span className="text-gray-600">{version.config.HTTP.method}</span>
           </div>
           <div className="flex">
-            <span className="font-medium w-32">Status:</span>
+            <span className="font-medium w-32">{t('mcpTools.test.status')}:</span>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tool.status.toLowerCase() === 'active'
                   ? 'bg-green-100 text-green-800'
@@ -195,10 +197,10 @@ export function MCPToolTestPage() {
       </Card>
 
       <Card>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Test Parameters</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">{t('mcpTools.test.testParameters')}</h2>
         <div className="space-y-4">
           {version.config.HTTP.parameters.length === 0 ? (
-            <p className="text-sm text-gray-500">This tool has no parameters.</p>
+            <p className="text-sm text-gray-500">{t('mcpTools.test.noParameters')}</p>
           ) : (
             version.config.HTTP.parameters.map((param: any) => (
               <div key={param.name}>
@@ -264,11 +266,11 @@ export function MCPToolTestPage() {
 
         <div className="mt-6">
           <Button onClick={handleTest} disabled={testing || tool.status.toLowerCase() !== 'active'}>
-            {testing ? 'Testing...' : 'Run Test'}
+            {testing ? t('mcpTools.test.testing') : t('mcpTools.test.runTest')}
           </Button>
           {tool.status.toLowerCase() !== 'active' && (
             <p className="mt-2 text-sm text-amber-600">
-              Tool must be active to run tests
+              {t('mcpTools.test.mustBeActive')}
             </p>
           )}
         </div>
@@ -277,7 +279,7 @@ export function MCPToolTestPage() {
       {testResult && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">Test Result</h2>
+            <h2 className="text-lg font-medium text-gray-900">{t('mcpTools.test.testResult')}</h2>
             <div className="flex items-center gap-4">
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${testResult.success
@@ -285,10 +287,10 @@ export function MCPToolTestPage() {
                     : 'bg-red-100 text-red-800'
                   }`}
               >
-                {testResult.success ? 'Success' : 'Failed'}
+                {testResult.success ? t('mcpTools.test.success') : t('mcpTools.test.failed')}
               </span>
               <span className="text-sm text-gray-600">
-                {testResult.executionTime}ms
+                {testResult.executionTime}{t('mcpTools.test.executionTime')}
               </span>
             </div>
           </div>
@@ -300,7 +302,7 @@ export function MCPToolTestPage() {
           )}
 
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Response:</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">{t('mcpTools.test.response')}</h3>
             <pre className="p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
               {JSON.stringify(testResult.result, null, 2)}
             </pre>
