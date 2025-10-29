@@ -534,7 +534,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         tool.activate();
 
         // 保存工具
-        self.tool_repository.save(&tool).await?;
+        self.tool_repository.update_without_new_version(&tool).await?;
 
         // 更新代理服务
         self.proxy_service.register_tool(tool.clone()).await?;
@@ -560,7 +560,7 @@ impl MCPApplicationService for MCPApplicationServiceImpl {
         tool.deactivate();
 
         // 保存工具
-        self.tool_repository.save(&tool).await?;
+        self.tool_repository.update_without_new_version(&tool).await?;
 
         // 更新代理服务
         self.proxy_service.register_tool(tool.clone()).await?;

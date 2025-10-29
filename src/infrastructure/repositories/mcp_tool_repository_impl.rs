@@ -278,6 +278,15 @@ impl MCPToolRepository for MCPToolRepositoryImpl {
         Ok(())
     }
 
+    async fn update_without_new_version(&self, tool: &MCPTool) -> Result<(), PlatformError> {
+        let active_model = self.domain_to_db_entity(tool);
+
+        // 更新工具记录
+        active_model.update(&*self.db).await.map_err(PlatformError::DatabaseError)?;
+
+        Ok(())
+    }
+
     async fn delete(&self, id: MCPToolId) -> Result<(), PlatformError> {
         // 删除工具（级联删除版本记录）
         mcp_tool::Entity::delete_by_id(id.0)

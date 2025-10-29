@@ -84,7 +84,8 @@ class MCPService {
   }
 
   async toggleToolStatus(id: string, status: 'active' | 'inactive'): Promise<MCPTool> {
-    const response = await apiClient.patch<{ tool: MCPTool }>(`/mcp/tools/${id}/status`, { status });
+    const action = status == 'active' ? 'activate' : 'deactivate';
+    const response = await apiClient.post<{ tool: MCPTool }>(`/mcp/tools/${id}/${action}`, {});
     return response.data.tool;
   }
 }

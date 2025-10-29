@@ -84,6 +84,9 @@ pub trait MCPToolRepository: Send + Sync {
     /// 更新工具
     async fn update(&self, tool: &MCPTool) -> Result<(), PlatformError>;
 
+    /// 更新工具但不更新版本. 用于激活/反激活等场景
+    async fn update_without_new_version(&self, tool: &MCPTool) -> Result<(), PlatformError>;
+
     /// 删除工具
     async fn delete(&self, id: MCPToolId) -> Result<(), PlatformError>;
 
