@@ -8,6 +8,7 @@ import { FlowDetailPage } from './pages/FlowDetailPage';
 import { FlowExecutionPage } from './pages/FlowExecutionPage';
 import { FlowVersionsPage } from './pages/FlowVersionsPage';
 import { FlowImportPage } from './pages/FlowImportPage';
+import { FlowTestPage } from './pages/FlowTestPage';
 import { MCPToolListPage } from './pages/MCPToolListPage';
 import { MCPToolDetailPage } from './pages/MCPToolDetailPage';
 import { MCPToolTestPage } from './pages/MCPToolTestPage';
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: 'flows/:id',
         element: <FlowDetailPage />,
+      },
+      {
+        path: 'flows/:id/test',
+        element: <FlowTestPage />,
       },
       {
         path: 'flows/:id/versions',

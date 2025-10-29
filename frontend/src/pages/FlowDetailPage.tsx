@@ -126,6 +126,9 @@ export const FlowDetailPage = () => {
           <Button variant="secondary" onClick={() => setShowCurlModal(true)}>
             Show cURL Command
           </Button>
+          <Button variant="secondary" onClick={() => navigate(`/flows/${id}/test`)}>
+            Test Flow
+          </Button>
           {flow.status === 'Active' && (
             <Button onClick={() => setShowExecuteModal(true)}>Execute Flow</Button>
           )}
