@@ -156,20 +156,20 @@ export function MCPToolVersionsPage() {
                   <div>
                     <span className="font-medium text-gray-700">Endpoint:</span>
                     <p className="text-gray-600 break-all mt-1">
-                      {version.config.endpoint}
+                      {version.config.HTTP.endpoint}
                     </p>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Method:</span>
-                    <p className="text-gray-600 mt-1">{version.config.method}</p>
+                    <p className="text-gray-600 mt-1">{version.config.HTTP.method}</p>
                   </div>
                 </div>
 
-                {version.config.headers && Object.keys(version.config.headers).length > 0 && (
+                {version.config.HTTP.headers && Object.keys(version.config.HTTP.headers).length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Headers:</h4>
                     <div className="space-y-1">
-                      {Object.entries(version.config.headers).map(([key, value]) => (
+                      {Object.entries(version.config.HTTP.headers).map(([key, value]) => (
                         <div
                           key={key}
                           className="text-sm text-gray-600 font-mono bg-gray-50 px-3 py-1 rounded"
@@ -181,13 +181,13 @@ export function MCPToolVersionsPage() {
                   </div>
                 )}
 
-                {version.config.parameters.length > 0 && (
+                {version.config.HTTP.parameters.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Parameters ({version.config.parameters.length}):
+                      Parameters ({version.config.HTTP.parameters.length}):
                     </h4>
                     <div className="space-y-2">
-                      {version.config.parameters.map((param, idx) => (
+                      {version.config.HTTP.parameters.map((param: any, idx: number) => (
                         <div
                           key={idx}
                           className="p-3 bg-gray-50 rounded-lg text-sm"

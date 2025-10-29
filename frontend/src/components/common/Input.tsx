@@ -3,10 +3,11 @@ import { forwardRef, type InputHTMLAttributes } from 'react';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   label?: string;
+  helpText?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ error, label, className = '', id, ...props }, ref) => {
+  ({ error, label, helpText, className = '', id, ...props }, ref) => {
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
     
     return (
@@ -22,6 +23,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={`input-field ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
           {...props}
         />
+        {helpText && !error && (
+          <p className="mt-1 text-xs text-gray-500">{helpText}</p>
+        )}
         {error && (
           <p className="mt-1 text-sm text-red-600">{error}</p>
         )}

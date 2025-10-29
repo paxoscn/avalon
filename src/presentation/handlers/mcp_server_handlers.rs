@@ -51,7 +51,12 @@ pub async fn call_mcp_tool(
     Json(request): Json<MCPServerCallRequest>,
 ) -> Result<Json<MCPToolCallResponse>, PlatformError> {
     let response = handler
-        .handle_call_tool(user.tenant_id, user.user_id, request.name, request.arguments)
+        .handle_call_tool(
+            user.tenant_id,
+            user.user_id,
+            request.name,
+            request.arguments,
+        )
         .await?;
 
     Ok(Json(response))
@@ -62,11 +67,16 @@ mod tests {
     use super::*;
     use crate::domain::{
         entities::MCPTool,
-        repositories::mcp_tool_repository::{MCPToolQueryOptions, MCPToolQueryResult, MCPToolRepository},
+        repositories::mcp_tool_repository::{
+            MCPToolQueryOptions, MCPToolQueryResult, MCPToolRepository,
+        },
         services::mcp_tool_service::{ToolCallContext, ToolCallResult},
         value_objects::{
             ids::{MCPToolId, TenantId, UserId},
-            tool_config::{HTTPToolConfig, HttpMethod, ParameterSchema, ParameterType, ToolConfig, ParameterPosition},
+            tool_config::{
+                HTTPToolConfig, HttpMethod, ParameterPosition, ParameterSchema, ParameterType,
+                ToolConfig,
+            },
         },
     };
     use crate::infrastructure::mcp::proxy_service::{MCPProxyService, MCPToolStats};
@@ -123,11 +133,17 @@ mod tests {
             })
         }
 
-        async fn find_by_tenant_id(&self, _tenant_id: TenantId) -> Result<Vec<MCPTool>, PlatformError> {
+        async fn find_by_tenant_id(
+            &self,
+            _tenant_id: TenantId,
+        ) -> Result<Vec<MCPTool>, PlatformError> {
             Ok(vec![])
         }
 
-        async fn find_by_created_by(&self, _created_by: UserId) -> Result<Vec<MCPTool>, PlatformError> {
+        async fn find_by_created_by(
+            &self,
+            _created_by: UserId,
+        ) -> Result<Vec<MCPTool>, PlatformError> {
             Ok(vec![])
         }
 
@@ -156,11 +172,17 @@ mod tests {
             Ok(0)
         }
 
-        async fn find_active_by_tenant(&self, _tenant_id: TenantId) -> Result<Vec<MCPTool>, PlatformError> {
+        async fn find_active_by_tenant(
+            &self,
+            _tenant_id: TenantId,
+        ) -> Result<Vec<MCPTool>, PlatformError> {
             Ok(vec![])
         }
 
-        async fn get_version_history(&self, _tool_id: MCPToolId) -> Result<Vec<crate::domain::entities::MCPToolVersion>, PlatformError> {
+        async fn get_version_history(
+            &self,
+            _tool_id: MCPToolId,
+        ) -> Result<Vec<crate::domain::entities::MCPToolVersion>, PlatformError> {
             Ok(vec![])
         }
 
@@ -205,7 +227,10 @@ mod tests {
             Ok(())
         }
 
-        async fn get_tenant_tools(&self, _tenant_id: TenantId) -> Result<Vec<MCPTool>, PlatformError> {
+        async fn get_tenant_tools(
+            &self,
+            _tenant_id: TenantId,
+        ) -> Result<Vec<MCPTool>, PlatformError> {
             Ok(vec![])
         }
 
@@ -225,18 +250,25 @@ mod tests {
             &self,
             _request: crate::infrastructure::mcp::protocol_handler::MCPRequest,
             _tenant_id: TenantId,
-        ) -> Result<crate::infrastructure::mcp::protocol_handler::MCPResponse, PlatformError> {
+        ) -> Result<crate::infrastructure::mcp::protocol_handler::MCPResponse, PlatformError>
+        {
             unimplemented!()
         }
 
-        async fn test_tool_connection(&self, _tool_id: MCPToolId) -> Result<ToolCallResult, PlatformError> {
+        async fn test_tool_connection(
+            &self,
+            _tool_id: MCPToolId,
+        ) -> Result<ToolCallResult, PlatformError> {
             Ok(ToolCallResult::success(
                 serde_json::json!({"connection": "ok"}),
                 10,
             ))
         }
 
-        async fn get_tool_stats(&self, _tenant_id: TenantId) -> Result<MCPToolStats, PlatformError> {
+        async fn get_tool_stats(
+            &self,
+            _tenant_id: TenantId,
+        ) -> Result<MCPToolStats, PlatformError> {
             Ok(MCPToolStats {
                 total_tools: 0,
                 active_tools: 0,

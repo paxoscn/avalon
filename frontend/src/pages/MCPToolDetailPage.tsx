@@ -22,6 +22,9 @@ export function MCPToolDetailPage() {
     method: 'POST' as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     headers: {} as Record<string, string>,
     parameters: [] as ParameterSchema[],
+    timeoutSeconds: 30,
+    retryCount: 3,
+    responseTemplate: '',
     changeLog: '',
   });
 
@@ -52,6 +55,9 @@ export function MCPToolDetailPage() {
           method: latestVersion.config.HTTP.method,
           headers: latestVersion.config.HTTP.headers || {},
           parameters: latestVersion.config.HTTP.parameters || [],
+          timeoutSeconds: latestVersion.config.HTTP.timeout_seconds || 30,
+          retryCount: latestVersion.config.HTTP.retry_count || 3,
+          responseTemplate: latestVersion.config.HTTP.response_template || '',
           changeLog: '',
         });
       }
@@ -79,6 +85,9 @@ export function MCPToolDetailPage() {
               method: formData.method,
               headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
               parameters: formData.parameters,
+              timeout_seconds: formData.timeoutSeconds,
+              retry_count: formData.retryCount,
+              response_template: formData.responseTemplate || undefined,
             },
           },
         };
@@ -95,6 +104,9 @@ export function MCPToolDetailPage() {
               method: formData.method,
               headers: Object.keys(formData.headers).length > 0 ? formData.headers : undefined,
               parameters: formData.parameters,
+              timeout_seconds: formData.timeoutSeconds,
+              retry_count: formData.retryCount,
+              response_template: formData.responseTemplate || undefined,
             },
           },
           changeLog: formData.changeLog || undefined,
@@ -132,7 +144,7 @@ export function MCPToolDetailPage() {
       ...formData,
       parameters: [
         ...formData.parameters,
-        { name: '', parameter_type: 'string', description: '', required: false },
+        { name: '', parameter_type: 'String', description: '', required: false, position: 'body' },
       ],
     });
   };
@@ -227,6 +239,7 @@ export function MCPToolDetailPage() {
               onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
               required
               placeholder="https://api.example.com/endpoint"
+              helpText="Use {paramName} for path parameters, e.g., /users/{userId}"
             />
 
             <div>
@@ -249,6 +262,43 @@ export function MCPToolDetailPage() {
                 <option value="DELETE">DELETE</option>
                 <option value="PATCH">PATCH</option>
               </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Timeout (seconds)"
+                type="number"
+                min="1"
+                max="300"
+                value={formData.timeoutSeconds}
+                onChange={(e) => setFormData({ ...formData, timeoutSeconds: parseInt(e.target.value) || 30 })}
+                helpText="1-300 seconds"
+              />
+              <Input
+                label="Retry Count"
+                type="number"
+                min="0"
+                max="10"
+                value={formData.retryCount}
+                onChange={(e) => setFormData({ ...formData, retryCount: parseInt(e.target.value) || 0 })}
+                helpText="0-10 retries"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Response Template (Optional)
+              </label>
+              <textarea
+                value={formData.responseTemplate}
+                onChange={(e) => setFormData({ ...formData, responseTemplate: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                placeholder="Use Handlebars syntax: {{ data.result }}"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Transform the API response using Handlebars template syntax
+              </p>
             </div>
           </div>
         </Card>
@@ -310,7 +360,7 @@ export function MCPToolDetailPage() {
           <div className="space-y-4">
             {formData.parameters.map((param, index) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <Input
                     label="Name"
                     value={param.name}
@@ -334,6 +384,20 @@ export function MCPToolDetailPage() {
                       <option value="Array">Array</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Position
+                    </label>
+                    <select
+                      value={param.position || 'body'}
+                      onChange={(e) => updateParameter(index, 'position', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="body">Body</option>
+                      <option value="header">Header</option>
+                      <option value="path">Path</option>
+                    </select>
+                  </div>
                 </div>
 
                 <Input
@@ -342,6 +406,35 @@ export function MCPToolDetailPage() {
                   onChange={(e) => updateParameter(index, 'description', e.target.value)}
                   placeholder="Parameter description"
                 />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Default Value (JSON)"
+                    value={param.default_value ? JSON.stringify(param.default_value) : ''}
+                    onChange={(e) => {
+                      try {
+                        const value = e.target.value ? JSON.parse(e.target.value) : undefined;
+                        updateParameter(index, 'default_value', value);
+                      } catch {
+                        // Invalid JSON, ignore
+                      }
+                    }}
+                    placeholder='e.g., "default" or 123'
+                  />
+                  <Input
+                    label="Enum Values (JSON array)"
+                    value={param.enum_values ? JSON.stringify(param.enum_values) : ''}
+                    onChange={(e) => {
+                      try {
+                        const value = e.target.value ? JSON.parse(e.target.value) : undefined;
+                        updateParameter(index, 'enum_values', value);
+                      } catch {
+                        // Invalid JSON, ignore
+                      }
+                    }}
+                    placeholder='e.g., ["option1", "option2"]'
+                  />
+                </div>
 
                 <div className="flex items-center justify-between">
                   <label className="flex items-center">

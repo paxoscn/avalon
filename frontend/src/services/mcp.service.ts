@@ -16,7 +16,9 @@ export interface HTTPToolConfig {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
   parameters: ParameterSchema[];
-  responseSchema?: Record<string, any>;
+  timeout_seconds?: number;
+  retry_count?: number;
+  response_template?: string;
 }
 
 export interface ParameterSchema {
@@ -24,7 +26,9 @@ export interface ParameterSchema {
   parameter_type: string;
   description?: string;
   required: boolean;
-  defaultValue?: any;
+  default_value?: any;
+  enum_values?: any[];
+  position?: 'body' | 'header' | 'path';
 }
 
 export interface UpdateMCPToolRequest {

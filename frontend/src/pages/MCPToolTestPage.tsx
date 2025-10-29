@@ -37,9 +37,9 @@ export function MCPToolTestPage() {
         
         // Initialize parameters with default values
         const initialParams: Record<string, any> = {};
-        latestVersion.config.parameters.forEach((param) => {
-          if (param.defaultValue !== undefined) {
-            initialParams[param.name] = param.defaultValue;
+        latestVersion.config.HTTP.parameters.forEach((param: any) => {
+          if (param.default_value !== undefined) {
+            initialParams[param.name] = param.default_value;
           } else {
             initialParams[param.name] = '';
           }
@@ -127,11 +127,11 @@ export function MCPToolTestPage() {
           </div>
           <div className="flex">
             <span className="font-medium w-32">Endpoint:</span>
-            <span className="text-gray-600 break-all">{version.config.endpoint}</span>
+            <span className="text-gray-600 break-all">{version.config.HTTP.endpoint}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Method:</span>
-            <span className="text-gray-600">{version.config.method}</span>
+            <span className="text-gray-600">{version.config.HTTP.method}</span>
           </div>
           <div className="flex">
             <span className="font-medium w-32">Status:</span>
@@ -151,10 +151,10 @@ export function MCPToolTestPage() {
       <Card>
         <h2 className="text-lg font-medium text-gray-900 mb-4">Test Parameters</h2>
         <div className="space-y-4">
-          {version.config.parameters.length === 0 ? (
+          {version.config.HTTP.parameters.length === 0 ? (
             <p className="text-sm text-gray-500">This tool has no parameters.</p>
           ) : (
-            version.config.parameters.map((param) => (
+            version.config.HTTP.parameters.map((param: any) => (
               <div key={param.name}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {param.name}
