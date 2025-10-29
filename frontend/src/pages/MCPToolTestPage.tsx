@@ -6,14 +6,14 @@ import { Button, Card, Input, Loader, Alert } from '../components/common';
 
 export function MCPToolTestPage() {
   const { id } = useParams<{ id: string }>();
-  
+
   const [tool, setTool] = useState<MCPTool | null>(null);
   const [version, setVersion] = useState<MCPToolVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<TestToolResponse | null>(null);
-  
+
   const [parameters, setParameters] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -26,25 +26,45 @@ export function MCPToolTestPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const toolData = await mcpService.getTool(id!);
       setTool(toolData);
-      
+
       const versions = await mcpService.getToolVersions(id!);
       if (versions.length > 0) {
         const latestVersion = versions[0];
         setVersion(latestVersion);
-        
-        // Initialize parameters with default values
-        const initialParams: Record<string, any> = {};
+
+        // Initialize parameters with default values, properly typed
+        // const initialParams: Record<string, any> = {};
         latestVersion.config.HTTP.parameters.forEach((param: any) => {
           if (param.default_value !== undefined) {
-            initialParams[param.name] = param.default_value;
+            // initialParams[param.name] = param.default_value;
+            handleParameterChange(param.name, param.default_value, param.parameter_type.toLowerCase());
           } else {
-            initialParams[param.name] = '';
+            let value;
+            // Set appropriate default based on type
+            switch (param.parameter_type.toLowerCase()) {
+              case 'number':
+              case 'integer':
+                value = '';
+                break;
+              case 'boolean':
+                value = false;
+                break;
+              case 'object':
+                value = {};
+                break;
+              case 'array':
+                value = [];
+                break;
+              default:
+                value = '';
+            }
+            handleParameterChange(param.name, value, param.parameter_type.toLowerCase());
           }
         });
-        setParameters(initialParams);
+        // setParameters(initialParams);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load tool');
@@ -74,8 +94,35 @@ export function MCPToolTestPage() {
     }
   };
 
-  const handleParameterChange = (name: string, value: any) => {
-    setParameters({ ...parameters, [name]: value });
+  const handleParameterChange = (name: string, value: any, paramType?: string) => {
+    let convertedValue = value;
+
+    // Convert value to the correct type based on parameter type
+    if (paramType) {
+      switch (paramType) {
+        case 'number':
+          convertedValue = value === '' ? '' : parseFloat(value);
+          break;
+        case 'integer':
+          convertedValue = value === '' ? '' : parseInt(value, 10);
+          break;
+        case 'boolean':
+          convertedValue = value === 'true' || value === true;
+          break;
+        case 'string':
+          convertedValue = String(value);
+          break;
+        case 'object':
+        case 'array':
+          // Already handled in the textarea onChange
+          convertedValue = value;
+          break;
+        default:
+          convertedValue = value;
+      }
+    }
+
+    setParameters({ ...parameters, [name]: convertedValue });
   };
 
   if (loading) {
@@ -136,11 +183,10 @@ export function MCPToolTestPage() {
           <div className="flex">
             <span className="font-medium w-32">Status:</span>
             <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                tool.status.toLowerCase() === 'active'
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tool.status.toLowerCase() === 'active'
                   ? 'bg-green-100 text-green-800'
                   : 'bg-gray-100 text-gray-800'
-              }`}
+                }`}
             >
               {tool.status}
             </span>
@@ -163,30 +209,28 @@ export function MCPToolTestPage() {
                 {param.description && (
                   <p className="text-xs text-gray-500 mb-2">{param.description}</p>
                 )}
-                {param.type === 'boolean' ? (
+                {param.parameter_type.toLowerCase() === 'boolean' ? (
                   <select
                     value={parameters[param.name]?.toString() || 'false'}
                     onChange={(e) =>
-                      handleParameterChange(param.name, e.target.value === 'true')
+                      handleParameterChange(param.name, e.target.value, 'boolean')
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="true">true</option>
                     <option value="false">false</option>
                   </select>
-                ) : param.type === 'number' ? (
+                ) : param.parameter_type.toLowerCase() === 'number' || param.parameter_type.toLowerCase() === 'integer' ? (
                   <Input
                     type="number"
                     value={parameters[param.name] || ''}
                     onChange={(e) =>
-                      handleParameterChange(
-                        param.name,
-                        e.target.value ? parseFloat(e.target.value) : ''
-                      )
+                      handleParameterChange(param.name, e.target.value, param.parameter_type.toLowerCase())
                     }
                     required={param.required}
+                    step={param.parameter_type.toLowerCase() === 'integer' ? '1' : 'any'}
                   />
-                ) : param.type === 'object' || param.type === 'array' ? (
+                ) : param.parameter_type.toLowerCase() === 'object' || param.parameter_type.toLowerCase() === 'array' ? (
                   <textarea
                     value={
                       typeof parameters[param.name] === 'string'
@@ -196,20 +240,20 @@ export function MCPToolTestPage() {
                     onChange={(e) => {
                       try {
                         const parsed = JSON.parse(e.target.value);
-                        handleParameterChange(param.name, parsed);
+                        handleParameterChange(param.name, parsed, param.parameter_type.toLowerCase());
                       } catch {
-                        handleParameterChange(param.name, e.target.value);
+                        handleParameterChange(param.name, e.target.value, param.parameter_type.toLowerCase());
                       }
                     }}
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                    placeholder={param.type === 'object' ? '{}' : '[]'}
+                    placeholder={param.parameter_type.toLowerCase() === 'object' ? '{}' : '[]'}
                   />
                 ) : (
                   <Input
                     type="text"
                     value={parameters[param.name] || ''}
-                    onChange={(e) => handleParameterChange(param.name, e.target.value)}
+                    onChange={(e) => handleParameterChange(param.name, e.target.value, 'string')}
                     required={param.required}
                   />
                 )}
@@ -236,11 +280,10 @@ export function MCPToolTestPage() {
             <h2 className="text-lg font-medium text-gray-900">Test Result</h2>
             <div className="flex items-center gap-4">
               <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  testResult.success
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${testResult.success
                     ? 'bg-green-100 text-green-800'
                     : 'bg-red-100 text-red-800'
-                }`}
+                  }`}
               >
                 {testResult.success ? 'Success' : 'Failed'}
               </span>
