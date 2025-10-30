@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use serde_json::Value;
+use serde_json::json;
 use std::sync::Arc;
 
 use crate::domain::services::execution_engine::{
@@ -108,7 +109,53 @@ impl NodeExecutor for EndNodeExecutor {
     ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
 
-        // Collect final output from state variables
+        // Extract outputs configuration from node data
+        // Expected format: {"outputs": [{"value_selector": ["node_id", "variable_name"], "value_type": "string", "variable": "output_name"}]}
+        let mut final_outputs = serde_json::Map::new();
+
+        if let Some(outputs) = node.data.get("outputs") {
+            if let Some(outputs_array) = outputs.as_array() {
+                for output_config in outputs_array {
+                    if let Some(config_obj) = output_config.as_object() {
+                        // Extract the output variable name
+                        let output_var_name = config_obj
+                            .get("variable")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("output");
+
+                        // Extract value_selector: [node_id, variable_name]
+                        if let Some(value_selector) = config_obj.get("value_selector") {
+                            if let Some(selector_array) = value_selector.as_array() {
+                                if selector_array.len() >= 2 {
+                                    // Get node_id and variable_name from selector
+                                    let node_id = selector_array[0].as_str().unwrap_or("");
+                                    let var_name = selector_array[1].as_str().unwrap_or("");
+
+                                    // Construct the variable key: #node_id.variable_name#
+                                    let var_key = format!("#{}.{}#", node_id, var_name);
+
+                                    // Get the value from state
+                                    if let Some(value) = state.get_variable(&var_key) {
+                                        final_outputs
+                                            .insert(output_var_name.to_string(), value.clone());
+                                    } else {
+                                        // If not found with # prefix, try without it
+                                        // This handles cases where the variable might be stored differently
+                                        if let Some(value) = state.get_variable(var_name) {
+                                            final_outputs
+                                                .insert(output_var_name.to_string(), value.clone());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        state.variables.insert("outputs".to_string(), json!(final_outputs));
+
         let output = serde_json::json!({
             "message": "Flow completed",
             "final_variables": state.variables,
@@ -1486,5 +1533,96 @@ mod tests {
             assert_eq!(result.status, NodeExecutionStatus::Success);
             assert_eq!(state.get_loop_counter("loop1"), i);
         }
+    }
+
+    #[tokio::test]
+    async fn test_end_node_with_outputs() {
+        let executor = EndNodeExecutor::new();
+
+        // Create state with some variables including LLM node output
+        let mut variables = HashMap::new();
+        variables.insert(
+            "#llm_1.text#".to_string(),
+            serde_json::json!("This is the LLM response"),
+        );
+        variables.insert(
+            "#start_1.user_input#".to_string(),
+            serde_json::json!("User question"),
+        );
+        variables.insert("other_var".to_string(), serde_json::json!("other value"));
+
+        let mut state = ExecutionState::new(
+            crate::domain::value_objects::FlowExecutionId::new(),
+            variables,
+        );
+
+        // End node configured to output specific variables
+        let node = FlowNode {
+            id: "end_1".to_string(),
+            node_type: NodeType::End,
+            data: serde_json::json!({
+                "outputs": [
+                    {
+                        "value_selector": ["llm_1", "text"],
+                        "value_type": "string",
+                        "variable": "text"
+                    },
+                    {
+                        "value_selector": ["start_1", "user_input"],
+                        "value_type": "string",
+                        "variable": "question"
+                    }
+                ]
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Verify the output contains only the specified variables
+        let output = result.output.unwrap();
+        let outputs = output.get("outputs").unwrap();
+
+        assert_eq!(
+            outputs.get("text"),
+            Some(&serde_json::json!("This is the LLM response"))
+        );
+        assert_eq!(
+            outputs.get("question"),
+            Some(&serde_json::json!("User question"))
+        );
+
+        // Verify other_var is not in outputs
+        assert_eq!(outputs.get("other_var"), None);
+    }
+
+    #[tokio::test]
+    async fn test_end_node_without_outputs_config() {
+        let executor = EndNodeExecutor::new();
+
+        let mut variables = HashMap::new();
+        variables.insert("var1".to_string(), serde_json::json!("value1"));
+        variables.insert("var2".to_string(), serde_json::json!("value2"));
+
+        let mut state = ExecutionState::new(
+            crate::domain::value_objects::FlowExecutionId::new(),
+            variables,
+        );
+
+        // End node without outputs configuration (backward compatibility)
+        let node = FlowNode {
+            id: "end_1".to_string(),
+            node_type: NodeType::End,
+            data: serde_json::json!({}),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Should return all variables
+        let output = result.output.unwrap();
+        assert!(output.get("final_variables").is_some());
     }
 }

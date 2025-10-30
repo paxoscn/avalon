@@ -1,0 +1,288 @@
+{
+  "description": "Complete flow example showing Start node variables, LLM node text output, and End node outputs configuration",
+  "use_case": "Question answering flow with configurable inputs and structured outputs",
+  "flow_definition": {
+    "workflow": {
+      "nodes": [
+        {
+          "id": "1758526244401",
+          "node_type": "Start",
+          "data": {
+            "variables": [
+              {
+                "variable": "user_question",
+                "default": "What is artificial intelligence?"
+              },
+              {
+                "variable": "response_style",
+                "default": "detailed"
+              },
+              {
+                "variable": "max_words",
+                "default": 200
+              }
+            ]
+          },
+          "position": {"x": 100, "y": 200}
+        },
+        {
+          "id": "1758526244404",
+          "node_type": "Llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are a helpful AI assistant. Provide {{#1758526244401.response_style#}} answers. Keep your response under {{#1758526244401.max_words#}} words."
+              },
+              {
+                "role": "user",
+                "text": "{{#1758526244401.user_question#}}"
+              }
+            ],
+            "output_variable": "llm_response"
+          },
+          "position": {"x": 400, "y": 200}
+        },
+        {
+          "id": "1758526244405",
+          "node_type": "End",
+          "data": {
+            "outputs": [
+              {
+                "value_selector": ["1758526244404", "text"],
+                "value_type": "string",
+                "variable": "text"
+              },
+              {
+                "value_selector": ["1758526244401", "user_question"],
+                "value_type": "string",
+                "variable": "question"
+              }
+            ]
+          },
+          "position": {"x": 700, "y": 200}
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "1758526244401",
+          "target": "1758526244404"
+        },
+        {
+          "id": "e2",
+          "source": "1758526244404",
+          "target": "1758526244405"
+        }
+      ]
+    }
+  },
+  "execution_scenarios": [
+    {
+      "name": "Using default values",
+      "description": "Execute flow with all default values from Start node",
+      "request": {
+        "method": "POST",
+        "endpoint": "/api/v1/flows/{flow_id}/execute",
+        "body": {
+          "input_data": {}
+        }
+      },
+      "execution_flow": {
+        "step_1_start": {
+          "node_id": "1758526244401",
+          "variables_set": {
+            "#1758526244401.user_question#": "What is artificial intelligence?",
+            "#1758526244401.response_style#": "detailed",
+            "#1758526244401.max_words#": 200
+          }
+        },
+        "step_2_llm": {
+          "node_id": "1758526244404",
+          "input_prompt": "You are a helpful AI assistant. Provide detailed answers. Keep your response under 200 words.\n\nUser: What is artificial intelligence?",
+          "llm_response": "Artificial intelligence (AI) refers to the simulation of human intelligence in machines...",
+          "variables_set": {
+            "llm_response": "Artificial intelligence (AI) refers to...",
+            "#1758526244404.text#": "Artificial intelligence (AI) refers to..."
+          }
+        },
+        "step_3_end": {
+          "node_id": "1758526244405",
+          "output": {
+            "message": "Flow completed",
+            "outputs": {
+              "text": "Artificial intelligence (AI) refers to...",
+              "question": "What is artificial intelligence?"
+            }
+          }
+        }
+      },
+      "expected_response": {
+        "execution_id": "uuid",
+        "status": "completed",
+        "output": {
+          "message": "Flow completed",
+          "outputs": {
+            "text": "Artificial intelligence (AI) refers to the simulation of human intelligence in machines...",
+            "question": "What is artificial intelligence?"
+          }
+        }
+      }
+    },
+    {
+      "name": "Override with custom question",
+      "description": "Execute flow with custom user question",
+      "request": {
+        "method": "POST",
+        "endpoint": "/api/v1/flows/{flow_id}/execute",
+        "body": {
+          "input_data": {
+            "user_question": "Explain quantum computing in simple terms",
+            "response_style": "simple",
+            "max_words": 100
+          }
+        }
+      },
+      "execution_flow": {
+        "step_1_start": {
+          "node_id": "1758526244401",
+          "variables_set": {
+            "#1758526244401.user_question#": "Explain quantum computing in simple terms",
+            "#1758526244401.response_style#": "simple",
+            "#1758526244401.max_words#": 100
+          }
+        },
+        "step_2_llm": {
+          "node_id": "1758526244404",
+          "input_prompt": "You are a helpful AI assistant. Provide simple answers. Keep your response under 100 words.\n\nUser: Explain quantum computing in simple terms",
+          "llm_response": "Quantum computing uses quantum mechanics to process information...",
+          "variables_set": {
+            "llm_response": "Quantum computing uses quantum mechanics...",
+            "#1758526244404.text#": "Quantum computing uses quantum mechanics..."
+          }
+        },
+        "step_3_end": {
+          "node_id": "1758526244405",
+          "output": {
+            "message": "Flow completed",
+            "outputs": {
+              "text": "Quantum computing uses quantum mechanics...",
+              "question": "Explain quantum computing in simple terms"
+            }
+          }
+        }
+      },
+      "expected_response": {
+        "execution_id": "uuid",
+        "status": "completed",
+        "output": {
+          "message": "Flow completed",
+          "outputs": {
+            "text": "Quantum computing uses quantum mechanics to process information...",
+            "question": "Explain quantum computing in simple terms"
+          }
+        }
+      }
+    }
+  ],
+  "variable_flow_diagram": {
+    "description": "How variables flow through the execution",
+    "flow": [
+      {
+        "stage": "1. Input",
+        "source": "API request input_data",
+        "variables": {
+          "user_question": "Custom question",
+          "response_style": "simple"
+        }
+      },
+      {
+        "stage": "2. Start Node Processing",
+        "action": "Merge input_data with defaults",
+        "result": {
+          "#1758526244401.user_question#": "Custom question (from input_data)",
+          "#1758526244401.response_style#": "simple (from input_data)",
+          "#1758526244401.max_words#": "200 (from default)"
+        }
+      },
+      {
+        "stage": "3. LLM Node Processing",
+        "action": "Resolve template variables and call LLM",
+        "template_resolution": {
+          "before": "{{#1758526244401.user_question#}}",
+          "after": "Custom question"
+        },
+        "result": {
+          "llm_response": "LLM generated text",
+          "#1758526244404.text#": "LLM generated text"
+        }
+      },
+      {
+        "stage": "4. End Node Processing",
+        "action": "Extract configured outputs",
+        "extraction": [
+          {
+            "config": {"value_selector": ["1758526244404", "text"], "variable": "text"},
+            "lookup": "#1758526244404.text#",
+            "result": "LLM generated text"
+          },
+          {
+            "config": {"value_selector": ["1758526244401", "user_question"], "variable": "question"},
+            "lookup": "#1758526244401.user_question#",
+            "result": "Custom question"
+          }
+        ],
+        "final_output": {
+          "text": "LLM generated text",
+          "question": "Custom question"
+        }
+      }
+    ]
+  },
+  "key_features": [
+    "Start node variables with default values and input_data override",
+    "LLM node automatically stores response in #node_id.text#",
+    "End node extracts specific variables using value_selector",
+    "Clean, structured output with only requested variables",
+    "Template variable resolution in LLM prompts"
+  ],
+  "api_integration": {
+    "curl_example": {
+      "default_values": "curl -X POST 'https://api.example.com/api/v1/flows/{flow_id}/execute' \\\n  -H 'Authorization: Bearer {token}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"input_data\": {}}'",
+      "custom_values": "curl -X POST 'https://api.example.com/api/v1/flows/{flow_id}/execute' \\\n  -H 'Authorization: Bearer {token}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"input_data\": {\"user_question\": \"What is machine learning?\", \"response_style\": \"simple\"}}'"
+    },
+    "response_structure": {
+      "success": {
+        "execution_id": "uuid",
+        "status": "completed",
+        "output": {
+          "message": "Flow completed",
+          "outputs": {
+            "text": "string - The LLM response",
+            "question": "string - The user's question"
+          }
+        },
+        "started_at": "ISO 8601 timestamp",
+        "completed_at": "ISO 8601 timestamp"
+      },
+      "error": {
+        "execution_id": "uuid",
+        "status": "failed",
+        "error": "Error message",
+        "started_at": "ISO 8601 timestamp",
+        "completed_at": "ISO 8601 timestamp"
+      }
+    }
+  },
+  "notes": [
+    "Node IDs in this example use numeric format (1758526244401) as shown in the requirement",
+    "The value_selector array format is [node_id, variable_name]",
+    "Variables are stored internally with # prefix: #node_id.variable_name#",
+    "LLM nodes automatically create a 'text' variable containing the response",
+    "Start node variables can be overridden via input_data",
+    "End node only outputs variables specified in the outputs configuration"
+  ]
+}

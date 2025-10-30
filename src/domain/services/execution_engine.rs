@@ -1,12 +1,12 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
 
 use crate::domain::entities::FlowExecution;
-use crate::domain::value_objects::{FlowDefinition, FlowNode, NodeType, FlowExecutionId};
-use crate::error::{Result, PlatformError};
+use crate::domain::value_objects::{FlowDefinition, FlowExecutionId, FlowNode, NodeType};
+use crate::error::{PlatformError, Result};
 
 /// Node execution result
 #[derive(Debug, Clone)]
@@ -59,11 +59,14 @@ impl ExecutionState {
         initial_variables: HashMap<String, Value>,
     ) -> Self {
         let mut variables = initial_variables;
-        
+
         // Inject context into variables for use by node executors
-        variables.insert("tenant_id".to_string(), Value::String(tenant_id.to_string()));
+        variables.insert(
+            "tenant_id".to_string(),
+            Value::String(tenant_id.to_string()),
+        );
         variables.insert("user_id".to_string(), Value::String(user_id.to_string()));
-        
+
         if let Some(sid) = session_id {
             variables.insert("session_id".to_string(), Value::String(sid.to_string()));
         }
@@ -110,8 +113,12 @@ impl ExecutionState {
 #[async_trait]
 pub trait NodeExecutor: Send + Sync {
     /// Execute a node with the given state
-    async fn execute(&self, node: &FlowNode, state: &mut ExecutionState) -> Result<NodeExecutionResult>;
-    
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult>;
+
     /// Check if this executor can handle the given node type
     fn can_handle(&self, node_type: &NodeType) -> bool;
 }
@@ -169,12 +176,29 @@ impl ExecutionEngineImpl {
         self.node_executors.iter().find(|e| e.can_handle(node_type))
     }
 
-    fn find_node_by_id<'a>(&self, node_id: &str, definition: &'a FlowDefinition) -> Option<&'a FlowNode> {
-        definition.workflow.graph.nodes.iter().find(|n| n.id == node_id)
+    fn find_node_by_id<'a>(
+        &self,
+        node_id: &str,
+        definition: &'a FlowDefinition,
+    ) -> Option<&'a FlowNode> {
+        definition
+            .workflow
+            .graph
+            .nodes
+            .iter()
+            .find(|n| n.id == node_id)
     }
 
-    fn get_outgoing_edges<'a>(&self, node_id: &str, definition: &'a FlowDefinition) -> Vec<&'a crate::domain::value_objects::FlowEdge> {
-        definition.workflow.graph.edges.iter()
+    fn get_outgoing_edges<'a>(
+        &self,
+        node_id: &str,
+        definition: &'a FlowDefinition,
+    ) -> Vec<&'a crate::domain::value_objects::FlowEdge> {
+        definition
+            .workflow
+            .graph
+            .edges
+            .iter()
             .filter(|e| e.source == node_id)
             .collect()
     }
@@ -204,7 +228,9 @@ impl ExecutionEngine for ExecutionEngineImpl {
         let start_nodes = definition.get_start_nodes();
         if start_nodes.is_empty() {
             execution.fail("No start node found in flow definition".to_string());
-            return Err(PlatformError::ValidationError("No start node found".to_string()));
+            return Err(PlatformError::ValidationError(
+                "No start node found".to_string(),
+            ));
         }
 
         // Use the first start node
@@ -245,7 +271,9 @@ impl ExecutionEngine for ExecutionEngineImpl {
 
                 // Check if node execution failed
                 if result.status == NodeExecutionStatus::Failed {
-                    let error = result.error.unwrap_or_else(|| "Node execution failed".to_string());
+                    let error = result
+                        .error
+                        .unwrap_or_else(|| "Node execution failed".to_string());
                     execution.fail(error.clone());
                     return Err(PlatformError::InternalError(error));
                 }
@@ -260,7 +288,10 @@ impl ExecutionEngine for ExecutionEngineImpl {
 
         // Check if we hit max iterations
         if iteration_count >= self.max_iterations {
-            let error = format!("Flow execution exceeded maximum iterations: {}", self.max_iterations);
+            let error = format!(
+                "Flow execution exceeded maximum iterations: {}",
+                self.max_iterations
+            );
             execution.fail(error.clone());
             return Err(PlatformError::InternalError(error));
         }
@@ -286,7 +317,10 @@ impl ExecutionEngine for ExecutionEngineImpl {
                     node_id: node.id.clone(),
                     status: NodeExecutionStatus::Failed,
                     output: None,
-                    error: Some(format!("No executor found for node type: {:?}", node.node_type)),
+                    error: Some(format!(
+                        "No executor found for node type: {:?}",
+                        node.node_type
+                    )),
                     started_at,
                     completed_at: Utc::now(),
                     execution_time_ms: 0,
@@ -311,7 +345,7 @@ impl ExecutionEngine for ExecutionEngineImpl {
             NodeType::Condition => {
                 // For condition nodes, evaluate the condition and choose the appropriate branch
                 let edges = self.get_outgoing_edges(&current_node.id, definition);
-                
+
                 for edge in edges {
                     // Check if this edge has a condition in the source_handle
                     let should_follow = if let Some(ref handle) = edge.source_handle {
@@ -347,7 +381,9 @@ impl ExecutionEngine for ExecutionEngineImpl {
             NodeType::Loop => {
                 // For loop nodes, check if we should continue looping or exit
                 let loop_id = &current_node.id;
-                let max_iterations = current_node.data.get("max_iterations")
+                let max_iterations = current_node
+                    .data
+                    .get("max_iterations")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(10) as usize;
 
@@ -366,7 +402,9 @@ impl ExecutionEngine for ExecutionEngineImpl {
                     // Exit loop - find the exit edge
                     let edges = self.get_outgoing_edges(&current_node.id, definition);
                     for edge in edges {
-                        if edge.source_handle.as_deref() == Some("exit") || edge.source_handle.is_none() {
+                        if edge.source_handle.as_deref() == Some("exit")
+                            || edge.source_handle.is_none()
+                        {
                             next_nodes.push(edge.target.clone());
                             break;
                         }
@@ -390,21 +428,29 @@ impl ExecutionEngine for ExecutionEngineImpl {
     fn evaluate_condition(&self, condition: &Value, state: &ExecutionState) -> Result<bool> {
         // Simple condition evaluation
         // Supports: {"variable": "var_name", "operator": "==", "value": "expected_value"}
-        
+
         if let Some(obj) = condition.as_object() {
-            let variable_name = obj.get("variable")
+            let variable_name = obj
+                .get("variable")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| PlatformError::ValidationError("Condition missing 'variable' field".to_string()))?;
+                .ok_or_else(|| {
+                    PlatformError::ValidationError("Condition missing 'variable' field".to_string())
+                })?;
 
-            let operator = obj.get("operator")
+            let operator = obj
+                .get("operator")
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| PlatformError::ValidationError("Condition missing 'operator' field".to_string()))?;
+                .ok_or_else(|| {
+                    PlatformError::ValidationError("Condition missing 'operator' field".to_string())
+                })?;
 
-            let expected_value = obj.get("value")
-                .ok_or_else(|| PlatformError::ValidationError("Condition missing 'value' field".to_string()))?;
+            let expected_value = obj.get("value").ok_or_else(|| {
+                PlatformError::ValidationError("Condition missing 'value' field".to_string())
+            })?;
 
-            let actual_value = state.get_variable(variable_name)
-                .ok_or_else(|| PlatformError::ValidationError(format!("Variable not found: {}", variable_name)))?;
+            let actual_value = state.get_variable(variable_name).ok_or_else(|| {
+                PlatformError::ValidationError(format!("Variable not found: {}", variable_name))
+            })?;
 
             let result = match operator {
                 "==" | "eq" => actual_value == expected_value,
@@ -445,13 +491,18 @@ impl ExecutionEngine for ExecutionEngineImpl {
                     }
                 }
                 _ => {
-                    return Err(PlatformError::ValidationError(format!("Unknown operator: {}", operator)));
+                    return Err(PlatformError::ValidationError(format!(
+                        "Unknown operator: {}",
+                        operator
+                    )));
                 }
             };
 
             Ok(result)
         } else {
-            Err(PlatformError::ValidationError("Condition must be a JSON object".to_string()))
+            Err(PlatformError::ValidationError(
+                "Condition must be a JSON object".to_string(),
+            ))
         }
     }
 }
