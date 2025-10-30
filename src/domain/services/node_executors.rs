@@ -9,7 +9,6 @@ use crate::domain::services::execution_engine::{
 };
 use crate::domain::value_objects::{FlowNode, NodeType};
 use crate::domain::ConfigId;
-use crate::domain::ModelProvider;
 use crate::error::Result;
 
 /// Start node executor - saves flow parameters for later access
@@ -686,7 +685,7 @@ impl LLMChatNodeExecutor {
     async fn extract_model_config(
         &self,
         node: &FlowNode,
-        state: &ExecutionState,
+        _state: &ExecutionState,
     ) -> Result<crate::domain::value_objects::ModelConfig> {
         let config_data = node.data.get("model").ok_or_else(|| {
             crate::error::PlatformError::ValidationError(
@@ -1443,6 +1442,282 @@ impl NodeExecutor for MCPToolNodeExecutor {
 
     fn can_handle(&self, node_type: &NodeType) -> bool {
         matches!(node_type, NodeType::McpTool)
+    }
+}
+
+/// Parameter Extractor node executor - uses LLM to extract structured parameters
+pub struct ParameterExtractorNodeExecutor {
+    llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>,
+    llm_config_repository:
+        Arc<dyn crate::domain::repositories::llm_config_repository::LLMConfigRepository>,
+}
+
+impl ParameterExtractorNodeExecutor {
+    pub fn new(
+        llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>,
+        llm_config_repository: Arc<
+            dyn crate::domain::repositories::llm_config_repository::LLMConfigRepository,
+        >,
+    ) -> Self {
+        Self {
+            llm_service,
+            llm_config_repository,
+        }
+    }
+
+    async fn extract_model_config(
+        &self,
+        node: &FlowNode,
+        _state: &ExecutionState,
+    ) -> Result<crate::domain::value_objects::ModelConfig> {
+        let config_data = node.data.get("model").ok_or_else(|| {
+            crate::error::PlatformError::ValidationError(
+                "Parameter extractor node missing 'model' field".to_string(),
+            )
+        })?;
+
+        let llm_config_id = config_data
+            .get("llm_config_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Parameter extractor node missing 'model.llm_config_id' field".to_string(),
+                )
+            })?;
+
+        let config = self
+            .llm_config_repository
+            .find_by_id(ConfigId::from_string(llm_config_id).map_err(|e| {
+                crate::error::PlatformError::ValidationError(format!(
+                    "Invalid UUID: {}. Error: {}",
+                    llm_config_id, e
+                ))
+            })?)
+            .await?
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(format!(
+                    "LLM config not found: {}",
+                    llm_config_id
+                ))
+            })?;
+
+        Ok(config.model_config.clone())
+    }
+
+    fn extract_tenant_id(&self, state: &ExecutionState) -> Result<uuid::Uuid> {
+        state
+            .variables
+            .get("tenant_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| uuid::Uuid::parse_str(s).ok())
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Missing or invalid tenant_id in execution context".to_string(),
+                )
+            })
+    }
+
+    fn resolve_query_content(&self, query_path: &[String], state: &ExecutionState) -> String {
+        if query_path.len() != 2 {
+            return String::new();
+        }
+
+        let node_id = &query_path[0];
+        let var_name = &query_path[1];
+        let var_key = format!("#{}.{}#", node_id, var_name);
+
+        state
+            .get_variable(&var_key)
+            .and_then(|v| match v {
+                Value::String(s) => Some(s.clone()),
+                _ => serde_json::to_string(v).ok(),
+            })
+            .unwrap_or_default()
+    }
+}
+
+#[async_trait]
+impl NodeExecutor for ParameterExtractorNodeExecutor {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
+        let started_at = Utc::now();
+
+        // Extract model configuration
+        let model_config = match self.extract_model_config(node, state).await {
+            Ok(config) => config,
+            Err(e) => {
+                let completed_at = Utc::now();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
+                return Ok(NodeExecutionResult {
+                    node_id: node.id.clone(),
+                    status: NodeExecutionStatus::Failed,
+                    output: None,
+                    error: Some(e.to_string()),
+                    started_at,
+                    completed_at,
+                    execution_time_ms,
+                });
+            }
+        };
+
+        // Extract system instruction
+        let instruction = node
+            .data
+            .get("instruction")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Extract parameters from the following text and return them as a JSON array of strings.");
+
+        // Extract query paths and build user prompt
+        let query_paths = node
+            .data
+            .get("query")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| {
+                crate::error::PlatformError::ValidationError(
+                    "Parameter extractor node missing 'query' field".to_string(),
+                )
+            });
+
+        let query_paths = match query_paths {
+            Ok(paths) => paths,
+            Err(e) => {
+                let completed_at = Utc::now();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
+                return Ok(NodeExecutionResult {
+                    node_id: node.id.clone(),
+                    status: NodeExecutionStatus::Failed,
+                    output: None,
+                    error: Some(e.to_string()),
+                    started_at,
+                    completed_at,
+                    execution_time_ms,
+                });
+            }
+        };
+
+        // Build user prompt from query paths
+        let path: Vec<String> = query_paths
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect();
+        let content = self.resolve_query_content(&path, state);
+
+        // Build messages for LLM
+        let messages = vec![
+            crate::domain::value_objects::ChatMessage::new_system_message(format!(
+                "{}. You must respond with a valid JSON array of strings only, no other text.",
+                instruction
+            )),
+            crate::domain::value_objects::ChatMessage::new_user_message(content),
+        ];
+
+        let tenant_id = match self.extract_tenant_id(state) {
+            Ok(id) => id,
+            Err(e) => {
+                let completed_at = Utc::now();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
+                return Ok(NodeExecutionResult {
+                    node_id: node.id.clone(),
+                    status: NodeExecutionStatus::Failed,
+                    output: None,
+                    error: Some(e.to_string()),
+                    started_at,
+                    completed_at,
+                    execution_time_ms,
+                });
+            }
+        };
+
+        // Call LLM service
+        let response = match self
+            .llm_service
+            .chat_completion(&model_config, messages, tenant_id)
+            .await
+        {
+            Ok(resp) => resp,
+            Err(e) => {
+                let completed_at = Utc::now();
+                let execution_time_ms = completed_at
+                    .signed_duration_since(started_at)
+                    .num_milliseconds();
+                return Ok(NodeExecutionResult {
+                    node_id: node.id.clone(),
+                    status: NodeExecutionStatus::Failed,
+                    output: None,
+                    error: Some(format!("LLM call failed: {}", e)),
+                    started_at,
+                    completed_at,
+                    execution_time_ms,
+                });
+            }
+        };
+
+        // Parse response as JSON array
+        let extracted_params: Vec<String> = match serde_json::from_str(&response.content) {
+            Ok(params) => params,
+            Err(_) => {
+                // If parsing fails, try to extract JSON array from the response
+                if let Some(start) = response.content.find('[') {
+                    if let Some(end) = response.content.rfind(']') {
+                        let json_str = &response.content[start..=end];
+                        serde_json::from_str(json_str).unwrap_or_else(|_| vec![response.content.clone()])
+                    } else {
+                        vec![response.content.clone()]
+                    }
+                } else {
+                    vec![response.content.clone()]
+                }
+            }
+        };
+
+        // Extract output parameter name
+        let parameters = node
+            .data
+            .get("parameters")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|p| p.as_object())
+            .and_then(|obj| obj.get("name"))
+            .and_then(|n| n.as_str())
+            .unwrap_or("extracted_parameters");
+
+        // Store result in state with node ID prefix
+        let output_var = format!("#{}.{}#", node.id, parameters);
+        state.set_variable(output_var, serde_json::json!(extracted_params));
+
+        let output = serde_json::json!({
+            "extracted_parameters": extracted_params,
+            "parameter_name": parameters,
+            "model_used": response.model_used,
+        });
+
+        let completed_at = Utc::now();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
+
+        Ok(NodeExecutionResult {
+            node_id: node.id.clone(),
+            status: NodeExecutionStatus::Success,
+            output: Some(output),
+            error: None,
+            started_at,
+            completed_at,
+            execution_time_ms,
+        })
+    }
+
+    fn can_handle(&self, node_type: &NodeType) -> bool {
+        matches!(node_type, NodeType::ParameterExtractor)
     }
 }
 

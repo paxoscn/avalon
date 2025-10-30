@@ -37,9 +37,10 @@ impl ExecutionEngineFactory {
         executors.push(Arc::new(AnswerNodeExecutor::new()));
 
         // Add service-integrated node executors
-        executors.push(Arc::new(LLMChatNodeExecutor::new(llm_service, llm_config_repository)));
+        executors.push(Arc::new(LLMChatNodeExecutor::new(llm_service.clone(), llm_config_repository.clone())));
         executors.push(Arc::new(VectorSearchNodeExecutor::new(vector_service)));
         executors.push(Arc::new(MCPToolNodeExecutor::new(mcp_service, tool_repository)));
+        executors.push(Arc::new(ParameterExtractorNodeExecutor::new(llm_service, llm_config_repository)));
 
         Arc::new(ExecutionEngineImpl::new(executors))
     }

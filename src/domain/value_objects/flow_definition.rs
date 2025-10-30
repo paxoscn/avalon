@@ -76,6 +76,7 @@ pub enum NodeType {
     HttpRequest,
     Code,
     Answer,
+    ParameterExtractor,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

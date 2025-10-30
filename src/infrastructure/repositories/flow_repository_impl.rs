@@ -293,7 +293,7 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
         let mut version = version.clone();
         
         for node in &mut version.definition.workflow.graph.nodes {
-            if node.node_type == NodeType::Llm {
+            if node.node_type == NodeType::Llm || node.node_type == NodeType::ParameterExtractor {
                 let config_data: &mut serde_json::Value = node.data.get_mut("model").ok_or_else(|| {
                     crate::error::PlatformError::ValidationError(
                         "LLM node missing 'model' field".to_string(),

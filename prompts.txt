@@ -83,3 +83,12 @@ HTTPToolConfig增加response_template, 用于将JSON响应翻译为工具的输�
 * parameters: 输出参数数组, 只有一个条目, 格式为{ "name": "输出参数名称" }
 
 执行逻辑: 传入系统提示词和用户提示词, 指定大模型输出格式为字符串数组, 获取大模型调用结果并存放在parameters[0]指定的参数名称中.
+
+---
+
+支持新的节点类型iteration(迭代). 其data包含以下属性:
+* iterator_selector: 输入变量的路径数组, 例如[ "1759993208994", "checking_items" ]代表节点ID=1759993208994的变量"checking_items". 该变量的类型是一个字符串数组, 用作后续遍历
+* output_selector: 输出变量的路径数组, 例如[ "1761578154176", "structured_output" ]代表节点ID=1761578154176的变量"structured_output". 该变量的类型是一个对象数组, 其值由每次迭代的结果聚合而成
+* start_node_id: 每次迭代的开始节点ID
+
+执行逻辑: 遍历iterator_selector的条目, 将条目的值存储为start_node_id对应节点的item属性, 并依次开始执行子流程, 执行结束后将结果合并到output_selector指定的变量数组中. 迭代结束后输出output_selector指定的变量数组

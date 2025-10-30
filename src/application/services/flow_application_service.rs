@@ -253,6 +253,9 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
         dsl: String,
         user_id: UserId,
     ) -> Result<(Flow, ValidationResult)> {
+        // FIXME Ugly
+        let dsl = dsl.replace("parameter-extractor", "parameter_extractor");
+
         // Parse DSL to FlowDefinition
         let definition = FlowDefinition::from_dsl(&dsl)
             .map_err(|e| PlatformError::DSLParsingFailed(e))?;

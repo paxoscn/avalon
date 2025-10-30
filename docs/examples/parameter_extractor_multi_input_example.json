@@ -1,0 +1,90 @@
+{
+  "workflow": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "start_1",
+          "node_type": "start",
+          "data": {
+            "variables": [
+              {
+                "variable": "email_subject",
+                "default": "Meeting Request: Q4 Planning Session"
+              },
+              {
+                "variable": "email_body",
+                "default": "Hi team, I'd like to schedule a meeting to discuss our Q4 planning. We need to cover budget allocation, hiring plans, and product roadmap. Please let me know your availability for next week."
+              }
+            ]
+          },
+          "position": { "x": 100, "y": 100 }
+        },
+        {
+          "id": "extractor_1",
+          "node_type": "parameter_extractor",
+          "data": {
+            "model": {
+              "llm_config_id": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "instruction": "Extract all meeting topics and discussion points from the email. Return them as a JSON array of strings, with each topic as a separate item.",
+            "query": [
+              ["start_1", "email_subject"],
+              ["start_1", "email_body"]
+            ],
+            "parameters": [
+              {
+                "name": "meeting_topics"
+              }
+            ]
+          },
+          "position": { "x": 300, "y": 100 }
+        },
+        {
+          "id": "llm_1",
+          "node_type": "llm",
+          "data": {
+            "model": {
+              "llm_config_id": "550e8400-e29b-41d4-a716-446655440000"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are a helpful meeting assistant. Generate a structured meeting agenda based on the provided topics."
+              },
+              {
+                "role": "user",
+                "text": "Create a meeting agenda for the following topics: {{#extractor_1.meeting_topics#}}"
+              }
+            ]
+          },
+          "position": { "x": 500, "y": 100 }
+        },
+        {
+          "id": "answer_1",
+          "node_type": "answer",
+          "data": {
+            "answer": "Meeting Agenda:\n\n{{#llm_1.text#}}\n\nTopics to be covered:\n{{#extractor_1.meeting_topics#}}"
+          },
+          "position": { "x": 700, "y": 100 }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge_1",
+          "source": "start_1",
+          "target": "extractor_1"
+        },
+        {
+          "id": "edge_2",
+          "source": "extractor_1",
+          "target": "llm_1"
+        },
+        {
+          "id": "edge_3",
+          "source": "llm_1",
+          "target": "answer_1"
+        }
+      ]
+    }
+  }
+}
