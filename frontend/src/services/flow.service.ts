@@ -20,8 +20,18 @@ export interface FlowListResponse {
 }
 
 export interface ExecuteFlowResponse {
-  executionId: string;
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  flow_id: string;
+  flow_version: string;
   status: string;
+  input_data?: Record<string, any>;
+  output_data?: Record<string, any>;
+  error_message?: string;
+  started_at: string;
+  completed_at?: string;
+  execution_time_ms?: number;
 }
 
 export interface ImportDslResponse {
@@ -89,7 +99,7 @@ class FlowService {
   }
 
   async getExecutionById(executionId: string): Promise<FlowExecution> {
-    const response = await apiClient.get<FlowExecution>(`/executions/${executionId}`);
+    const response = await apiClient.get<FlowExecution>(`/flow-executions/${executionId}`);
     return response.data;
   }
 

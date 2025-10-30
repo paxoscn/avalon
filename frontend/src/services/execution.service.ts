@@ -26,7 +26,7 @@ export interface ExecutionStep {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
   input_data?: Record<string, any>;
   output_data?: Record<string, any>;
-  error_message?: string;
+  errorMessage?: string;
   started_at: string;
   completed_at?: string;
   execution_time_ms?: number;

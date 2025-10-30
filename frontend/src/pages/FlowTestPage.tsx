@@ -80,7 +80,7 @@ export function FlowTestPage() {
       });
 
       // Navigate to execution detail page
-      navigate(`/flows/${id}/executions/${result.executionId}`);
+      navigate(`/flows/${id}/executions/${result.id}`);
     } catch (err: any) {
       setError(err.response?.data?.error || '执行Flow失败');
     } finally {

@@ -39,7 +39,7 @@ export const FlowExecutionPage = () => {
       const data = await flowService.getExecutionById(executionId);
       setExecution(data);
 
-      if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
+      if (data.status.toLowerCase() === 'completed' || data.status.toLowerCase() === 'failed' || data.status.toLowerCase() === 'cancelled') {
         setPolling(false);
       }
     } catch (err: any) {
@@ -117,7 +117,7 @@ export const FlowExecutionPage = () => {
             >
               {execution.status}
             </span>
-            {(execution.status === 'running' || execution.status === 'pending') && (
+            {(execution.status.toLowerCase() === 'running' || execution.status.toLowerCase() === 'pending') && (
               <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
             )}
           </div>

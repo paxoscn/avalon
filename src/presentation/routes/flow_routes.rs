@@ -35,6 +35,8 @@ pub fn flow_routes(service: Arc<dyn FlowApplicationService>) -> Router {
         .route("/flows/{flow_id}/versions", post(flow_handlers::create_version))
         .route("/flows/{flow_id}/versions", get(flow_handlers::get_versions))
         .route("/flows/{flow_id}/rollback", post(flow_handlers::rollback_to_version))
+
+        .route("/flow-executions/{execution_id}", get(flow_handlers::get_execution_status))
         
         .with_state(service)
 }
