@@ -350,9 +350,9 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
             }
 
             match engine.execute(&mut execution, &version.definition, initial_variables).await {
-                Ok(_state) => {
+                Ok(state) => {
                     // For now, just mark as completed with a simple status
-                    let output = serde_json::json!({"status": "completed"});
+                    let output = serde_json::json!({"status": "completed", "variables": state.variables});
                     execution.complete(output);
                 }
                 Err(e) => {
