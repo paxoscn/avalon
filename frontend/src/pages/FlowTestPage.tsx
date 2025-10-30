@@ -39,15 +39,15 @@ export function FlowTestPage() {
         const currentVersion = versions.find(v => v.version === flowData.current_version) || versions[0];
         setVersion(currentVersion);
 
-        console.log("xxx", currentVersion.definition?.workflow?.graph?.nodes.find((node: any) => node.node_type === "start"));
+        const initialVars: Record<string, any> = {};
+        // initialVars["query"] = '';
         // Extract variables from flow definition if available
         if (currentVersion.definition?.workflow?.graph?.nodes.find((node: any) => node.node_type === "start").data.variables) {
-          const initialVars: Record<string, any> = {};
           currentVersion.definition.workflow.graph.nodes.find((node: any) => node.node_type === "start").data.variables.forEach((variable: any) => {
             initialVars[variable.variable] = variable.default;
           });
-          setVariables(initialVars);
         }
+        setVariables(initialVars);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || '加载Flow失败');

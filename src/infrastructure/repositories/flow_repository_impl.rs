@@ -309,7 +309,8 @@ impl FlowVersionRepository for FlowVersionRepositoryImpl {
                     .get("provider")
                     .and_then(|v| v.as_str())
                     .unwrap_or("openai")
-                    .replace("langgenius/tongyi/tongyi", "openai");
+                    .replace("langgenius/tongyi/tongyi", "openai")
+                    .replace("langgenius/volcengine_maas/volcengine_maas", "openai");
 
                 let llm_configs = entities::llm_config::Entity::find()
                     .filter(entities::llm_config::Column::TenantId.eq(tenant_id.0))

@@ -66,3 +66,20 @@ HTTPToolConfig增加response_template, 用于将JSON响应翻译为工具的输�
 模板需要能支持简单的变量和循环, 性能越高越好.
 
 实现MCP server能力, 并提供工具列表和调用接口.
+
+---
+
+支持新的节点类型answer(直接回复). 其data包含以下属性:
+* answer: 输出字符串. 可以包含引用. 例如"{{#1761621778329.checking_items#}}"代表输出节点ID=1761621778329的变量"checking_items"
+
+执行逻辑: 将answer的计算结果输出到该节点的变量"answer".
+
+---
+
+支持新的节点类型parameter-extractor(参数提取器). 其data包含以下属性:
+* model: 与LLM节点的data.model定义相同
+* instruction: 系统提示词
+* query: 输入变量的路径数组, 例如[ "1759993208994", "standard_text" ]代表节点ID=1759993208994的变量"standard_text". 用作用户提示词
+* parameters: 输出参数数组, 只有一个条目, 格式为{ "name": "输出参数名称" }
+
+执行逻辑: 传入系统提示词和用户提示词, 指定大模型输出格式为字符串数组, 获取大模型调用结果并存放在parameters[0]指定的参数名称中.

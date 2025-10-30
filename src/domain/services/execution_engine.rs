@@ -258,8 +258,8 @@ impl ExecutionEngine for ExecutionEngineImpl {
                 let result = self.execute_node(node, &mut state).await?;
                 state.record_node_result(result.clone());
 
-                // Check if this is an end node
-                if node.node_type == NodeType::End {
+                // Check if this is an end or answer node
+                if node.node_type == NodeType::End || node.node_type == NodeType::Answer {
                     // Collect final output from state
                     let output = serde_json::json!({
                         "variables": state.variables,

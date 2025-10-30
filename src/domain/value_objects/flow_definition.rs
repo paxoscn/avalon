@@ -75,6 +75,7 @@ pub enum NodeType {
     Variable,
     HttpRequest,
     Code,
+    Answer,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -134,13 +135,22 @@ impl FlowDefinition {
             return Err("Flow must have at least one start node".to_string());
         }
 
-        // Check if there's at least one end node
-        let end_nodes: Vec<_> = self.workflow.graph.nodes.iter()
-            .filter(|n| n.node_type == NodeType::End)
+        // // Check if there's at least one end node
+        // let end_nodes: Vec<_> = self.workflow.graph.nodes.iter()
+        //     .filter(|n| n.node_type == NodeType::End)
+        //     .collect();
+        
+        // if end_nodes.is_empty() {
+        //     return Err("Flow must have at least one end node".to_string());
+        // }
+
+        // Check if there's at least one answer node
+        let answer_nodes: Vec<_> = self.workflow.graph.nodes.iter()
+            .filter(|n| n.node_type == NodeType::Answer)
             .collect();
         
-        if end_nodes.is_empty() {
-            return Err("Flow must have at least one end node".to_string());
+        if answer_nodes.is_empty() {
+            return Err("Flow must have at least one answer node".to_string());
         }
 
         // Validate node IDs are unique
@@ -173,6 +183,12 @@ impl FlowDefinition {
     pub fn get_end_nodes(&self) -> Vec<&FlowNode> {
         self.workflow.graph.nodes.iter()
             .filter(|n| n.node_type == NodeType::End)
+            .collect()
+    }
+
+    pub fn get_answer_nodes(&self) -> Vec<&FlowNode> {
+        self.workflow.graph.nodes.iter()
+            .filter(|n| n.node_type == NodeType::Answer)
             .collect()
     }
 }

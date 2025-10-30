@@ -297,6 +297,7 @@ mod tests {
             Arc::new(LoopNodeExecutor::new()),
             Arc::new(CodeNodeExecutor::new()),
             Arc::new(HttpRequestNodeExecutor::new()),
+            Arc::new(AnswerNodeExecutor::new()),
         ];
         ExecutionEngineImpl::new(executors)
     }

@@ -306,11 +306,12 @@ impl ProviderUtils {
 
         match provider {
             "openai" => {
-                if !api_key.starts_with("sk-") {
-                    return Err(LLMError::InvalidConfiguration(
-                        "OpenAI API key must start with 'sk-'".to_string(),
-                    ));
-                }
+                // Doubao does not starts with 'sl-'.
+                // if !api_key.starts_with("sk-") {
+                //     return Err(LLMError::InvalidConfiguration(
+                //         "OpenAI API key must start with 'sk-'".to_string(),
+                //     ));
+                // }
             }
             "claude" => {
                 if !api_key.starts_with("sk-ant-") {

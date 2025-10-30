@@ -1,0 +1,97 @@
+{
+  "workflow": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "start_1",
+          "node_type": "start",
+          "data": {
+            "variables": [
+              {
+                "variable": "user_name",
+                "default": "用户"
+              },
+              {
+                "variable": "query",
+                "default": "请列出重要的检查项目"
+              }
+            ]
+          },
+          "position": {
+            "x": 0,
+            "y": 100
+          }
+        },
+        {
+          "id": "1761621778329",
+          "node_type": "llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "你是一个专业的助手，负责生成检查清单。"
+              },
+              {
+                "role": "user",
+                "text": "{{#start_1.query#}}"
+              }
+            ],
+            "output_variable": "llm_response"
+          },
+          "position": {
+            "x": 200,
+            "y": 100
+          }
+        },
+        {
+          "id": "answer_1",
+          "node_type": "answer",
+          "data": {
+            "answer": "你好 {{#start_1.user_name#}}，\n\n根据你的请求，以下是生成的检查项目：\n\n{{#1761621778329.text#}}\n\n希望这些信息对你有帮助！"
+          },
+          "position": {
+            "x": 400,
+            "y": 100
+          }
+        },
+        {
+          "id": "end_1",
+          "node_type": "end",
+          "data": {
+            "outputs": [
+              {
+                "value_selector": ["answer_1", "answer"],
+                "value_type": "string",
+                "variable": "final_answer"
+              }
+            ]
+          },
+          "position": {
+            "x": 600,
+            "y": 100
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge_1",
+          "source": "start_1",
+          "target": "1761621778329"
+        },
+        {
+          "id": "edge_2",
+          "source": "1761621778329",
+          "target": "answer_1"
+        },
+        {
+          "id": "edge_3",
+          "source": "answer_1",
+          "target": "end_1"
+        }
+      ]
+    }
+  }
+}

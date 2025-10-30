@@ -34,6 +34,7 @@ impl ExecutionEngineFactory {
         executors.push(Arc::new(LoopNodeExecutor::new()));
         executors.push(Arc::new(CodeNodeExecutor::new()));
         executors.push(Arc::new(HttpRequestNodeExecutor::new()));
+        executors.push(Arc::new(AnswerNodeExecutor::new()));
 
         // Add service-integrated node executors
         executors.push(Arc::new(LLMChatNodeExecutor::new(llm_service, llm_config_repository)));
@@ -55,6 +56,7 @@ impl ExecutionEngineFactory {
         executors.push(Arc::new(LoopNodeExecutor::new()));
         executors.push(Arc::new(CodeNodeExecutor::new()));
         executors.push(Arc::new(HttpRequestNodeExecutor::new()));
+        executors.push(Arc::new(AnswerNodeExecutor::new()));
 
         Arc::new(ExecutionEngineImpl::new(executors))
     }

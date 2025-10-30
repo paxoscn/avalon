@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use serde_json::Value;
 use serde_json::json;
+use serde_json::Value;
 use std::sync::Arc;
 
 use crate::domain::services::execution_engine::{
@@ -154,7 +154,9 @@ impl NodeExecutor for EndNodeExecutor {
             }
         }
 
-        state.variables.insert("outputs".to_string(), json!(final_outputs));
+        state
+            .variables
+            .insert("outputs".to_string(), json!(final_outputs));
 
         let output = serde_json::json!({
             "message": "Flow completed",
@@ -367,6 +369,99 @@ impl NodeExecutor for LoopNodeExecutor {
 
     fn can_handle(&self, node_type: &NodeType) -> bool {
         matches!(node_type, NodeType::Loop)
+    }
+}
+
+/// Answer node executor - processes answer strings with variable references
+pub struct AnswerNodeExecutor;
+
+impl AnswerNodeExecutor {
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Resolves variable references in the answer string
+    /// Supports format: {{#node_id.variable_name#}}
+    fn resolve_answer(&self, answer: &str, state: &ExecutionState) -> String {
+        let mut result = answer.to_string();
+
+        // Replace {{#node_id.variable_name#}} with actual values from state
+        for (key, value) in &state.variables {
+            let placeholder = format!("{{{{{}}}}}", key);
+            if result.contains(&placeholder) {
+                let value_str = match value {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    Value::Array(arr) => {
+                        serde_json::to_string(arr).unwrap_or_else(|_| "[]".to_string())
+                    }
+                    Value::Object(obj) => {
+                        serde_json::to_string(obj).unwrap_or_else(|_| "{}".to_string())
+                    }
+                    Value::Null => "null".to_string(),
+                };
+                result = result.replace(&placeholder, &value_str);
+            }
+        }
+
+        result
+    }
+}
+
+impl Default for AnswerNodeExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl NodeExecutor for AnswerNodeExecutor {
+    async fn execute(
+        &self,
+        node: &FlowNode,
+        state: &mut ExecutionState,
+    ) -> Result<NodeExecutionResult> {
+        let started_at = Utc::now();
+
+        // Extract answer template from node data
+        let answer_template = node
+            .data
+            .get("answer")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        // Resolve variable references in the answer
+        let resolved_answer = self.resolve_answer(answer_template, state);
+
+        // Store the resolved answer in state with format: #node_id.answer#
+        let answer_var = format!("#{}.answer#", node.id);
+        state.set_variable(answer_var, serde_json::json!(resolved_answer.clone()));
+        
+        state.set_variable("outputs".to_string(), json!({ "answer": resolved_answer.clone() }));
+
+        let output = serde_json::json!({
+            "answer": resolved_answer,
+        });
+
+        let completed_at = Utc::now();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
+
+        Ok(NodeExecutionResult {
+            node_id: node.id.clone(),
+            status: NodeExecutionStatus::Success,
+            output: Some(output),
+            error: None,
+            started_at,
+            completed_at,
+            execution_time_ms,
+        })
+    }
+
+    fn can_handle(&self, node_type: &NodeType) -> bool {
+        matches!(node_type, NodeType::Answer)
     }
 }
 
@@ -1624,5 +1719,111 @@ mod tests {
         // Should return all variables
         let output = result.output.unwrap();
         assert!(output.get("final_variables").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_answer_node_executor() {
+        let executor = AnswerNodeExecutor::new();
+
+        // Create state with some variables
+        let mut variables = HashMap::new();
+        variables.insert(
+            "#1761621778329.checking_items#".to_string(),
+            serde_json::json!("Item 1, Item 2, Item 3"),
+        );
+        variables.insert(
+            "#start_1.user_name#".to_string(),
+            serde_json::json!("Alice"),
+        );
+
+        let mut state = ExecutionState::new(
+            crate::domain::value_objects::FlowExecutionId::new(),
+            variables,
+        );
+
+        // Answer node with variable references
+        let node = FlowNode {
+            id: "answer_1".to_string(),
+            node_type: NodeType::Answer,
+            data: serde_json::json!({
+                "answer": "Hello {{#start_1.user_name#}}, here are your items: {{#1761621778329.checking_items#}}"
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Verify the resolved answer is stored in state
+        assert_eq!(
+            state.get_variable("#answer_1.answer#"),
+            Some(&serde_json::json!(
+                "Hello Alice, here are your items: Item 1, Item 2, Item 3"
+            ))
+        );
+
+        // Verify the output contains the resolved answer
+        let output = result.output.unwrap();
+        assert_eq!(
+            output.get("answer"),
+            Some(&serde_json::json!(
+                "Hello Alice, here are your items: Item 1, Item 2, Item 3"
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_answer_node_with_no_variables() {
+        let executor = AnswerNodeExecutor::new();
+        let mut state = create_test_state();
+
+        // Answer node with plain text (no variable references)
+        let node = FlowNode {
+            id: "answer_2".to_string(),
+            node_type: NodeType::Answer,
+            data: serde_json::json!({
+                "answer": "This is a plain text answer without any variables."
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Verify the answer is stored as-is
+        assert_eq!(
+            state.get_variable("#answer_2.answer#"),
+            Some(&serde_json::json!(
+                "This is a plain text answer without any variables."
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_answer_node_with_missing_variable() {
+        let executor = AnswerNodeExecutor::new();
+        let mut state = create_test_state();
+
+        // Answer node referencing a non-existent variable
+        let node = FlowNode {
+            id: "answer_3".to_string(),
+            node_type: NodeType::Answer,
+            data: serde_json::json!({
+                "answer": "Hello {{#missing_node.missing_var#}}, this variable doesn't exist."
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // The placeholder should remain unreplaced if variable doesn't exist
+        let output = result.output.unwrap();
+        assert_eq!(
+            output.get("answer"),
+            Some(&serde_json::json!(
+                "Hello {{#missing_node.missing_var#}}, this variable doesn't exist."
+            ))
+        );
     }
 }

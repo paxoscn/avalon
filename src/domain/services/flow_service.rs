@@ -155,10 +155,16 @@ impl FlowDomainService for FlowDomainServiceImpl {
             result.add_warning("Flow has multiple start nodes".to_string());
         }
 
-        // Check for end nodes
-        let end_nodes = definition.get_end_nodes();
-        if end_nodes.is_empty() {
-            result.add_error("Flow must have at least one end node".to_string());
+        // // Check for end nodes
+        // let end_nodes = definition.get_end_nodes();
+        // if end_nodes.is_empty() {
+        //     result.add_error("Flow must have at least one end node".to_string());
+        // }
+
+        // Check for answer nodes
+        let answer_nodes = definition.get_answer_nodes();
+        if answer_nodes.is_empty() {
+            result.add_error("Flow must have at least one answer node".to_string());
         }
 
         // Check for orphaned nodes (nodes with no incoming or outgoing edges)
