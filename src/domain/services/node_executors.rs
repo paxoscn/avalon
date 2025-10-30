@@ -7,11 +7,11 @@ use crate::domain::services::execution_engine::{
     ExecutionState, NodeExecutionResult, NodeExecutionStatus, NodeExecutor,
 };
 use crate::domain::value_objects::{FlowNode, NodeType};
-use crate::domain::ModelProvider;
 use crate::domain::ConfigId;
+use crate::domain::ModelProvider;
 use crate::error::Result;
 
-/// Start node executor - simply passes through
+/// Start node executor - saves flow parameters for later access
 pub struct StartNodeExecutor;
 
 impl StartNodeExecutor {
@@ -31,9 +31,29 @@ impl NodeExecutor for StartNodeExecutor {
     async fn execute(
         &self,
         node: &FlowNode,
-        _state: &mut ExecutionState,
+        state: &mut ExecutionState,
     ) -> Result<NodeExecutionResult> {
         let started_at = Utc::now();
+
+        // Extract variables from node data and save them with node ID prefix
+        // Expected format: {"variables": [{"variable": "user_input", "default": "Hello World"}]}
+        if let Some(variables) = node.data.get("variables") {
+            if let Some(vars_array) = variables.as_array() {
+                for var_item in vars_array {
+                    if let Some(var_obj) = var_item.as_object() {
+                        if let (Some(var_name), Some(default_value)) = (
+                            var_obj.get("variable").and_then(|v| v.as_str()),
+                            var_obj.get("default"),
+                        ) {
+                            // Store variables with format: #node_id.variable_name#
+                            let prefixed_key = format!("#{}.{}#", node.id, var_name);
+                            state.set_variable(prefixed_key, default_value.clone());
+                        }
+                    }
+                }
+            }
+        }
+
         let completed_at = Utc::now();
         let execution_time_ms = completed_at
             .signed_duration_since(started_at)
@@ -172,6 +192,14 @@ impl VariableNodeExecutor {
         // If value is a string starting with $, treat it as a variable reference
         if let Some(s) = value.as_str() {
             if let Some(var_name) = s.strip_prefix('$') {
+                if let Some(var_value) = state.get_variable(var_name) {
+                    return var_value.clone();
+                }
+            }
+
+            // Also support {{variable}} syntax for consistency
+            if s.starts_with("{{") && s.ends_with("}}") {
+                let var_name = &s[2..s.len() - 2];
                 if let Some(var_value) = state.get_variable(var_name) {
                     return var_value.clone();
                 }
@@ -429,9 +457,11 @@ impl LLMChatNodeExecutor {
         state: &ExecutionState,
     ) -> Result<Vec<crate::domain::value_objects::ChatMessage>> {
         let default_messages_data = Vec::new();
-        let messages_data = node.data.get("prompt_template")
-        .and_then(|v| v.as_array())
-        .unwrap_or(&default_messages_data);
+        let messages_data = node
+            .data
+            .get("prompt_template")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&default_messages_data);
 
         let mut messages = Vec::new();
 
@@ -487,6 +517,7 @@ impl LLMChatNodeExecutor {
         let mut result = template.to_string();
 
         // Replace {{variable_name}} with actual values from state
+        // This supports both regular variables and node-prefixed parameters like {{#node_id.param#}}
         for (key, value) in &state.variables {
             let placeholder = format!("{{{{{}}}}}", key);
             if result.contains(&placeholder) {
@@ -530,15 +561,17 @@ impl LLMChatNodeExecutor {
         let config = self
             .llm_config_repository
             .find_by_id(ConfigId::from_string(llm_config_id).map_err(|e| {
-                crate::error::PlatformError::ValidationError(
-                    format!("Invalid UUID: {}. Error: {}", llm_config_id, e),
-                )
+                crate::error::PlatformError::ValidationError(format!(
+                    "Invalid UUID: {}. Error: {}",
+                    llm_config_id, e
+                ))
             })?)
             .await?
             .ok_or_else(|| {
-                crate::error::PlatformError::ValidationError(
-                    format!("LLM config not found: {}", llm_config_id),
-                )
+                crate::error::PlatformError::ValidationError(format!(
+                    "LLM config not found: {}",
+                    llm_config_id
+                ))
             })?;
 
         // TODO Merging config from both the flow and the LLM config.
@@ -949,11 +982,12 @@ impl MCPToolNodeExecutor {
                 Value::Array(resolved)
             }
             Value::String(s) => {
-                // Check if it's a variable reference
+                // Check if it's a variable reference with {{...}} syntax
                 if let Some(var_name) = s.strip_prefix("{{").and_then(|s| s.strip_suffix("}}")) {
+                    let trimmed = var_name.trim();
                     state
                         .variables
-                        .get(var_name.trim())
+                        .get(trimmed)
                         .cloned()
                         .unwrap_or_else(|| Value::String(s.clone()))
                 } else {
@@ -1287,6 +1321,41 @@ mod tests {
         let result = executor.execute(&node, &mut state).await.unwrap();
         assert_eq!(result.status, NodeExecutionStatus::Success);
         assert_eq!(result.node_id, "start");
+    }
+
+    #[tokio::test]
+    async fn test_start_node_with_parameters() {
+        let executor = StartNodeExecutor::new();
+        let node = FlowNode {
+            id: "start_1".to_string(),
+            node_type: NodeType::Start,
+            data: serde_json::json!({
+                "variables": [
+                    {"variable": "user_input", "default": "Hello World"},
+                    {"variable": "max_tokens", "default": 100},
+                    {"variable": "temperature", "default": 0.7}
+                ]
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+        let mut state = create_test_state();
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Verify variables are stored with node ID prefix
+        assert_eq!(
+            state.get_variable("#start_1.user_input#"),
+            Some(&serde_json::json!("Hello World"))
+        );
+        assert_eq!(
+            state.get_variable("#start_1.max_tokens#"),
+            Some(&serde_json::json!(100))
+        );
+        assert_eq!(
+            state.get_variable("#start_1.temperature#"),
+            Some(&serde_json::json!(0.7))
+        );
     }
 
     #[tokio::test]

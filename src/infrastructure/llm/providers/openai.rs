@@ -11,6 +11,7 @@ use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use tracing::{debug};
 
 /// OpenAI API provider implementation
 pub struct OpenAIProvider {
@@ -241,10 +242,12 @@ impl LLMProvider for OpenAIProvider {
         let url = format!("{}/chat/completions", self.config.base_url);
         let headers = self.build_headers();
         let openai_request = self.convert_request(request);
+        debug!("openai_request = {:?}", openai_request);
 
         let response: StandardChatResponse = self.http_client
             .post_json(&url, &headers, &openai_request)
             .await?;
+        debug!("response = {:?}", response);
 
         self.convert_response(response)
     }
