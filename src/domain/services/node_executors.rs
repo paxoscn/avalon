@@ -701,6 +701,10 @@ impl NodeExecutor for LLMChatNodeExecutor {
 
         state.set_variable(output_var.to_string(), serde_json::json!(response.content));
 
+        // Also store response.content in #node_id.text# for easy access in subsequent nodes
+        let text_var = format!("#{}.text#", node.id);
+        state.set_variable(text_var, serde_json::json!(response.content));
+
         let output = serde_json::json!({
             "content": response.content,
             "model_used": response.model_used,

@@ -1,0 +1,207 @@
+{
+  "description": "Example flow demonstrating LLM node chaining using #node_id.text# variables",
+  "use_case": "Generate content, summarize it, and translate to another language",
+  "flow_definition": {
+    "workflow": {
+      "nodes": [
+        {
+          "id": "start_1",
+          "node_type": "Start",
+          "data": {
+            "variables": [
+              {
+                "variable": "topic",
+                "default": "artificial intelligence"
+              },
+              {
+                "variable": "target_language",
+                "default": "Spanish"
+              }
+            ]
+          },
+          "position": {"x": 0, "y": 0}
+        },
+        {
+          "id": "llm_generate",
+          "node_type": "Llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are a knowledgeable technical writer."
+              },
+              {
+                "role": "user",
+                "text": "Write a detailed 3-paragraph explanation of {{#start_1.topic#}}. Include its history, current applications, and future potential."
+              }
+            ],
+            "output_variable": "detailed_explanation"
+          },
+          "position": {"x": 200, "y": 0}
+        },
+        {
+          "id": "llm_summarize",
+          "node_type": "Llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are an expert at creating concise summaries."
+              },
+              {
+                "role": "user",
+                "text": "Summarize the following text in exactly 2 sentences:\n\n{{#llm_generate.text#}}"
+              }
+            ],
+            "output_variable": "summary"
+          },
+          "position": {"x": 400, "y": 0}
+        },
+        {
+          "id": "llm_translate",
+          "node_type": "Llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are a professional translator."
+              },
+              {
+                "role": "user",
+                "text": "Translate the following text to {{#start_1.target_language#}}:\n\n{{#llm_summarize.text#}}"
+              }
+            ],
+            "output_variable": "translated_summary"
+          },
+          "position": {"x": 600, "y": 0}
+        },
+        {
+          "id": "end_1",
+          "node_type": "End",
+          "data": {},
+          "position": {"x": 800, "y": 0}
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "start_1",
+          "target": "llm_generate"
+        },
+        {
+          "id": "e2",
+          "source": "llm_generate",
+          "target": "llm_summarize"
+        },
+        {
+          "id": "e3",
+          "source": "llm_summarize",
+          "target": "llm_translate"
+        },
+        {
+          "id": "e4",
+          "source": "llm_translate",
+          "target": "end_1"
+        }
+      ]
+    }
+  },
+  "execution_example": {
+    "request": {
+      "input_data": {
+        "topic": "quantum computing",
+        "target_language": "French"
+      }
+    },
+    "execution_flow": {
+      "step_1": {
+        "node": "start_1",
+        "variables_set": {
+          "#start_1.topic#": "quantum computing",
+          "#start_1.target_language#": "French"
+        }
+      },
+      "step_2": {
+        "node": "llm_generate",
+        "input": "Write a detailed 3-paragraph explanation of quantum computing...",
+        "output": "Quantum computing represents a revolutionary approach to computation...",
+        "variables_set": {
+          "detailed_explanation": "Quantum computing represents...",
+          "#llm_generate.text#": "Quantum computing represents..."
+        }
+      },
+      "step_3": {
+        "node": "llm_summarize",
+        "input": "Summarize the following text in exactly 2 sentences:\n\nQuantum computing represents...",
+        "output": "Quantum computing uses quantum mechanics principles to process information. It has potential applications in cryptography, drug discovery, and optimization problems.",
+        "variables_set": {
+          "summary": "Quantum computing uses quantum mechanics...",
+          "#llm_summarize.text#": "Quantum computing uses quantum mechanics..."
+        }
+      },
+      "step_4": {
+        "node": "llm_translate",
+        "input": "Translate the following text to French:\n\nQuantum computing uses quantum mechanics...",
+        "output": "L'informatique quantique utilise les principes de la mécanique quantique pour traiter l'information. Elle a des applications potentielles en cryptographie, découverte de médicaments et problèmes d'optimisation.",
+        "variables_set": {
+          "translated_summary": "L'informatique quantique utilise...",
+          "#llm_translate.text#": "L'informatique quantique utilise..."
+        }
+      },
+      "step_5": {
+        "node": "end_1",
+        "final_state": {
+          "#start_1.topic#": "quantum computing",
+          "#start_1.target_language#": "French",
+          "#llm_generate.text#": "Quantum computing represents...",
+          "#llm_summarize.text#": "Quantum computing uses quantum mechanics...",
+          "#llm_translate.text#": "L'informatique quantique utilise...",
+          "detailed_explanation": "Quantum computing represents...",
+          "summary": "Quantum computing uses quantum mechanics...",
+          "translated_summary": "L'informatique quantique utilise..."
+        }
+      }
+    }
+  },
+  "key_features": [
+    "Each LLM node automatically stores its response in #node_id.text#",
+    "Subsequent nodes can easily reference previous LLM outputs",
+    "Custom output_variable names are also supported for flexibility",
+    "The flow demonstrates a common pattern: Generate → Summarize → Translate"
+  ],
+  "variable_access_patterns": {
+    "start_node_variables": "{{#start_1.variable_name#}}",
+    "llm_node_outputs": "{{#llm_node_id.text#}}",
+    "custom_variables": "{{variable_name}}"
+  },
+  "alternative_flows": {
+    "parallel_processing": {
+      "description": "Process the same input with multiple LLMs in parallel",
+      "structure": "Start → [LLM1, LLM2, LLM3] → Combine → End"
+    },
+    "iterative_refinement": {
+      "description": "Refine output through multiple iterations",
+      "structure": "Start → LLM1 → LLM2 (refine) → LLM3 (polish) → End"
+    },
+    "conditional_branching": {
+      "description": "Choose different LLM paths based on conditions",
+      "structure": "Start → LLM1 → Condition → [Path A: LLM2, Path B: LLM3] → End"
+    }
+  },
+  "best_practices": [
+    "Use descriptive node IDs (llm_generate, llm_summarize) instead of generic ones (llm_1, llm_2)",
+    "Always reference LLM outputs using #node_id.text# for consistency",
+    "Keep prompts clear and specific about what you want from each LLM",
+    "Consider token limits when chaining multiple LLM calls",
+    "Test each LLM node independently before chaining them together"
+  ]
+}

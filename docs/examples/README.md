@@ -8,6 +8,10 @@ This directory contains example flow definitions and usage patterns.
 
 Demonstrates how to use Start node variables with `input_data` overrides.
 
+### llm_chaining_example.json
+
+Demonstrates how to chain multiple LLM nodes using the automatic `#node_id.text#` variable.
+
 **Key Features:**
 - Define default values in the Start node
 - Override values at runtime using `input_data`
@@ -48,3 +52,4 @@ POST /api/v1/flows/{flow_id}/execute
 
 - [Flow Start Node Variables](../flow_start_node_parameters.md) - Detailed guide on Start node variables
 - [Flow Execution with Variables](../flow_execution_with_variables.md) - Complete execution guide
+- [LLM Node Text Variable](../llm_node_text_variable.md) - How LLM nodes store their output in `#node_id.text#`
