@@ -45,7 +45,11 @@ impl MigrationTrait for Migration {
                             .default(Expr::current_timestamp())
                             .not_null(),
                     )
-                    .col(ColumnDef::new(FlowExecutions::CompletedAt).timestamp_with_time_zone())
+                    .col(ColumnDef::new(FlowExecutions::CompletedAt)
+                            .timestamp_with_time_zone()
+                            .default(Expr::value("1970-01-01 08:00:01"))
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(FlowExecutions::ExecutionTimeMs).integer())
                     .foreign_key(
                         ForeignKey::create()

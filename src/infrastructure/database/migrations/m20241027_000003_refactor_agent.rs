@@ -21,7 +21,11 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Agents::Table)
-                    .add_column(ColumnDef::new(Agents::FiredAt).timestamp_with_time_zone())
+                    .add_column(ColumnDef::new(Agents::FiredAt)
+                            .timestamp_with_time_zone()
+                            .default(Expr::value("1970-01-01 08:00:01"))
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await?;

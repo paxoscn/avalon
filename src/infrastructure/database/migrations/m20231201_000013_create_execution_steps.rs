@@ -56,7 +56,11 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )
-                    .col(ColumnDef::new(ExecutionSteps::CompletedAt).timestamp())
+                    .col(ColumnDef::new(ExecutionSteps::CompletedAt).timestamp()
+                            .timestamp_with_time_zone()
+                            .default(Expr::value("1970-01-01 08:00:01"))
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(ExecutionSteps::ExecutionTimeMs).integer())
                     .col(ColumnDef::new(ExecutionSteps::Metadata).json())
                     .foreign_key(

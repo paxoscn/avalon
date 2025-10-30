@@ -2,7 +2,7 @@
 # Requirement 1.1, 1.2, 1.3: Docker containerization
 
 # Build stage
-FROM rust:1.75-slim as builder
+FROM rust:1.90-slim as builder
 
 WORKDIR /app
 
