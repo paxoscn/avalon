@@ -61,8 +61,8 @@ export interface FlowExecution {
 }
 
 export interface ExecuteFlowRequest {
-  variables?: Record<string, any>;
-  sessionId?: string;
+  input_data?: Record<string, any>;
+  session_id?: string;
 }
 
 export interface ImportDslRequest {

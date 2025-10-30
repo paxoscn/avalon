@@ -75,8 +75,8 @@ export function FlowTestPage() {
       }
 
       const result = await flowService.executeFlow(id!, {
-        variables: executionVariables,
-        sessionId: sessionId || undefined,
+        input_data: executionVariables,
+        session_id: sessionId || undefined,
       });
 
       // Navigate to execution detail page
