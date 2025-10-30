@@ -25,7 +25,7 @@ When executing a flow, you can define variables in the Start node's `data.variab
 }
 ```
 
-### 2. Variable Storage
+### 2. Variable Storage and Priority
 
 The `StartNodeExecutor` automatically stores these variables in the execution state with a special prefix format:
 
@@ -33,8 +33,13 @@ The `StartNodeExecutor` automatically stores these variables in the execution st
 #<node_id>.<variable_name>#
 ```
 
+**Value Priority:**
+1. **First Priority**: Value from `input_data` (passed during flow execution)
+2. **Second Priority**: Default value from node definition
+
 For example, with a start node ID of `start_1`:
-- `user_input` → stored as `#start_1.user_input#`
+- If `input_data` contains `{"user_input": "Custom value"}`, then `#start_1.user_input#` = "Custom value"
+- If `input_data` does not contain `user_input`, then `#start_1.user_input#` = "Hello World" (default)
 - `max_tokens` → stored as `#start_1.max_tokens#`
 - `temperature` → stored as `#start_1.temperature#`
 
@@ -161,9 +166,14 @@ Build dynamic prompts using start node variables:
 
 The variable storage and resolution is handled by:
 
-- **StartNodeExecutor**: Extracts variables from `data.variables` array and stores them with the `#node_id.variable_name#` prefix
+- **StartNodeExecutor**: 
+  1. Extracts variables from `data.variables` array
+  2. For each variable, checks if a value exists in `state.variables` (from `input_data`)
+  3. If found in `state.variables`, uses that value (override)
+  4. If not found, uses the `default` value from node definition
+  5. Stores the final value with the `#node_id.variable_name#` prefix
 - **Template Resolution**: Various executors (LLM, MCP Tool, Variable) resolve `{{...}}` references
-- **ExecutionState**: Maintains the variable storage throughout flow execution
+- **ExecutionState**: Maintains the variable storage throughout flow execution, initialized with `input_data`
 
 ## Example Flow
 

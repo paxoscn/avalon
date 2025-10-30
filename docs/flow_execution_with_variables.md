@@ -68,8 +68,35 @@ In this case:
 When the Start node executes:
 
 1. It reads the `variables` array from `node.data.variables`
-2. For each variable, it checks if there's an override in the execution context
-3. It stores the value (either default or overridden) with the format: `#<node_id>.<variable_name>#`
+2. For each variable, it checks if a value exists in `state.variables` (populated from `input_data`)
+3. **If found in `input_data`**: Uses the value from `input_data` (override)
+4. **If not found**: Uses the `default` value from the node definition
+5. It stores the final value with the format: `#<node_id>.<variable_name>#`
+
+**Example:**
+
+Node definition:
+```json
+{
+  "variables": [
+    {"variable": "question", "default": "What is AI?"},
+    {"variable": "language", "default": "English"}
+  ]
+}
+```
+
+Execution with `input_data`:
+```json
+{
+  "input_data": {
+    "question": "Explain quantum computing"
+  }
+}
+```
+
+Result:
+- `#start_1.question#` = "Explain quantum computing" (from input_data)
+- `#start_1.language#` = "English" (from default)
 
 ## Accessing Variables in Subsequent Nodes
 
@@ -213,13 +240,15 @@ Content-Type: application/json
 
 ### Current Implementation
 
-The current implementation stores the **default values** from the Start node's `variables` array. To support runtime overrides, you would need to:
+The implementation supports runtime overrides through `input_data`:
 
-1. Pass `input_data` through the execution context
-2. Modify `StartNodeExecutor` to check for overrides in the execution context
-3. Use the override value if present, otherwise use the default
+1. `input_data` is converted to `initial_variables` in the flow execution service
+2. `ExecutionState` is initialized with these `initial_variables`
+3. `StartNodeExecutor` checks `state.variables` for each variable name
+4. If found, uses the value from `input_data` (override)
+5. If not found, uses the `default` value from node definition
 
-### Example Enhancement
+### Implementation Code
 
 ```rust
 // In StartNodeExecutor::execute
@@ -231,10 +260,10 @@ if let Some(variables) = node.data.get("variables") {
                     var_obj.get("variable").and_then(|v| v.as_str()),
                     var_obj.get("default"),
                 ) {
-                    // Check for override in execution context
+                    // First check if value exists in state.variables (from input_data)
+                    // If not found, use the default value from node definition
                     let value = state
-                        .variables
-                        .get(var_name)
+                        .get_variable(var_name)
                         .cloned()
                         .unwrap_or_else(|| default_value.clone());
                     

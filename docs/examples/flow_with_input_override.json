@@ -1,0 +1,155 @@
+{
+  "description": "Example flow showing how input_data overrides default values in Start node",
+  "flow_definition": {
+    "workflow": {
+      "nodes": [
+        {
+          "id": "start_1",
+          "node_type": "Start",
+          "data": {
+            "variables": [
+              {
+                "variable": "user_question",
+                "default": "What is artificial intelligence?"
+              },
+              {
+                "variable": "response_language",
+                "default": "English"
+              },
+              {
+                "variable": "max_length",
+                "default": 200
+              }
+            ]
+          },
+          "position": {"x": 0, "y": 0}
+        },
+        {
+          "id": "llm_1",
+          "node_type": "Llm",
+          "data": {
+            "model": {
+              "llm_config_id": "your-llm-config-id"
+            },
+            "prompt_template": [
+              {
+                "role": "system",
+                "text": "You are a helpful assistant. Answer in {{#start_1.response_language#}}. Keep your response under {{#start_1.max_length#}} words."
+              },
+              {
+                "role": "user",
+                "text": "{{#start_1.user_question#}}"
+              }
+            ],
+            "output_variable": "llm_response"
+          },
+          "position": {"x": 300, "y": 0}
+        },
+        {
+          "id": "end_1",
+          "node_type": "End",
+          "data": {},
+          "position": {"x": 600, "y": 0}
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "start_1",
+          "target": "llm_1"
+        },
+        {
+          "id": "e2",
+          "source": "llm_1",
+          "target": "end_1"
+        }
+      ]
+    }
+  },
+  "execution_examples": [
+    {
+      "name": "Using all default values",
+      "request": {
+        "input_data": {}
+      },
+      "result": {
+        "variables_used": {
+          "#start_1.user_question#": "What is artificial intelligence?",
+          "#start_1.response_language#": "English",
+          "#start_1.max_length#": 200
+        }
+      }
+    },
+    {
+      "name": "Override user_question only",
+      "request": {
+        "input_data": {
+          "user_question": "Explain quantum computing in simple terms"
+        }
+      },
+      "result": {
+        "variables_used": {
+          "#start_1.user_question#": "Explain quantum computing in simple terms",
+          "#start_1.response_language#": "English",
+          "#start_1.max_length#": 200
+        }
+      }
+    },
+    {
+      "name": "Override multiple variables",
+      "request": {
+        "input_data": {
+          "user_question": "¿Qué es el aprendizaje automático?",
+          "response_language": "Spanish",
+          "max_length": 150
+        }
+      },
+      "result": {
+        "variables_used": {
+          "#start_1.user_question#": "¿Qué es el aprendizaje automático?",
+          "#start_1.response_language#": "Spanish",
+          "#start_1.max_length#": 150
+        }
+      }
+    },
+    {
+      "name": "Override with different types",
+      "request": {
+        "input_data": {
+          "user_question": "Tell me about neural networks",
+          "max_length": 500
+        }
+      },
+      "result": {
+        "variables_used": {
+          "#start_1.user_question#": "Tell me about neural networks",
+          "#start_1.response_language#": "English",
+          "#start_1.max_length#": 500
+        }
+      }
+    }
+  ],
+  "api_usage": {
+    "endpoint": "POST /api/v1/flows/{flow_id}/execute",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {your_token}"
+    },
+    "body_example_1": {
+      "input_data": {}
+    },
+    "body_example_2": {
+      "input_data": {
+        "user_question": "Custom question here",
+        "response_language": "French"
+      }
+    }
+  },
+  "notes": [
+    "Variables in input_data override the default values defined in the Start node",
+    "Variables not provided in input_data will use their default values",
+    "All variables are stored with the format #node_id.variable_name#",
+    "Variables can be referenced in subsequent nodes using {{#node_id.variable_name#}} syntax",
+    "The variable names in input_data must match the 'variable' field in the Start node definition"
+  ]
+}

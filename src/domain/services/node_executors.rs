@@ -37,6 +37,8 @@ impl NodeExecutor for StartNodeExecutor {
 
         // Extract variables from node data and save them with node ID prefix
         // Expected format: {"variables": [{"variable": "user_input", "default": "Hello World"}]}
+        // Priority: 1. Value from input_data (already in state.variables)
+        //           2. Default value from node definition
         if let Some(variables) = node.data.get("variables") {
             if let Some(vars_array) = variables.as_array() {
                 for var_item in vars_array {
@@ -45,9 +47,16 @@ impl NodeExecutor for StartNodeExecutor {
                             var_obj.get("variable").and_then(|v| v.as_str()),
                             var_obj.get("default"),
                         ) {
+                            // First check if value exists in state.variables (from input_data)
+                            // If not found, use the default value from node definition
+                            let value = state
+                                .get_variable(var_name)
+                                .cloned()
+                                .unwrap_or_else(|| default_value.clone());
+
                             // Store variables with format: #node_id.variable_name#
                             let prefixed_key = format!("#{}.{}#", node.id, var_name);
-                            state.set_variable(prefixed_key, default_value.clone());
+                            state.set_variable(prefixed_key, value);
                         }
                     }
                 }
@@ -1352,6 +1361,55 @@ mod tests {
             state.get_variable("#start_1.max_tokens#"),
             Some(&serde_json::json!(100))
         );
+        assert_eq!(
+            state.get_variable("#start_1.temperature#"),
+            Some(&serde_json::json!(0.7))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_start_node_with_input_data_override() {
+        let executor = StartNodeExecutor::new();
+        let node = FlowNode {
+            id: "start_1".to_string(),
+            node_type: NodeType::Start,
+            data: serde_json::json!({
+                "variables": [
+                    {"variable": "user_input", "default": "Default Question"},
+                    {"variable": "max_tokens", "default": 100},
+                    {"variable": "temperature", "default": 0.7}
+                ]
+            }),
+            position: NodePosition { x: 0.0, y: 0.0 },
+        };
+
+        // Create state with input_data that overrides some variables
+        let mut initial_variables = HashMap::new();
+        initial_variables.insert(
+            "user_input".to_string(),
+            serde_json::json!("Overridden Question from input_data"),
+        );
+        initial_variables.insert("max_tokens".to_string(), serde_json::json!(200));
+        // temperature is not provided, should use default
+
+        let mut state = ExecutionState::new(
+            crate::domain::value_objects::FlowExecutionId::new(),
+            initial_variables,
+        );
+
+        let result = executor.execute(&node, &mut state).await.unwrap();
+        assert_eq!(result.status, NodeExecutionStatus::Success);
+
+        // Verify that input_data values override defaults
+        assert_eq!(
+            state.get_variable("#start_1.user_input#"),
+            Some(&serde_json::json!("Overridden Question from input_data"))
+        );
+        assert_eq!(
+            state.get_variable("#start_1.max_tokens#"),
+            Some(&serde_json::json!(200))
+        );
+        // temperature should use default since not in input_data
         assert_eq!(
             state.get_variable("#start_1.temperature#"),
             Some(&serde_json::json!(0.7))
