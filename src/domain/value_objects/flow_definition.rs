@@ -114,8 +114,7 @@ impl FlowDefinition {
     /// Parse FlowDefinition from Dify DSL string
     pub fn from_dsl(dsl: &str) -> Result<Self, String> {
         // Parse the DSL JSON string
-        serde_json::from_str(dsl)
-            .map_err(|e| format!("Failed to parse DSL: {}", e))
+        serde_json::from_str(dsl).map_err(|e| format!("Failed to parse DSL: {}", e))
     }
 
     /// Parse FlowDefinition from JSON value
@@ -131,10 +130,14 @@ impl FlowDefinition {
 
     pub fn validate(&self) -> Result<(), String> {
         // Check if there's at least one start node
-        let start_nodes: Vec<_> = self.workflow.graph.nodes.iter()
+        let start_nodes: Vec<_> = self
+            .workflow
+            .graph
+            .nodes
+            .iter()
             .filter(|n| n.node_type == NodeType::Start && n.parent_id == None)
             .collect();
-        
+
         if start_nodes.is_empty() {
             return Err("Flow must have at least one start node".to_string());
         }
@@ -143,16 +146,20 @@ impl FlowDefinition {
         // let end_nodes: Vec<_> = self.workflow.graph.nodes.iter()
         //     .filter(|n| n.node_type == NodeType::End)
         //     .collect();
-        
+
         // if end_nodes.is_empty() {
         //     return Err("Flow must have at least one end node".to_string());
         // }
 
         // Check if there's at least one answer node
-        let answer_nodes: Vec<_> = self.workflow.graph.nodes.iter()
+        let answer_nodes: Vec<_> = self
+            .workflow
+            .graph
+            .nodes
+            .iter()
             .filter(|n| n.node_type == NodeType::Answer)
             .collect();
-        
+
         if answer_nodes.is_empty() {
             return Err("Flow must have at least one answer node".to_string());
         }
@@ -168,10 +175,16 @@ impl FlowDefinition {
         // Validate edges reference existing nodes
         for edge in &self.workflow.graph.edges {
             if !node_ids.contains(&edge.source) {
-                return Err(format!("Edge references non-existent source node: {}", edge.source));
+                return Err(format!(
+                    "Edge references non-existent source node: {}",
+                    edge.source
+                ));
             }
             if !node_ids.contains(&edge.target) {
-                return Err(format!("Edge references non-existent target node: {}", edge.target));
+                return Err(format!(
+                    "Edge references non-existent target node: {}",
+                    edge.target
+                ));
             }
         }
 
@@ -179,19 +192,28 @@ impl FlowDefinition {
     }
 
     pub fn get_start_nodes(&self) -> Vec<&FlowNode> {
-        self.workflow.graph.nodes.iter()
+        self.workflow
+            .graph
+            .nodes
+            .iter()
             .filter(|n| n.node_type == NodeType::Start && n.parent_id == None)
             .collect()
     }
 
     pub fn get_end_nodes(&self) -> Vec<&FlowNode> {
-        self.workflow.graph.nodes.iter()
+        self.workflow
+            .graph
+            .nodes
+            .iter()
             .filter(|n| n.node_type == NodeType::End)
             .collect()
     }
 
     pub fn get_answer_nodes(&self) -> Vec<&FlowNode> {
-        self.workflow.graph.nodes.iter()
+        self.workflow
+            .graph
+            .nodes
+            .iter()
             .filter(|n| n.node_type == NodeType::Answer)
             .collect()
     }

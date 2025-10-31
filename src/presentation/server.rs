@@ -3,20 +3,25 @@ use crate::{
     config::AppConfig,
     domain::services::*,
     error::Result,
-    infrastructure::{llm::LLMProviderRegistry, mcp::MCPProxyServiceImpl, repositories::*, vector::VectorStoreRegistry, Database, RedisCache},
+    infrastructure::{
+        llm::LLMProviderRegistry, mcp::MCPProxyServiceImpl, repositories::*,
+        vector::VectorStoreRegistry, Database, RedisCache,
+    },
     presentation::{
-        routes::{
-            agent_routes, audit_routes, create_app_router, create_mcp_api_routes, execution_history_routes, flow_routes, llm_config_routes, session_routes, vector_config_routes
-        },
         middleware::auth_middleware,
+        routes::{
+            agent_routes, audit_routes, create_app_router, create_mcp_api_routes,
+            execution_history_routes, file_routes, flow_routes, llm_config_routes, session_routes,
+            vector_config_routes,
+        },
     },
 };
-use axum::{
-    middleware,
-    Router,
-};
+use axum::{middleware, Router};
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::fs::ServeDir,
+};
 
 pub struct Server {
     config: AppConfig,
@@ -56,18 +61,29 @@ impl Server {
         let user_repository = Arc::new(UserRepositoryImpl::new(self.database.connection()));
         let tenant_repository = Arc::new(TenantRepositoryImpl::new(self.database.connection()));
         let flow_repository = Arc::new(FlowRepositoryImpl::new(self.database.connection()));
-        let flow_version_repository = Arc::new(FlowVersionRepositoryImpl::new(self.database.connection()));
-        let flow_execution_repository = Arc::new(FlowExecutionRepositoryImpl::new(self.database.connection()));
-        let llm_config_repository = Arc::new(LLMConfigRepositoryImpl::new(self.database.connection()));
-        let vector_config_repository = Arc::new(VectorConfigRepositoryImpl::new(self.database.connection()));
+        let flow_version_repository =
+            Arc::new(FlowVersionRepositoryImpl::new(self.database.connection()));
+        let flow_execution_repository =
+            Arc::new(FlowExecutionRepositoryImpl::new(self.database.connection()));
+        let llm_config_repository =
+            Arc::new(LLMConfigRepositoryImpl::new(self.database.connection()));
+        let vector_config_repository =
+            Arc::new(VectorConfigRepositoryImpl::new(self.database.connection()));
         let mcp_tool_repository = Arc::new(MCPToolRepositoryImpl::new(self.database.connection()));
-        let mcp_version_repository = Arc::new(MCPToolVersionRepositoryImpl::new(self.database.connection()));
-        let session_repository = Arc::new(ChatSessionRepositoryImpl::new(self.database.connection()));
+        let mcp_version_repository = Arc::new(MCPToolVersionRepositoryImpl::new(
+            self.database.connection(),
+        ));
+        let session_repository =
+            Arc::new(ChatSessionRepositoryImpl::new(self.database.connection()));
         let message_repository = Arc::new(MessageRepositoryImpl::new(self.database.connection()));
         let audit_repository = Arc::new(AuditLogRepositoryImpl::new(self.database.connection()));
-        let execution_history_repository = Arc::new(ExecutionHistoryRepositoryImpl::new(self.database.connection()));
+        let execution_history_repository = Arc::new(ExecutionHistoryRepositoryImpl::new(
+            self.database.connection(),
+        ));
         let agent_repository = Arc::new(AgentRepositoryImpl::new(self.database.connection()));
-        let agent_allocation_repository = Arc::new(AgentAllocationRepositoryImpl::new(self.database.connection()));
+        let agent_allocation_repository = Arc::new(AgentAllocationRepositoryImpl::new(
+            self.database.connection(),
+        ));
 
         let vector_store_registry = Arc::new(VectorStoreRegistry::new());
         let llm_provider_registry = Arc::new(LLMProviderRegistry::new());
@@ -78,13 +94,19 @@ impl Server {
             self.config.jwt_secret.clone(),
             Some(self.config.bcrypt_cost),
         ));
-        
-        let flow_domain_service: Arc<dyn FlowDomainService> = Arc::new(FlowDomainServiceImpl::new());
-        let llm_domain_service: Arc<dyn LLMDomainService> = Arc::new(LLMDomainServiceImpl::new(llm_provider_registry.clone()));
-        let vector_store_domain_service: Arc<dyn VectorStoreDomainService> = Arc::new(VectorStoreDomainServiceImpl::new());
-        let mcp_domain_service: Arc<dyn MCPToolDomainService> = Arc::new(MCPToolDomainServiceImpl::new());
-        let session_domain_service: Arc<SessionDomainService> = Arc::new(SessionDomainService::new(30));
-        let audit_domain_service: Arc<dyn AuditService> = Arc::new(AuditServiceImpl::new(audit_repository));
+
+        let flow_domain_service: Arc<dyn FlowDomainService> =
+            Arc::new(FlowDomainServiceImpl::new());
+        let llm_domain_service: Arc<dyn LLMDomainService> =
+            Arc::new(LLMDomainServiceImpl::new(llm_provider_registry.clone()));
+        let vector_store_domain_service: Arc<dyn VectorStoreDomainService> =
+            Arc::new(VectorStoreDomainServiceImpl::new());
+        let mcp_domain_service: Arc<dyn MCPToolDomainService> =
+            Arc::new(MCPToolDomainServiceImpl::new());
+        let session_domain_service: Arc<SessionDomainService> =
+            Arc::new(SessionDomainService::new(30));
+        let audit_domain_service: Arc<dyn AuditService> =
+            Arc::new(AuditServiceImpl::new(audit_repository));
 
         let execution_engine = ExecutionEngineFactory::create_with_services(
             llm_domain_service.clone(),
@@ -112,12 +134,11 @@ impl Server {
                 Some(execution_engine),
             ));
 
-        let llm_service: Arc<dyn LLMApplicationService> =
-            Arc::new(LLMApplicationServiceImpl::new(
-                llm_config_repository.clone(),
-                llm_domain_service,
-                llm_provider_registry,
-            ));
+        let llm_service: Arc<dyn LLMApplicationService> = Arc::new(LLMApplicationServiceImpl::new(
+            llm_config_repository.clone(),
+            llm_domain_service,
+            llm_provider_registry,
+        ));
 
         let vector_service = Arc::new(VectorApplicationService::new(
             vector_config_repository.clone(),
@@ -128,13 +149,12 @@ impl Server {
         //     vector_store_registry,
         // ));
 
-        let mcp_service: Arc<dyn MCPApplicationService> =
-            Arc::new(MCPApplicationServiceImpl::new(
-                mcp_tool_repository.clone(),
-                mcp_version_repository,
-                mcp_domain_service,
-                mcp_proxy_service,
-            ));
+        let mcp_service: Arc<dyn MCPApplicationService> = Arc::new(MCPApplicationServiceImpl::new(
+            mcp_tool_repository.clone(),
+            mcp_version_repository,
+            mcp_domain_service,
+            mcp_proxy_service,
+        ));
 
         let session_service = Arc::new(SessionApplicationService::new(
             session_repository,
@@ -142,26 +162,36 @@ impl Server {
             session_domain_service,
         ));
 
-        let audit_service = Arc::new(AuditApplicationService::new(
-            audit_domain_service,
-        ));
+        let audit_service = Arc::new(AuditApplicationService::new(audit_domain_service));
 
         let execution_history_service = Arc::new(ExecutionHistoryServiceImpl::new(
             execution_history_repository,
         ));
 
-        let execution_history_application_service = Arc::new(ExecutionHistoryApplicationService::new(
-            execution_history_service,
-        ));
+        let execution_history_application_service = Arc::new(
+            ExecutionHistoryApplicationService::new(execution_history_service),
+        );
 
-        let agent_service: Arc<dyn AgentApplicationService> = Arc::new(AgentApplicationServiceImpl::new(
-            agent_repository,
-            agent_allocation_repository,
-            vector_config_repository,
-            mcp_tool_repository,
-            flow_repository,
-            user_repository,
+        let agent_service: Arc<dyn AgentApplicationService> =
+            Arc::new(AgentApplicationServiceImpl::new(
+                agent_repository,
+                agent_allocation_repository,
+                vector_config_repository,
+                mcp_tool_repository,
+                flow_repository,
+                user_repository,
+            ));
+
+        // Create file repository and service
+        let file_repository = Arc::new(FileRepositoryImpl::new(
+            std::path::PathBuf::from("/tmp/uploads"),
+            format!(
+                "http://{}:{}",
+                self.config.server.host, self.config.server.port
+            ),
         ));
+        let file_service: Arc<dyn FileApplicationService> =
+            Arc::new(FileApplicationServiceImpl::new(file_repository));
 
         // Configure CORS
         let cors = self.create_cors_layer();
@@ -171,25 +201,33 @@ impl Server {
             // Auth routes (includes /api/health and /api/auth/*)
             .merge(create_app_router(auth_service.clone()))
             // API routes
-            .nest("/api", Router::new()
-                // Agent management routes
-                .merge(agent_routes(agent_service))
-                // Flow management routes
-                .merge(flow_routes(flow_service))
-                // Configuration routes
-                .merge(llm_config_routes(llm_service))
-                .merge(vector_config_routes(vector_service))
-                // Session and audit routes
-                .merge(session_routes(session_service))
-                .merge(audit_routes(audit_service))
-                .merge(execution_history_routes(execution_history_application_service))
-                // MCP tool routes
-                .merge(create_mcp_api_routes(mcp_service))
-                .route_layer(middleware::from_fn_with_state(
-                    auth_service.clone(),
-                    auth_middleware,
-                ))
-            );
+            .nest(
+                "/api",
+                Router::new()
+                    // Agent management routes
+                    .merge(agent_routes(agent_service))
+                    // Flow management routes
+                    .merge(flow_routes(flow_service))
+                    // Configuration routes
+                    .merge(llm_config_routes(llm_service))
+                    .merge(vector_config_routes(vector_service))
+                    // Session and audit routes
+                    .merge(session_routes(session_service))
+                    .merge(audit_routes(audit_service))
+                    .merge(execution_history_routes(
+                        execution_history_application_service,
+                    ))
+                    // MCP tool routes
+                    .merge(create_mcp_api_routes(mcp_service))
+                    // File upload routes
+                    .merge(file_routes(file_service))
+                    .route_layer(middleware::from_fn_with_state(
+                        auth_service.clone(),
+                        auth_middleware,
+                    )),
+            )
+            // Serve uploaded files (no auth required for downloads)
+            .nest_service("/files", ServeDir::new("/tmp/uploads"));
 
         // Apply CORS
         app.layer(cors)

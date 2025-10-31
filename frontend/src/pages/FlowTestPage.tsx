@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { flowService } from '../services/flow.service';
+import { fileService } from '../services/file.service';
 import type { Flow, FlowVersion } from '../types';
 import { Button, Card, Input, Loader, Alert } from '../components/common';
 
@@ -15,6 +16,9 @@ export function FlowTestPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [variables, setVariables] = useState<Record<string, any>>({});
+  const [variableTypes, setVariableTypes] = useState<Record<string, string>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File[]>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [sessionId, setSessionId] = useState<string>('');
   const [jsonInput, setJsonInput] = useState<string>('{}');
   const [useJsonMode, setUseJsonMode] = useState(false);
@@ -40,14 +44,17 @@ export function FlowTestPage() {
         setVersion(currentVersion);
 
         const initialVars: Record<string, any> = {};
+        const types: Record<string, string> = {};
         // initialVars["query"] = '';
         // Extract variables from flow definition if available
         if (currentVersion.definition?.workflow?.graph?.nodes.find((node: any) => node.node_type === "start").data.variables) {
           currentVersion.definition.workflow.graph.nodes.find((node: any) => node.node_type === "start").data.variables.forEach((variable: any) => {
-            initialVars[variable.variable] = variable.default;
+            initialVars[variable.variable] = variable.type === 'file-list' ? [] : variable.default;
+            types[variable.variable] = variable.type || 'string';
           });
         }
         setVariables(initialVars);
+        setVariableTypes(types);
       }
     } catch (err: any) {
       setError(err.response?.data?.error || '加载Flow失败');
@@ -90,6 +97,47 @@ export function FlowTestPage() {
 
   const handleVariableChange = (name: string, value: any) => {
     setVariables({ ...variables, [name]: value });
+  };
+
+  const handleFileSelect = async (variableName: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const currentFiles = uploadedFiles[variableName] || [];
+    const updatedFiles = [...currentFiles, ...fileArray];
+    
+    setUploadedFiles({ ...uploadedFiles, [variableName]: updatedFiles });
+    setUploadingFiles({ ...uploadingFiles, [variableName]: true });
+
+    try {
+      // Upload files and get URLs
+      const uploadPromises = fileArray.map(file => uploadFile(file));
+      const urls = await Promise.all(uploadPromises);
+      
+      const currentUrls = variables[variableName] || [];
+      const updatedUrls = [...currentUrls, ...urls];
+      
+      setVariables({ ...variables, [variableName]: updatedUrls });
+    } catch (err: any) {
+      setError(`文件上传失败: ${err.message}`);
+    } finally {
+      setUploadingFiles({ ...uploadingFiles, [variableName]: false });
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<string> => {
+    return await fileService.uploadFile(file);
+  };
+
+  const removeFile = (variableName: string, index: number) => {
+    const currentFiles = uploadedFiles[variableName] || [];
+    const currentUrls = variables[variableName] || [];
+    
+    const updatedFiles = currentFiles.filter((_: File, i: number) => i !== index);
+    const updatedUrls = currentUrls.filter((_: string, i: number) => i !== index);
+    
+    setUploadedFiles({ ...uploadedFiles, [variableName]: updatedFiles });
+    setVariables({ ...variables, [variableName]: updatedUrls });
   };
 
   const toggleInputMode = () => {
@@ -237,18 +285,112 @@ export function FlowTestPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {Object.keys(variables).map((key) => (
-                    <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {key}
-                      </label>
-                      <Input
-                        type="text"
-                        value={variables[key] || ''}
-                        onChange={(e) => handleVariableChange(key, e.target.value)}
-                      />
-                    </div>
-                  ))}
+                  {Object.keys(variables).map((key) => {
+                    const varType = variableTypes[key] || 'string';
+                    
+                    if (varType === 'file-list') {
+                      const files = uploadedFiles[key] || [];
+                      const isUploading = uploadingFiles[key] || false;
+                      
+                      return (
+                        <div key={key}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {key}
+                          </label>
+                          
+                          <div className="space-y-2">
+                            {/* File upload button */}
+                            <div className="flex items-center gap-2">
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  multiple
+                                  onChange={(e) => handleFileSelect(key, e.target.files)}
+                                  className="hidden"
+                                  disabled={isUploading}
+                                />
+                                <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 text-sm font-medium">
+                                  {isUploading ? '上传中...' : '选择文件'}
+                                </div>
+                              </label>
+                              {files.length > 0 && (
+                                <span className="text-sm text-gray-500">
+                                  已选择 {files.length} 个文件
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* File list */}
+                            {files.length > 0 && (
+                              <div className="space-y-1">
+                                {files.map((file, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200"
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <svg
+                                        className="w-4 h-4 text-gray-400 flex-shrink-0"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                      </svg>
+                                      <span className="text-sm text-gray-700 truncate">
+                                        {file.name}
+                                      </span>
+                                      <span className="text-xs text-gray-500 flex-shrink-0">
+                                        ({(file.size / 1024).toFixed(1)} KB)
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeFile(key, index)}
+                                      className="ml-2 text-red-500 hover:text-red-700 flex-shrink-0"
+                                      disabled={isUploading}
+                                    >
+                                      <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M6 18L18 6M6 6l12 12"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div key={key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {key}
+                        </label>
+                        <Input
+                          type="text"
+                          value={variables[key] || ''}
+                          onChange={(e) => handleVariableChange(key, e.target.value)}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

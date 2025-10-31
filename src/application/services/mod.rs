@@ -13,6 +13,7 @@ pub mod audit_application_service;
 pub mod execution_history_application_service;
 pub mod flow_application_service;
 pub mod agent_application_service;
+pub mod file_service;
 
 #[cfg(test)]
 pub mod integrated_llm_service_test;
@@ -44,3 +45,4 @@ pub use audit_application_service::*;
 pub use execution_history_application_service::*;
 pub use flow_application_service::*;
 pub use agent_application_service::*;
+pub use file_service::*;
