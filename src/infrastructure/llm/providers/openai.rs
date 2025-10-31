@@ -41,7 +41,7 @@ struct OpenAIChatRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct OpenAIMessage {
     role: String,
-    content: String,
+    content: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
@@ -127,11 +127,43 @@ impl OpenAIProvider {
     }
 
     fn convert_request(&self, request: ChatRequest) -> OpenAIChatRequest {
+        use crate::domain::value_objects::chat_message::{MessageContent, ContentPart};
+        
         let messages = request.messages
             .iter()
-            .map(|msg| OpenAIMessage {
-                role: format!("{:?}", msg.role).to_lowercase(),
-                content: msg.content.clone(),
+            .map(|msg| {
+                let content = match &msg.content {
+                    MessageContent::Text(text) => serde_json::json!(text),
+                    MessageContent::Multimodal(parts) => {
+                        let content_parts: Vec<serde_json::Value> = parts
+                            .iter()
+                            .map(|part| match part {
+                                ContentPart::Text { text } => serde_json::json!({
+                                    "type": "text",
+                                    "text": text
+                                }),
+                                ContentPart::ImageUrl { image_url } => {
+                                    let mut img_obj = serde_json::json!({
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": image_url.url
+                                        }
+                                    });
+                                    if let Some(detail) = &image_url.detail {
+                                        img_obj["image_url"]["detail"] = serde_json::json!(detail);
+                                    }
+                                    img_obj
+                                }
+                            })
+                            .collect();
+                        serde_json::json!(content_parts)
+                    }
+                };
+                
+                OpenAIMessage {
+                    role: format!("{:?}", msg.role).to_lowercase(),
+                    content,
+                }
             })
             .collect();
 
@@ -356,11 +388,13 @@ mod tests {
 
     #[test]
     fn test_convert_request() {
+        use crate::domain::value_objects::chat_message::MessageContent;
+        
         let provider = create_test_provider();
         let messages = vec![
             ChatMessage {
                 role: MessageRole::User,
-                content: "Hello".to_string(),
+                content: MessageContent::Text("Hello".to_string()),
                 metadata: None,
                 timestamp: Utc::now(),
             },
@@ -383,7 +417,7 @@ mod tests {
         assert_eq!(openai_request.model, "gpt-3.5-turbo");
         assert_eq!(openai_request.messages.len(), 1);
         assert_eq!(openai_request.messages[0].role, "user");
-        assert_eq!(openai_request.messages[0].content, "Hello");
+        assert_eq!(openai_request.messages[0].content, serde_json::json!("Hello"));
         assert_eq!(openai_request.temperature, Some(0.7));
         assert!(!openai_request.stream);
     }

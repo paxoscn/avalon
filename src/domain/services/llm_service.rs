@@ -1,7 +1,6 @@
 use crate::domain::value_objects::{ModelConfig, ChatMessage, MessageMetadata};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 use std::sync::Arc;
@@ -344,11 +343,11 @@ impl LLMDomainService for LLMDomainServiceImpl {
         provider.test_connection().await
     }
 
-    fn estimate_token_count(&self, messages: &[ChatMessage], model: &str) -> Result<u32, LLMError> {
+    fn estimate_token_count(&self, messages: &[ChatMessage], _model: &str) -> Result<u32, LLMError> {
         // Simple estimation based on character count
         // This is a rough approximation - real implementations would use proper tokenizers
         let total_chars: usize = messages.iter()
-            .map(|m| m.content.len())
+            .map(|m| m.get_text_content().len())
             .sum();
         
         // Rough estimation: 1 token ≈ 4 characters for English text

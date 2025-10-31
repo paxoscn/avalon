@@ -215,7 +215,7 @@ impl ProviderUtils {
             .iter()
             .map(|msg| StandardMessage {
                 role: format!("{:?}", msg.role).to_lowercase(),
-                content: Some(msg.content.clone()),
+                content: Some(msg.get_text_content()),
                 tool_calls: None, // TODO: Implement tool calls conversion
             })
             .collect()

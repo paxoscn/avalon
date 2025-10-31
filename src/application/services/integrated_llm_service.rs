@@ -504,7 +504,7 @@ impl LLMDomainService for IntegratedLLMService {
     fn estimate_token_count(&self, messages: &[ChatMessage], _model: &str) -> Result<u32, LLMError> {
         // Simple estimation based on character count
         let total_chars: usize = messages.iter()
-            .map(|m| m.content.len())
+            .map(|m| m.get_text_content().len())
             .sum();
         
         // Rough estimation: 1 token ≈ 4 characters for English text

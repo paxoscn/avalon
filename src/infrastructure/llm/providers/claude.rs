@@ -37,7 +37,7 @@ struct ClaudeChatRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct ClaudeMessage {
     role: String,
-    content: String,
+    content: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize)]
@@ -122,31 +122,59 @@ impl ClaudeProvider {
     }
 
     fn convert_request(&self, request: ChatRequest) -> Result<ClaudeChatRequest, LLMError> {
+        use crate::domain::value_objects::chat_message::{MessageContent, ContentPart};
+        
         let mut messages = Vec::new();
         let mut system_message = None;
 
         for msg in request.messages {
+            let content = match &msg.content {
+                MessageContent::Text(text) => serde_json::json!(text),
+                MessageContent::Multimodal(parts) => {
+                    let content_parts: Vec<serde_json::Value> = parts
+                        .iter()
+                        .map(|part| match part {
+                            ContentPart::Text { text } => serde_json::json!({
+                                "type": "text",
+                                "text": text
+                            }),
+                            ContentPart::ImageUrl { image_url } => {
+                                serde_json::json!({
+                                    "type": "image",
+                                    "source": {
+                                        "type": "url",
+                                        "url": image_url.url
+                                    }
+                                })
+                            }
+                        })
+                        .collect();
+                    serde_json::json!(content_parts)
+                }
+            };
+            
             match msg.role {
                 crate::domain::value_objects::MessageRole::System => {
-                    system_message = Some(msg.content);
+                    // Claude expects system message as a string
+                    system_message = Some(msg.get_text_content());
                 }
                 crate::domain::value_objects::MessageRole::User => {
                     messages.push(ClaudeMessage {
                         role: "user".to_string(),
-                        content: msg.content,
+                        content,
                     });
                 }
                 crate::domain::value_objects::MessageRole::Assistant => {
                     messages.push(ClaudeMessage {
                         role: "assistant".to_string(),
-                        content: msg.content,
+                        content,
                     });
                 }
                 crate::domain::value_objects::MessageRole::Tool => {
                     // Claude doesn't have a separate tool role, treat as user message
                     messages.push(ClaudeMessage {
                         role: "user".to_string(),
-                        content: msg.content,
+                        content,
                     });
                 }
             }
@@ -202,7 +230,7 @@ impl ClaudeProvider {
             model: self.config.default_model.clone(),
             messages: vec![ClaudeMessage {
                 role: "user".to_string(),
-                content: "Hello".to_string(),
+                content: serde_json::json!("Hello"),
             }],
             system: None,
             max_tokens: 10,
@@ -328,17 +356,19 @@ mod tests {
 
     #[test]
     fn test_convert_request() {
+        use crate::domain::value_objects::chat_message::MessageContent;
+        
         let provider = create_test_provider();
         let messages = vec![
             ChatMessage {
                 role: MessageRole::System,
-                content: "You are a helpful assistant".to_string(),
+                content: MessageContent::Text("You are a helpful assistant".to_string()),
                 metadata: None,
                 timestamp: Utc::now(),
             },
             ChatMessage {
                 role: MessageRole::User,
-                content: "Hello".to_string(),
+                content: MessageContent::Text("Hello".to_string()),
                 metadata: None,
                 timestamp: Utc::now(),
             },
@@ -361,7 +391,7 @@ mod tests {
         assert_eq!(claude_request.model, "claude-3-haiku-20240307");
         assert_eq!(claude_request.messages.len(), 1); // System message is separate
         assert_eq!(claude_request.messages[0].role, "user");
-        assert_eq!(claude_request.messages[0].content, "Hello");
+        assert_eq!(claude_request.messages[0].content, serde_json::json!("Hello"));
         assert_eq!(claude_request.system, Some("You are a helpful assistant".to_string()));
         assert_eq!(claude_request.max_tokens, 1000);
         assert!(!claude_request.stream);

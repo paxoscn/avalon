@@ -172,7 +172,7 @@ impl ContextManagementService {
         // Process messages in reverse order (most recent first)
         for msg in messages.iter().rev() {
             // Rough token estimation: ~4 characters per token
-            let msg_tokens = msg.message.content.len() / 4;
+            let msg_tokens = msg.message.get_text_content().len() / 4;
 
             if estimated_tokens + msg_tokens > self.max_context_tokens {
                 break;
@@ -319,7 +319,7 @@ impl ContextManagementService {
             .find_recent_by_session(session_id, 50)
             .await?;
 
-        let total_chars: usize = messages.iter().map(|m| m.message.content.len()).sum();
+        let total_chars: usize = messages.iter().map(|m| m.message.get_text_content().len()).sum();
         let estimated_tokens = total_chars / 4;
 
         Ok(json!({

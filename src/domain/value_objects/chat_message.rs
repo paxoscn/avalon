@@ -5,9 +5,33 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChatMessage {
     pub role: MessageRole,
-    pub content: String,
+    pub content: MessageContent,
     pub metadata: Option<MessageMetadata>,
     pub timestamp: DateTime<Utc>,
+}
+
+/// Message content that can be either text or multimodal (text + images)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MessageContent {
+    Text(String),
+    Multimodal(Vec<ContentPart>),
+}
+
+/// Individual content part (text or image)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ContentPart {
+    Text { text: String },
+    ImageUrl { image_url: ImageUrl },
+}
+
+/// Image URL with optional detail level
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImageUrl {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,7 +75,7 @@ impl ChatMessage {
     pub fn new_user_message(content: String) -> Self {
         ChatMessage {
             role: MessageRole::User,
-            content,
+            content: MessageContent::Text(content),
             metadata: None,
             timestamp: Utc::now(),
         }
@@ -60,7 +84,7 @@ impl ChatMessage {
     pub fn new_assistant_message(content: String) -> Self {
         ChatMessage {
             role: MessageRole::Assistant,
-            content,
+            content: MessageContent::Text(content),
             metadata: None,
             timestamp: Utc::now(),
         }
@@ -69,7 +93,25 @@ impl ChatMessage {
     pub fn new_system_message(content: String) -> Self {
         ChatMessage {
             role: MessageRole::System,
-            content,
+            content: MessageContent::Text(content),
+            metadata: None,
+            timestamp: Utc::now(),
+        }
+    }
+
+    pub fn new_user_message_with_images(text: String, image_urls: Vec<String>) -> Self {
+        let mut parts = vec![ContentPart::Text { text }];
+        for url in image_urls {
+            parts.push(ContentPart::ImageUrl {
+                image_url: ImageUrl {
+                    url,
+                    detail: None,
+                },
+            });
+        }
+        ChatMessage {
+            role: MessageRole::User,
+            content: MessageContent::Multimodal(parts),
             metadata: None,
             timestamp: Utc::now(),
         }
@@ -81,15 +123,53 @@ impl ChatMessage {
     }
 
     pub fn validate(&self) -> Result<(), String> {
-        if self.content.trim().is_empty() {
-            return Err("Message content cannot be empty".to_string());
+        match &self.content {
+            MessageContent::Text(text) => {
+                if text.trim().is_empty() {
+                    return Err("Message content cannot be empty".to_string());
+                }
+                if text.len() > 100_000 {
+                    return Err("Message content exceeds maximum length of 100,000 characters".to_string());
+                }
+            }
+            MessageContent::Multimodal(parts) => {
+                if parts.is_empty() {
+                    return Err("Multimodal content cannot be empty".to_string());
+                }
+                for part in parts {
+                    match part {
+                        ContentPart::Text { text } => {
+                            if text.len() > 100_000 {
+                                return Err("Text part exceeds maximum length of 100,000 characters".to_string());
+                            }
+                        }
+                        ContentPart::ImageUrl { image_url } => {
+                            if image_url.url.trim().is_empty() {
+                                return Err("Image URL cannot be empty".to_string());
+                            }
+                        }
+                    }
+                }
+            }
         }
-
-        if self.content.len() > 100_000 {
-            return Err("Message content exceeds maximum length of 100,000 characters".to_string());
-        }
-
         Ok(())
+    }
+
+    /// Get the text content from the message (for backward compatibility)
+    pub fn get_text_content(&self) -> String {
+        match &self.content {
+            MessageContent::Text(text) => text.clone(),
+            MessageContent::Multimodal(parts) => {
+                parts
+                    .iter()
+                    .filter_map(|part| match part {
+                        ContentPart::Text { text } => Some(text.as_str()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            }
+        }
     }
 
     pub fn is_from_user(&self) -> bool {

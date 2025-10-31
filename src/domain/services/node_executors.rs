@@ -636,23 +636,64 @@ impl LLMChatNodeExecutor {
                     continue;
                 }
 
-                let message = match role {
-                    "user" => crate::domain::value_objects::ChatMessage::new_user_message(
-                        resolved_content,
-                    ),
-                    "assistant" => {
-                        crate::domain::value_objects::ChatMessage::new_assistant_message(
+                // TODO
+                // resolved_content = "# 标准\n\n判断是否戴口罩\n\n# 图片\n\n[\"https://jushu-ai-oss-test.oss-cn-beijing.aliyuncs.com/uploads/8bb06948-a8ea-11f0-bacd-0242ac110002/5b3e5c72-6bc7-44bd-9c3b-357cca6d1858/截屏2025-10-24 下午11.05.01.png\"]"
+                //
+                // Check if resolved_content is a JSON array of strings with image URLs
+                let message = if role == "user" {
+                    if let Ok(content_array) = serde_json::from_str::<Vec<String>>(&resolved_content) {
+                        // Check if any strings are image URLs
+                        let image_urls: Vec<String> = content_array
+                            .iter()
+                            .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
+                            .cloned()
+                            .collect();
+                        
+                        let text_parts: Vec<String> = content_array
+                            .iter()
+                            .filter(|s| !s.starts_with("http://") && !s.starts_with("https://"))
+                            .cloned()
+                            .collect();
+                        
+                        if !image_urls.is_empty() {
+                            // Create multimodal message with text and images
+                            let text = if text_parts.is_empty() {
+                                "Please analyze these images.".to_string()
+                            } else {
+                                text_parts.join(" ")
+                            };
+                            crate::domain::value_objects::ChatMessage::new_user_message_with_images(
+                                text,
+                                image_urls,
+                            )
+                        } else {
+                            // No image URLs, treat as regular text
+                            crate::domain::value_objects::ChatMessage::new_user_message(
+                                resolved_content,
+                            )
+                        }
+                    } else {
+                        // Not a JSON array, treat as regular text
+                        crate::domain::value_objects::ChatMessage::new_user_message(
                             resolved_content,
                         )
                     }
-                    "system" => crate::domain::value_objects::ChatMessage::new_system_message(
-                        resolved_content,
-                    ),
-                    _ => {
-                        return Err(crate::error::PlatformError::ValidationError(format!(
-                            "Unknown message role: {}",
-                            role
-                        )))
+                } else {
+                    match role {
+                        "assistant" => {
+                            crate::domain::value_objects::ChatMessage::new_assistant_message(
+                                resolved_content,
+                            )
+                        }
+                        "system" => crate::domain::value_objects::ChatMessage::new_system_message(
+                            resolved_content,
+                        ),
+                        _ => {
+                            return Err(crate::error::PlatformError::ValidationError(format!(
+                                "Unknown message role: {}",
+                                role
+                            )))
+                        }
                     }
                 };
 

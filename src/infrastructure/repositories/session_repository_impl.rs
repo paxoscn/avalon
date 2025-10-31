@@ -221,7 +221,7 @@ impl MessageRepositoryImpl {
 
         let chat_message = ChatMessage {
             role,
-            content: entity.content,
+            content: crate::domain::value_objects::chat_message::MessageContent::Text(entity.content),
             metadata,
             timestamp: entity.created_at,
         };
@@ -253,7 +253,7 @@ impl MessageRepositoryImpl {
             id: Set(message.id.0),
             session_id: Set(message.session_id.0),
             role: Set(role),
-            content: Set(message.message.content.clone()),
+            content: Set(message.message.get_text_content()),
             metadata: Set(metadata_json),
             created_at: Set(message.message.timestamp),
         })

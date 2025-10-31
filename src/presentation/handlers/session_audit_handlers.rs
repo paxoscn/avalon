@@ -269,7 +269,7 @@ pub async fn add_message(
     
     let chat_message = ChatMessage {
         role,
-        content: req.content,
+        content: crate::domain::value_objects::chat_message::MessageContent::Text(req.content),
         metadata,
         timestamp: chrono::Utc::now(),
     };
@@ -414,7 +414,7 @@ fn message_to_response(message: &crate::domain::entities::Message) -> MessageRes
         id: message.id.0.to_string(),
         session_id: message.session_id.0.to_string(),
         role: format!("{:?}", message.message.role),
-        content: message.message.content.clone(),
+        content: message.message.get_text_content(),
         metadata: message.message.metadata.as_ref().map(|m| serde_json::to_value(m).unwrap_or(Value::Null)),
         created_at: message.message.timestamp.to_rfc3339(),
     }
