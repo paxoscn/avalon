@@ -255,6 +255,7 @@ impl FlowApplicationService for FlowApplicationServiceImpl {
     ) -> Result<(Flow, ValidationResult)> {
         // FIXME Ugly
         let dsl = dsl.replace("parameter-extractor", "parameter_extractor");
+        let dsl = dsl.replace("iteration-start", "start");
 
         // Parse DSL to FlowDefinition
         let definition = FlowDefinition::from_dsl(&dsl)

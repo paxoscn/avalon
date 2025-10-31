@@ -20,6 +20,8 @@ pub struct DifyDSL {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DifyNode {
     pub id: String,
+    #[serde(rename = "parentId")]
+    pub parent_id: Option<String>,
     #[serde(rename = "type")]
     pub node_type: String,
     pub title: String,
@@ -139,6 +141,7 @@ impl DifyDSLParser {
         
         Ok(FlowNode {
             id: node.id,
+            parent_id: node.parent_id,
             node_type,
             data: node.data,
             position: NodePosition {

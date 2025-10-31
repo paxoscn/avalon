@@ -17,6 +17,7 @@ mod tests {
             nodes: vec![
                 FlowNode {
                     id: "start".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Start,
                     title: "Start".to_string(),
                     data: json!({}),
@@ -24,6 +25,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "end".to_string(),
+                    parent_id: None,
                     node_type: NodeType::End,
                     title: "End".to_string(),
                     data: json!({}),
@@ -33,6 +35,7 @@ mod tests {
             edges: vec![
                 FlowEdge {
                     id: "e1".to_string(),
+                    parent_id: None,
                     source: "start".to_string(),
                     target: "end".to_string(),
                     source_handle: None,
@@ -54,6 +57,7 @@ mod tests {
             nodes: vec![
                 FlowNode {
                     id: "start".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Start,
                     title: "Start".to_string(),
                     data: json!({}),
@@ -61,6 +65,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "var1".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Variable,
                     title: "Set Variable".to_string(),
                     data: json!({
@@ -72,6 +77,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "end".to_string(),
+                    parent_id: None,
                     node_type: NodeType::End,
                     title: "End".to_string(),
                     data: json!({}),
@@ -117,6 +123,7 @@ mod tests {
             nodes: vec![
                 FlowNode {
                     id: "start".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Start,
                     title: "Start".to_string(),
                     data: json!({}),
@@ -124,6 +131,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "condition".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Condition,
                     title: "Check Value".to_string(),
                     data: json!({
@@ -137,6 +145,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "true_branch".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Variable,
                     title: "True Branch".to_string(),
                     data: json!({
@@ -148,6 +157,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "false_branch".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Variable,
                     title: "False Branch".to_string(),
                     data: json!({
@@ -159,6 +169,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "end".to_string(),
+                    parent_id: None,
                     node_type: NodeType::End,
                     title: "End".to_string(),
                     data: json!({}),
@@ -217,6 +228,7 @@ mod tests {
             nodes: vec![
                 FlowNode {
                     id: "start".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Start,
                     title: "Start".to_string(),
                     data: json!({}),
@@ -224,6 +236,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "loop".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Loop,
                     title: "Loop".to_string(),
                     data: json!({"max_iterations": 3}),
@@ -231,6 +244,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "loop_body".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Variable,
                     title: "Loop Body".to_string(),
                     data: json!({
@@ -242,6 +256,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "end".to_string(),
+                    parent_id: None,
                     node_type: NodeType::End,
                     title: "End".to_string(),
                     data: json!({}),
@@ -446,6 +461,7 @@ mod tests {
             nodes: vec![
                 FlowNode {
                     id: "start".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Start,
                     title: "Start".to_string(),
                     data: json!({}),
@@ -453,6 +469,7 @@ mod tests {
                 },
                 FlowNode {
                     id: "loop".to_string(),
+                    parent_id: None,
                     node_type: NodeType::Variable,
                     title: "Loop".to_string(),
                     data: json!({}),

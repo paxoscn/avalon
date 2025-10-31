@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::domain::services::{
     execution_engine::{ExecutionEngine, ExecutionEngineImpl, NodeExecutor},
     node_executors::*,
+    iteration_node_executor::IterationNodeExecutor,
     llm_service::LLMDomainService,
     vector_service::VectorStoreDomainService,
     mcp_tool_service::MCPToolDomainService,
@@ -41,6 +42,7 @@ impl ExecutionEngineFactory {
         executors.push(Arc::new(VectorSearchNodeExecutor::new(vector_service)));
         executors.push(Arc::new(MCPToolNodeExecutor::new(mcp_service, tool_repository)));
         executors.push(Arc::new(ParameterExtractorNodeExecutor::new(llm_service, llm_config_repository)));
+        executors.push(Arc::new(IterationNodeExecutor::new()));
 
         Arc::new(ExecutionEngineImpl::new(executors))
     }

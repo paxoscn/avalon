@@ -381,6 +381,7 @@ mod tests {
         // Create LLM node
         let node = FlowNode {
             id: "llm1".to_string(),
+            parent_id: None,
             node_type: NodeType::Llm,
             data: json!({
                 "model_config": {
@@ -447,6 +448,7 @@ mod tests {
         // Create vector search node
         let node = FlowNode {
             id: "vector1".to_string(),
+            parent_id: None,
             node_type: NodeType::VectorSearch,
             title: "Vector Search".to_string(),
             data: json!({
@@ -495,6 +497,7 @@ mod tests {
         // Create MCP tool node
         let node = FlowNode {
             id: "mcp1".to_string(),
+            parent_id: None,
             node_type: NodeType::McpTool,
             title: "MCP Tool".to_string(),
             data: json!({

@@ -1741,6 +1741,7 @@ mod tests {
         let executor = StartNodeExecutor::new();
         let node = FlowNode {
             id: "start".to_string(),
+            parent_id: None,
             node_type: NodeType::Start,
             // title: "Start".to_string(),
             data: serde_json::json!({}),
@@ -1758,6 +1759,7 @@ mod tests {
         let executor = StartNodeExecutor::new();
         let node = FlowNode {
             id: "start_1".to_string(),
+            parent_id: None,
             node_type: NodeType::Start,
             data: serde_json::json!({
                 "variables": [
@@ -1793,6 +1795,7 @@ mod tests {
         let executor = StartNodeExecutor::new();
         let node = FlowNode {
             id: "start_1".to_string(),
+            parent_id: None,
             node_type: NodeType::Start,
             data: serde_json::json!({
                 "variables": [
@@ -1842,6 +1845,7 @@ mod tests {
         let executor = VariableNodeExecutor::new();
         let node = FlowNode {
             id: "var1".to_string(),
+            parent_id: None,
             node_type: NodeType::Variable,
             // title: "Set Variable".to_string(),
             data: serde_json::json!({
@@ -1866,6 +1870,7 @@ mod tests {
         let executor = VariableNodeExecutor::new();
         let node = FlowNode {
             id: "var1".to_string(),
+            parent_id: None,
             node_type: NodeType::Variable,
             // title: "Set Variable".to_string(),
             data: serde_json::json!({
@@ -1890,6 +1895,7 @@ mod tests {
         let executor = LoopNodeExecutor::new();
         let node = FlowNode {
             id: "loop1".to_string(),
+            parent_id: None,
             node_type: NodeType::Loop,
             // title: "Loop".to_string(),
             data: serde_json::json!({"max_iterations": 5}),
@@ -1929,6 +1935,7 @@ mod tests {
         // End node configured to output specific variables
         let node = FlowNode {
             id: "end_1".to_string(),
+            parent_id: None,
             node_type: NodeType::End,
             data: serde_json::json!({
                 "outputs": [
@@ -1983,6 +1990,7 @@ mod tests {
         // End node without outputs configuration (backward compatibility)
         let node = FlowNode {
             id: "end_1".to_string(),
+            parent_id: None,
             node_type: NodeType::End,
             data: serde_json::json!({}),
             position: NodePosition { x: 0.0, y: 0.0 },
@@ -2019,6 +2027,7 @@ mod tests {
         // Answer node with variable references
         let node = FlowNode {
             id: "answer_1".to_string(),
+            parent_id: None,
             node_type: NodeType::Answer,
             data: serde_json::json!({
                 "answer": "Hello {{#start_1.user_name#}}, here are your items: {{#1761621778329.checking_items#}}"
@@ -2055,6 +2064,7 @@ mod tests {
         // Answer node with plain text (no variable references)
         let node = FlowNode {
             id: "answer_2".to_string(),
+            parent_id: None,
             node_type: NodeType::Answer,
             data: serde_json::json!({
                 "answer": "This is a plain text answer without any variables."
@@ -2082,6 +2092,7 @@ mod tests {
         // Answer node referencing a non-existent variable
         let node = FlowNode {
             id: "answer_3".to_string(),
+            parent_id: None,
             node_type: NodeType::Answer,
             data: serde_json::json!({
                 "answer": "Hello {{#missing_node.missing_var#}}, this variable doesn't exist."

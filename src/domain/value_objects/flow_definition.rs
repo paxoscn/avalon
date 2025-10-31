@@ -22,6 +22,8 @@ pub struct FlowGraph {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FlowNode {
     pub id: String,
+    #[serde(rename = "parentId")]
+    pub parent_id: Option<String>,
     pub node_type: NodeType,
     // pub title: String,
     pub data: Value,
@@ -77,6 +79,7 @@ pub enum NodeType {
     Code,
     Answer,
     ParameterExtractor,
+    Iteration,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -129,7 +132,7 @@ impl FlowDefinition {
     pub fn validate(&self) -> Result<(), String> {
         // Check if there's at least one start node
         let start_nodes: Vec<_> = self.workflow.graph.nodes.iter()
-            .filter(|n| n.node_type == NodeType::Start)
+            .filter(|n| n.node_type == NodeType::Start && n.parent_id == None)
             .collect();
         
         if start_nodes.is_empty() {
@@ -177,7 +180,7 @@ impl FlowDefinition {
 
     pub fn get_start_nodes(&self) -> Vec<&FlowNode> {
         self.workflow.graph.nodes.iter()
-            .filter(|n| n.node_type == NodeType::Start)
+            .filter(|n| n.node_type == NodeType::Start && n.parent_id == None)
             .collect()
     }
 

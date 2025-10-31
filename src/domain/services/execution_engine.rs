@@ -202,6 +202,173 @@ impl ExecutionEngineImpl {
             .filter(|e| e.source == node_id)
             .collect()
     }
+
+    /// Execute iteration logic for an iteration node
+    async fn execute_iteration(
+        &self,
+        iteration_node: &FlowNode,
+        state: &mut ExecutionState,
+        definition: &FlowDefinition,
+    ) -> Result<NodeExecutionResult> {
+        let started_at = Utc::now();
+
+        // Get iteration configuration from state
+        let iteration_config_key = format!("#{}.iteration_config#", iteration_node.id);
+        let iteration_config = state
+            .get_variable(&iteration_config_key)
+            .ok_or_else(|| {
+                PlatformError::ValidationError(
+                    "Iteration configuration not found in state".to_string(),
+                )
+            })?
+            .clone();
+
+        let iterator_array = iteration_config
+            .get("iterator_array")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| {
+                PlatformError::ValidationError("Invalid iterator_array in config".to_string())
+            })?
+            .clone();
+
+        let start_node_id = iteration_config
+            .get("start_node_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                PlatformError::ValidationError("Invalid start_node_id in config".to_string())
+            })?;
+
+        let output_node_id = iteration_config
+            .get("output_node_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                PlatformError::ValidationError("Invalid output_node_id in config".to_string())
+            })?;
+
+        let output_var_name = iteration_config
+            .get("output_var_name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                PlatformError::ValidationError("Invalid output_var_name in config".to_string())
+            })?;
+
+        let mut output_array: Vec<Value> = Vec::new();
+
+        // Iterate over each item in the iterator array
+        for (index, item) in iterator_array.iter().enumerate() {
+            // Store the current item in the start node's "item" variable
+            let item_var_key = format!("#{}.item#", iteration_node.id);
+            state.set_variable(item_var_key.clone(), item.clone());
+
+            // Store iteration index
+            let index_var_key = format!("#{}.index#", iteration_node.id);
+            state.set_variable(index_var_key, serde_json::json!(index));
+
+            // Execute the sub-flow starting from start_node_id
+            let mut sub_flow_nodes = vec![start_node_id.to_string()];
+            let mut sub_iteration_count = 0;
+            let max_sub_iterations = 100; // Limit sub-flow iterations
+
+            while !sub_flow_nodes.is_empty() && sub_iteration_count < max_sub_iterations {
+                sub_iteration_count += 1;
+                let mut next_sub_nodes = Vec::new();
+
+                for sub_node_id in sub_flow_nodes {
+                    let sub_node = match self.find_node_by_id(&sub_node_id, definition) {
+                        Some(n) => n,
+                        None => {
+                            return Err(PlatformError::ValidationError(format!(
+                                "Sub-flow node not found: {}",
+                                sub_node_id
+                            )));
+                        }
+                    };
+
+                    // Execute the sub-flow node
+                    state.current_node = Some(sub_node_id.clone());
+                    let sub_result = self.execute_node(sub_node, state).await?;
+                    state.record_node_result(sub_result.clone());
+
+                    // Check if we've reached the output node
+                    if sub_node_id == output_node_id {
+                        // Collect the output from this iteration
+                        let output_var_key = format!("#{}.{}#", output_node_id, output_var_name);
+                        if let Some(output_value) = state.get_variable(&output_var_key) {
+                            output_array.push(output_value.clone());
+                        }
+                        // Break out of sub-flow execution
+                        break;
+                    }
+
+                    // Check if sub-node execution failed
+                    if sub_result.status == NodeExecutionStatus::Failed {
+                        return Ok(NodeExecutionResult {
+                            node_id: iteration_node.id.clone(),
+                            status: NodeExecutionStatus::Failed,
+                            output: None,
+                            error: Some(format!(
+                                "Sub-flow execution failed at node {}: {}",
+                                sub_node_id,
+                                sub_result.error.unwrap_or_default()
+                            )),
+                            started_at,
+                            completed_at: Utc::now(),
+                            execution_time_ms: Utc::now()
+                                .signed_duration_since(started_at)
+                                .num_milliseconds(),
+                        });
+                    }
+
+                    // Get next nodes in the sub-flow
+                    let next = self.get_next_nodes(sub_node, definition, state)?;
+                    next_sub_nodes.extend(next);
+                }
+
+                sub_flow_nodes = next_sub_nodes;
+            }
+
+            if sub_iteration_count >= max_sub_iterations {
+                return Ok(NodeExecutionResult {
+                    node_id: iteration_node.id.clone(),
+                    status: NodeExecutionStatus::Failed,
+                    output: None,
+                    error: Some(format!(
+                        "Sub-flow exceeded maximum iterations: {}",
+                        max_sub_iterations
+                    )),
+                    started_at,
+                    completed_at: Utc::now(),
+                    execution_time_ms: Utc::now()
+                        .signed_duration_since(started_at)
+                        .num_milliseconds(),
+                });
+            }
+        }
+
+        // Store the aggregated output array in state
+        let final_output_var_key = format!("#{}.{}#", output_node_id, output_var_name);
+        state.set_variable(final_output_var_key, serde_json::json!(output_array));
+        state.set_variable(format!("#{}.output#", iteration_node.id), serde_json::json!(output_array));
+
+        let completed_at = Utc::now();
+        let execution_time_ms = completed_at
+            .signed_duration_since(started_at)
+            .num_milliseconds();
+
+        Ok(NodeExecutionResult {
+            node_id: iteration_node.id.clone(),
+            status: NodeExecutionStatus::Success,
+            output: Some(serde_json::json!({
+                "message": "Iteration completed",
+                "iterations": iterator_array.len(),
+                "output_count": output_array.len(),
+            })),
+            error: None,
+            started_at,
+            completed_at,
+            execution_time_ms,
+        })
+    }
 }
 
 #[async_trait]
@@ -278,8 +445,33 @@ impl ExecutionEngine for ExecutionEngineImpl {
                     return Err(PlatformError::InternalError(error));
                 }
 
+                // Handle iteration node specially
+                if node.node_type == NodeType::Iteration {
+                    // Execute the iteration logic
+                    let iteration_result = self.execute_iteration(node, &mut state, definition).await?;
+                    
+                    if iteration_result.status == NodeExecutionStatus::Failed {
+                        let error = iteration_result
+                            .error
+                            .unwrap_or_else(|| "Iteration execution failed".to_string());
+                        execution.fail(error.clone());
+                        return Err(PlatformError::InternalError(error));
+                    }
+                }
+
                 // Get next nodes to execute
                 let next = self.get_next_nodes(node, definition, &state)?;
+
+                if next.is_empty() {
+                    // Collect final output from state
+                    let output = serde_json::json!({
+                        "variables": state.variables,
+                        "visited_nodes": state.visited_nodes,
+                    });
+                    execution.complete(output);
+                    return Ok(state);
+                }
+
                 next_nodes.extend(next);
             }
 
@@ -411,6 +603,15 @@ impl ExecutionEngine for ExecutionEngineImpl {
                     }
                     // Reset loop counter
                     // Note: We don't reset here to allow nested loops to work correctly
+                }
+            }
+            NodeType::Iteration => {
+                // For iteration nodes, the next node is determined by the iteration state
+                // The iteration logic is handled in the main execution loop
+                // Here we just return the next node after iteration completes
+                let edges = self.get_outgoing_edges(&current_node.id, definition);
+                for edge in edges {
+                    next_nodes.push(edge.target.clone());
                 }
             }
             _ => {

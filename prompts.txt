@@ -91,4 +91,4 @@ HTTPToolConfig增加response_template, 用于将JSON响应翻译为工具的输�
 * output_selector: 输出变量的路径数组, 例如[ "1761578154176", "structured_output" ]代表节点ID=1761578154176的变量"structured_output". 该变量的类型是一个对象数组, 其值由每次迭代的结果聚合而成
 * start_node_id: 每次迭代的开始节点ID
 
-执行逻辑: 遍历iterator_selector的条目, 将条目的值存储为start_node_id对应节点的item属性, 并依次开始执行子流程, 执行结束后将结果合并到output_selector指定的变量数组中. 迭代结束后输出output_selector指定的变量数组
+执行逻辑: 遍历iterator_selector的条目, 将条目的值存储为start_node_id对应节点的item属性, 并从start_node_id对应节点依次开始执行子流程, 一轮迭代执行结束后将结果合并到output_selector指定的变量数组中. 迭代全部结束后输出output_selector指定的变量数组
