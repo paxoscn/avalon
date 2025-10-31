@@ -185,10 +185,11 @@ impl Server {
         // Create file repository and service
         let file_repository = Arc::new(FileRepositoryImpl::new(
             std::path::PathBuf::from("/tmp/uploads"),
-            format!(
-                "http://{}:{}",
-                self.config.server.host, self.config.server.port
-            ),
+            // format!(
+            //     "http://{}:{}",
+            //     self.config.server.host, self.config.server.port
+            // ),
+            self.config.downloading_base_url.clone(),
         ));
         let file_service: Arc<dyn FileApplicationService> =
             Arc::new(FileApplicationServiceImpl::new(file_repository));

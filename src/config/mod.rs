@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub jwt_secret: String,
     pub bcrypt_cost: u32,
     pub cors: CorsConfig,
+    pub downloading_base_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -61,6 +62,9 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
             .map(|s| s.trim().to_string())
             .collect();
+        
+        let downloading_base_url = env::var("APP_DOWNLOADING_BASE_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
 
         Ok(AppConfig {
             server: ServerConfig { host, port },
@@ -72,6 +76,7 @@ impl AppConfig {
                 allowed_origins,
                 allow_all_localhost,
             },
+            downloading_base_url,
         })
     }
 }

@@ -28,7 +28,8 @@ impl FileRepositoryImpl {
     }
     
     fn get_file_url(&self, tenant_id: &str, file_id: &str, filename: &str) -> String {
-        format!("{}/files/{}/{}/{}", self.base_url, tenant_id, file_id, filename)
+        // format!("{}/files/{}/{}/{}", self.base_url, tenant_id, file_id, filename)
+        format!("{}/{}/{}/{}", self.base_url, tenant_id, file_id, filename)
     }
 }
 
