@@ -36,6 +36,8 @@ struct OpenAIChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
     stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -167,6 +169,18 @@ impl OpenAIProvider {
             })
             .collect();
 
+        // Convert response_format to OpenAI format
+        let response_format = request.response_format.map(|rf| {
+            serde_json::json!({
+                "type": rf.format_type,
+                "json_schema": rf.json_schema.map(|js| serde_json::json!({
+                    "name": js.name,
+                    "strict": js.strict,
+                    "schema": js.schema
+                }))
+            })
+        });
+
         OpenAIChatRequest {
             model: request.model,
             messages,
@@ -177,6 +191,7 @@ impl OpenAIProvider {
             presence_penalty: request.presence_penalty,
             stop: request.stop_sequences,
             stream: request.stream,
+            response_format,
         }
     }
 
@@ -411,6 +426,7 @@ mod tests {
             stop_sequences: None,
             stream: false,
             tenant_id: uuid::Uuid::new_v4(),
+            response_format: None,
         };
 
         let openai_request = provider.convert_request(request);

@@ -15,6 +15,7 @@ pub trait LLMDomainService: Send + Sync {
         config: &ModelConfig,
         messages: Vec<ChatMessage>,
         tenant_id: Uuid,
+        response_format: Option<ResponseFormat>,
     ) -> Result<ChatResponse, LLMError>;
 
     /// Generate embeddings for the given text
@@ -181,6 +182,25 @@ pub struct ChatRequest {
     pub stop_sequences: Option<Vec<String>>,
     pub stream: bool,
     pub tenant_id: Uuid,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_format: Option<ResponseFormat>,
+}
+
+/// Response format for structured outputs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResponseFormat {
+    #[serde(rename = "type")]
+    pub format_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub json_schema: Option<JsonSchema>,
+}
+
+/// JSON schema for structured outputs
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct JsonSchema {
+    pub name: String,
+    pub strict: bool,
+    pub schema: serde_json::Value,
 }
 
 impl LLMDomainServiceImpl {
@@ -215,6 +235,7 @@ impl LLMDomainServiceImpl {
             stop_sequences: config.parameters.stop_sequences.clone(),
             stream,
             tenant_id,
+            response_format: None,
         }
     }
 }
@@ -226,6 +247,7 @@ impl LLMDomainService for LLMDomainServiceImpl {
         config: &ModelConfig,
         messages: Vec<ChatMessage>,
         tenant_id: Uuid,
+        response_format: Option<ResponseFormat>,
     ) -> Result<ChatResponse, LLMError> {
         // Validate configuration first
         let validation = self.validate_config(config)?;
@@ -242,7 +264,8 @@ impl LLMDomainService for LLMDomainServiceImpl {
         let provider = self.provider_registry.create_provider(&config)
         .ok_or_else(|| LLMError::ProviderError(format!("Provider '{}' not found", provider_name)))?;
         
-        let request = self.build_chat_request(config, messages, tenant_id, false);
+        let mut request = self.build_chat_request(config, messages, tenant_id, false);
+        request.response_format = response_format;
         provider.chat_completion(request).await
     }
 

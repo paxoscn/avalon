@@ -369,6 +369,7 @@ impl LLMDomainService for IntegratedLLMService {
         config: &ModelConfig,
         messages: Vec<ChatMessage>,
         tenant_id: Uuid,
+        response_format: Option<crate::domain::services::llm_service::ResponseFormat>,
     ) -> Result<ChatResponse, LLMError> {
         let provider_name = self.select_provider(config).await?;
         
@@ -376,11 +377,13 @@ impl LLMDomainService for IntegratedLLMService {
             let provider_registry = self.provider_registry.clone();
             let config = config.clone();
             let messages = messages.clone();
+            let response_format = response_format.clone();
             
             move |selected_provider: &str| -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<ChatResponse, LLMError>> + Send>> {
                 let provider_registry = provider_registry.clone();
                 let config = config.clone();
                 let messages = messages.clone();
+                let response_format = response_format.clone();
                 let selected_provider = selected_provider.to_string();
                 
                 Box::pin(async move {
@@ -396,6 +399,7 @@ impl LLMDomainService for IntegratedLLMService {
                             stop_sequences: config.parameters.stop_sequences,
                             stream: false,
                             tenant_id,
+                            response_format,
                         };
                         
                         provider.chat_completion(request).await
@@ -458,6 +462,7 @@ impl LLMDomainService for IntegratedLLMService {
                 stop_sequences: config.parameters.stop_sequences.clone(),
                 stream: true,
                 tenant_id,
+                response_format: None,
             };
             
             provider.stream_chat_completion(request).await

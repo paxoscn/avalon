@@ -178,7 +178,7 @@ impl LLMIntegrationService {
             .ok_or_else(|| PlatformError::NotFound("No default LLM configuration found".to_string()))?;
 
         self.integrated_service
-            .chat_completion(&config.model_config, messages, tenant_id.0)
+            .chat_completion(&config.model_config, messages, tenant_id.0, None)
             .await
             .map_err(PlatformError::from)
     }
@@ -195,7 +195,7 @@ impl LLMIntegrationService {
             .await?;
 
         self.integrated_service
-            .chat_completion(&config.model_config, messages, tenant_id.0)
+            .chat_completion(&config.model_config, messages, tenant_id.0, None)
             .await
             .map_err(PlatformError::from)
     }

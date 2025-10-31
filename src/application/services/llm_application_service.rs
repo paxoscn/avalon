@@ -341,6 +341,7 @@ impl LLMApplicationService for LLMApplicationServiceImpl {
                 stop_sequences: config.model_config.parameters.stop_sequences.clone(),
                 stream: false,
                 tenant_id: tenant_id.0,
+                response_format: None,
             };
             
             provider.chat_completion(request).await.map_err(PlatformError::from)

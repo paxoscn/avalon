@@ -92,3 +92,45 @@ HTTPToolConfig增加response_template, 用于将JSON响应翻译为工具的输�
 * start_node_id: 每次迭代的开始节点ID
 
 执行逻辑: 遍历iterator_selector的条目, 将条目的值存储为start_node_id对应节点的item属性, 并从start_node_id对应节点依次开始执行子流程, 一轮迭代执行结束后将结果合并到output_selector指定的变量数组中. 迭代全部结束后输出output_selector指定的变量数组
+
+---
+
+LLMChatNodeExecutor需要把节点data的structured_output写入大模型请求的response_format中. 示例:
+
+输入:
+
+```yaml
+structured_output:
+  schema:
+    additionalProperties: false
+    properties:
+      passed:
+        type: boolean
+    required: []
+    type: object
+```
+
+输出:
+
+```json
+{
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "structured_output",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "description": "是否通过验证（true/false）"
+          }
+        },
+        "required": ["passed"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
+```

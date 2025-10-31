@@ -436,8 +436,11 @@ impl NodeExecutor for AnswerNodeExecutor {
         // Store the resolved answer in state with format: #node_id.answer#
         let answer_var = format!("#{}.answer#", node.id);
         state.set_variable(answer_var, serde_json::json!(resolved_answer.clone()));
-        
-        state.set_variable("outputs".to_string(), json!({ "answer": resolved_answer.clone() }));
+
+        state.set_variable(
+            "outputs".to_string(),
+            json!({ "answer": resolved_answer.clone() }),
+        );
 
         let output = serde_json::json!({
             "answer": resolved_answer,
@@ -641,20 +644,22 @@ impl LLMChatNodeExecutor {
                 //
                 // Check if resolved_content is a JSON array of strings with image URLs
                 let message = if role == "user" {
-                    if let Ok(content_array) = serde_json::from_str::<Vec<String>>(&resolved_content) {
+                    if let Ok(content_array) =
+                        serde_json::from_str::<Vec<String>>(&resolved_content)
+                    {
                         // Check if any strings are image URLs
                         let image_urls: Vec<String> = content_array
                             .iter()
                             .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
                             .cloned()
                             .collect();
-                        
+
                         let text_parts: Vec<String> = content_array
                             .iter()
                             .filter(|s| !s.starts_with("http://") && !s.starts_with("https://"))
                             .cloned()
                             .collect();
-                        
+
                         if !image_urls.is_empty() {
                             // Create multimodal message with text and images
                             let text = if text_parts.is_empty() {
@@ -663,8 +668,7 @@ impl LLMChatNodeExecutor {
                                 text_parts.join(" ")
                             };
                             crate::domain::value_objects::ChatMessage::new_user_message_with_images(
-                                text,
-                                image_urls,
+                                text, image_urls,
                             )
                         } else {
                             // No image URLs, treat as regular text
@@ -769,6 +773,25 @@ impl LLMChatNodeExecutor {
         Ok(config.model_config.clone())
     }
 
+    fn extract_structured_output(
+        &self,
+        node: &FlowNode,
+    ) -> Option<crate::domain::services::llm_service::ResponseFormat> {
+        // Extract structured_output from node data
+        let structured_output = node.data.get("structured_output")?;
+        let schema = structured_output.get("schema")?;
+
+        // Build the response format according to OpenAI's structured output format
+        Some(crate::domain::services::llm_service::ResponseFormat {
+            format_type: "json_schema".to_string(),
+            json_schema: Some(crate::domain::services::llm_service::JsonSchema {
+                name: "structured_output".to_string(),
+                strict: true,
+                schema: schema.clone(),
+            }),
+        })
+    }
+
     fn extract_tenant_id(&self, state: &ExecutionState) -> Result<uuid::Uuid> {
         state
             .variables
@@ -850,10 +873,13 @@ impl NodeExecutor for LLMChatNodeExecutor {
             }
         };
 
+        // Extract structured output configuration if present
+        let response_format = self.extract_structured_output(node);
+
         // Call LLM service
         let response = match self
             .llm_service
-            .chat_completion(&model_config, messages, tenant_id)
+            .chat_completion(&model_config, messages, tenant_id, response_format)
             .await
         {
             Ok(resp) => resp,
@@ -1678,10 +1704,10 @@ impl NodeExecutor for ParameterExtractorNodeExecutor {
             }
         };
 
-        // Call LLM service
+        // Call LLM service (ParameterExtractor doesn't use structured output)
         let response = match self
             .llm_service
-            .chat_completion(&model_config, messages, tenant_id)
+            .chat_completion(&model_config, messages, tenant_id, None)
             .await
         {
             Ok(resp) => resp,
@@ -1710,7 +1736,8 @@ impl NodeExecutor for ParameterExtractorNodeExecutor {
                 if let Some(start) = response.content.find('[') {
                     if let Some(end) = response.content.rfind(']') {
                         let json_str = &response.content[start..=end];
-                        serde_json::from_str(json_str).unwrap_or_else(|_| vec![response.content.clone()])
+                        serde_json::from_str(json_str)
+                            .unwrap_or_else(|_| vec![response.content.clone()])
                     } else {
                         vec![response.content.clone()]
                     }
