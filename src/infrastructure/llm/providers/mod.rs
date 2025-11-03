@@ -21,7 +21,7 @@ pub struct HttpClientConfig {
 impl Default for HttpClientConfig {
     fn default() -> Self {
         Self {
-            timeout: std::time::Duration::from_secs(30),
+            timeout: std::time::Duration::from_secs(300),
             max_retries: 3,
             user_agent: "agent-platform/0.1.0".to_string(),
         }
