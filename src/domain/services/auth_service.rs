@@ -256,7 +256,7 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
         }
 
         // Generate token
-        let token = self.generate_token(user, Duration::hours(24)).await?;
+        let token = self.generate_token(user, Duration::hours(999999)).await?;
 
         // Extract token claims for session info
         let claims = self.validate_token(&token).await?;
