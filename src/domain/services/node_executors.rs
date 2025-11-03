@@ -639,45 +639,65 @@ impl LLMChatNodeExecutor {
                     continue;
                 }
 
-                // TODO
-                // resolved_content = "# 标准\n\n判断是否戴口罩\n\n# 图片\n\n[\"https://jushu-ai-oss-test.oss-cn-beijing.aliyuncs.com/uploads/8bb06948-a8ea-11f0-bacd-0242ac110002/5b3e5c72-6bc7-44bd-9c3b-357cca6d1858/截屏2025-10-24 下午11.05.01.png\"]"
-                //
+                // Split resolved_content by URLs to create an array
+                let mut content_parts = Vec::new();
+                let mut current = resolved_content.as_str();
+                
+                while let Some(url_start) = current.find("https://") {
+                    // 获取 URL 之前的部分
+                    let before_url = &current[..url_start];
+                    if !before_url.is_empty() {
+                        content_parts.push(before_url.to_string());
+                    }
+                    
+                    // 从 URL 开始位置查找结束的双引号
+                    let rest = &current[url_start..];
+                    if let Some(url_end) = rest.find('"') {
+                        // 获取 URL 本身（不包含双引号）
+                        let url = &rest[..url_end];
+                        content_parts.push(url.to_string());
+                        
+                        // 更新 current 为双引号之后的部分
+                        current = &rest[url_end + 1..];
+                    } else {
+                        // 如果找不到结束的双引号，将剩余部分作为最后一部分
+                        content_parts.push(current.to_string());
+                        break;
+                    }
+                }
+                
+                // 处理剩余字符串（如果没有 URL 的部分）
+                if !current.is_empty() {
+                    content_parts.push(current.to_string());
+                }
+
                 // Check if resolved_content is a JSON array of strings with image URLs
                 let message = if role == "user" {
-                    if let Ok(content_array) =
-                        serde_json::from_str::<Vec<String>>(&resolved_content)
-                    {
-                        // Check if any strings are image URLs
-                        let image_urls: Vec<String> = content_array
-                            .iter()
-                            .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
-                            .cloned()
-                            .collect();
+                    // Check if any strings are image URLs
+                    let image_urls: Vec<String> = content_parts
+                        .iter()
+                        .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
+                        .cloned()
+                        .collect();
 
-                        let text_parts: Vec<String> = content_array
-                            .iter()
-                            .filter(|s| !s.starts_with("http://") && !s.starts_with("https://"))
-                            .cloned()
-                            .collect();
+                    let text_parts: Vec<String> = content_parts
+                        .iter()
+                        .filter(|s| !s.starts_with("http://") && !s.starts_with("https://"))
+                        .cloned()
+                        .collect();
 
-                        if !image_urls.is_empty() {
-                            // Create multimodal message with text and images
-                            let text = if text_parts.is_empty() {
-                                "Please analyze these images.".to_string()
-                            } else {
-                                text_parts.join(" ")
-                            };
-                            crate::domain::value_objects::ChatMessage::new_user_message_with_images(
-                                text, image_urls,
-                            )
+                    if !image_urls.is_empty() {
+                        // Create multimodal message with text and images
+                        let text = if text_parts.is_empty() {
+                            "Please analyze these images.".to_string()
                         } else {
-                            // No image URLs, treat as regular text
-                            crate::domain::value_objects::ChatMessage::new_user_message(
-                                resolved_content,
-                            )
-                        }
+                            text_parts.join(" ")
+                        };
+                        crate::domain::value_objects::ChatMessage::new_user_message_with_images(
+                            text, image_urls,
+                        )
                     } else {
-                        // Not a JSON array, treat as regular text
+                        // No image URLs, treat as regular text
                         crate::domain::value_objects::ChatMessage::new_user_message(
                             resolved_content,
                         )
