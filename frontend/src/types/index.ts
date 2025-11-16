@@ -234,8 +234,8 @@ export interface Agent {
   avatar?: string;
   greeting?: string;
   knowledge_base_ids: string[];
-  mcp_tool_ids: string[];
-  flow_ids: string[];
+  mcp_tools: MCPTool[];
+  flows: Flow[];
   system_prompt: string;
   additional_settings?: string;
   preset_questions: string[];

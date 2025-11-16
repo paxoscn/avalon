@@ -295,6 +295,14 @@ curl -X POST http://localhost:8080/api/auth/login \
     "password": "pass"
   }'
 
+curl -X POST http://agent-platform:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "8bb06948-a8ea-11f0-bacd-0242ac110002",
+    "username": "admin",
+    "password": "password"
+  }'
+
 # Refresh token
 curl -X POST http://localhost:8080/api/auth/refresh \
   -H "Authorization: Bearer YOUR_TOKEN"
@@ -322,6 +330,11 @@ curl -X POST http://localhost:8080/api/flows/{id}/execute \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"variables": {}}'
+
+curl 'http://agent-platform:8080/api/flows/b227905c-b0db-4942-ad17-668afc0236ae/execute' \
+  -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMWYwYThlZi1mM2FiLWY4MzktYmFjZC0wMjQyYWMxMTAwMDIiLCJ0ZW5hbnRfaWQiOiI4YmIwNjk0OC1hOGVhLTExZjAtYmFjZC0wMjQyYWMxMTAwMDIiLCJ1c2VybmFtZSI6ImFkbWluIiwibmlja25hbWUiOiJhZG1pbiIsImV4cCI6NTM2MjE3OTY5OCwiaWF0IjoxNzYyMTgzMjk4LCJqdGkiOiJmMDg3YjJkMi0xMWEzLTRmN2UtYWZjZC1iMDM1ZDEwMGEwYTQifQ.MHqzkDK7ae2jT7KFG0dS8c19PJl9Gy--Ehbx9-VR_Lo' \
+  -H 'Content-Type: application/json' \
+  -d '{"input_data":{"media":["https://jushu-ai-oss-test.oss-cn-beijing.aliyuncs.com/uploads/8bb06948-a8ea-11f0-bacd-0242ac110002/62fed457-5074-4f42-8666-92947edf4c23/1760003763061_4174292631956986.png"],"standard_text":"检查所有人是否都戴了口罩","standard_img":[]}}'
 ```
 
 ### MCP Tools

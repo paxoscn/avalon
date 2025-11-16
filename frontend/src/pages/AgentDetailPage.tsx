@@ -20,6 +20,7 @@ export function AgentDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [availableLLMConfigs, setAvailableLLMConfigs] = useState<any[]>([]);
   const [availableKnowledgeBases, setAvailableKnowledgeBases] = useState<VectorConfig[]>([]);
   const [availableTools, setAvailableTools] = useState<MCPTool[]>([]);
   const [availableFlows, setAvailableFlows] = useState<Flow[]>([]);
@@ -31,6 +32,7 @@ export function AgentDetailPage() {
     systemPrompt: '',
     additionalSettings: '',
     presetQuestions: ['', '', ''],
+    llmConfigId: '',
     knowledgeBaseIds: [] as string[],
     mcpToolIds: [] as string[],
     flowIds: [] as string[],
@@ -59,9 +61,10 @@ export function AgentDetailPage() {
           ...data.preset_questions,
           ...Array(3 - data.preset_questions.length).fill(''),
         ].slice(0, 3),
-        knowledgeBaseIds: data.knowledge_base_ids,
-        mcpToolIds: data.mcp_tool_ids,
-        flowIds: data.flow_ids,
+        llmConfigId: (data as any).llm_config_id || '',
+        knowledgeBaseIds: data.knowledge_base_ids || [],
+        mcpToolIds: data.mcp_tools.map(function(mcp_tool) { return mcp_tool.id }) || [],
+        flowIds: data.flows.map(function(flow) { return flow.id }) || [],
       });
     } catch (err: any) {
       setError(err.response?.data?.error || t('agents.errors.loadAgentFailed'));
@@ -72,13 +75,15 @@ export function AgentDetailPage() {
 
   const loadResources = async () => {
     try {
-      const [kbs, tools, flowsResponse] = await Promise.all([
+      const [llmConfigs, vectorConfigs, tools, flowsResponse] = await Promise.all([
         llmService.listConfigs().catch(() => []),
+        import('../services/vector.service').then(m => m.vectorService.listConfigs()).catch(() => []),
         mcpService.listTools().catch(() => []),
         flowService.getFlows().catch(() => ({ flows: [], total: 0 })),
       ]);
-      setAvailableKnowledgeBases(kbs as any);
-      setAvailableTools(tools);console.log(flowsResponse.flows);
+      setAvailableLLMConfigs(llmConfigs);
+      setAvailableKnowledgeBases(vectorConfigs);
+      setAvailableTools(tools);
       setAvailableFlows(flowsResponse.flows || []);
     } catch (err) {
       console.error('Failed to load resources:', err);
@@ -105,6 +110,7 @@ export function AgentDetailPage() {
           knowledge_base_ids: formData.knowledgeBaseIds,
           mcp_tool_ids: formData.mcpToolIds,
           flow_ids: formData.flowIds,
+          ...(formData.llmConfigId && { llm_config_id: formData.llmConfigId } as any),
         };
         const newAgent = await agentService.createAgent(request);
         setSuccess(t('agents.success.created'));
@@ -117,6 +123,7 @@ export function AgentDetailPage() {
           system_prompt: formData.systemPrompt,
           additional_settings: formData.additionalSettings || undefined,
           preset_questions: presetQuestions,
+          ...(formData.llmConfigId && { llm_config_id: formData.llmConfigId } as any),
         };
         await agentService.updateAgent(id!, request);
         setSuccess(t('agents.success.updated'));
@@ -318,6 +325,36 @@ export function AgentDetailPage() {
           </Card>
 
           <Card>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.llmModel')}</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('agents.detail.llmModelDescription')}
+            </p>
+            <div className="space-y-2">
+              {availableLLMConfigs.length === 0 ? (
+                <p className="text-sm text-gray-500">{t('agents.detail.noLLMConfigs')}</p>
+              ) : (
+                availableLLMConfigs.map((config) => (
+                  <label key={config.id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="llmConfig"
+                      checked={formData.llmConfigId === config.id}
+                      onChange={() => setFormData({ ...formData, llmConfigId: config.id })}
+                      className="border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="ml-3 flex-1">
+                      <span className="text-sm font-medium text-gray-900">{config.name}</span>
+                      <p className="text-xs text-gray-500">
+                        {config.provider} - {config.model_name}
+                      </p>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card>
             <h2 className="text-lg font-medium text-gray-900 mb-4">{t('agents.detail.knowledgeBases')}</h2>
           <p className="text-sm text-gray-600 mb-4">
             {t('agents.detail.knowledgeBasesDescription')}
@@ -334,7 +371,12 @@ export function AgentDetailPage() {
                     onChange={() => handleToggleKnowledgeBase(kb.id)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="ml-3 text-sm font-medium text-gray-900">{kb.name}</span>
+                  <div className="ml-3 flex-1">
+                    <span className="text-sm font-medium text-gray-900">{kb.name}</span>
+                    <p className="text-xs text-gray-500">
+                      {kb.provider}
+                    </p>
+                  </div>
                 </label>
               ))
             )}
