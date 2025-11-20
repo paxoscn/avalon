@@ -18,8 +18,112 @@ export function VectorConfigListPage() {
     try {
       setLoading(true);
       setError(null);
+      
+      // 添加模拟数据
+      const mockConfigs: VectorConfig[] = [
+        {
+          id: 'mock-vector-1',
+          name: '商品知识库',
+          provider: 'pinecone',
+          config: {
+            indexName: 'product-knowledge',
+            dimension: 1536,
+            apiKey: '***',
+            environment: 'production'
+          },
+          isDefault: true,
+          created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-2',
+          name: '高德POI知识库',
+          provider: 'qdrant',
+          config: {
+            indexName: 'amap-poi-data',
+            dimension: 768,
+            url: 'https://qdrant.example.com',
+            apiKey: '***'
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-3',
+          name: '活动知识库',
+          provider: 'weaviate',
+          config: {
+            indexName: 'marketing-campaigns',
+            dimension: 1536,
+            url: 'https://weaviate.example.com',
+            apiKey: '***'
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-4',
+          name: '优惠券知识库',
+          provider: 'chromadb',
+          config: {
+            indexName: 'coupon-database',
+            dimension: 384,
+            host: 'localhost',
+            port: 8000
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-5',
+          name: '门店信息知识库',
+          provider: 'milvus',
+          config: {
+            indexName: 'store-information',
+            dimension: 1536,
+            host: 'milvus.example.com',
+            port: 19530
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-6',
+          name: '客户反馈知识库',
+          provider: 'pinecone',
+          config: {
+            indexName: 'customer-feedback',
+            dimension: 768,
+            apiKey: '***',
+            environment: 'production'
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'mock-vector-7',
+          name: '政策法规知识库',
+          provider: 'qdrant',
+          config: {
+            indexName: 'policy-regulations',
+            dimension: 1536,
+            url: 'https://qdrant.example.com',
+            apiKey: '***'
+          },
+          isDefault: false,
+          created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ];
+      
       const data = await vectorService.listConfigs();
-      setConfigs(data);
+      // 将模拟数据添加到实际数据前面
+      setConfigs([...mockConfigs, ...data]);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load vector configurations');
     } finally {
@@ -98,9 +202,9 @@ export function VectorConfigListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Vector Database Configurations</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">知识库配置</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage vector database provider configurations
+            管理企业知识库配置
           </p>
         </div>
         <Link to="/config/vector/new">

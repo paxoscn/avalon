@@ -25,11 +25,11 @@
     "username": "用户名",
     "password": "密码",
     "signInToAccount": "登录您的账户",
-    "agentPlatform": "AI 平台",
-    "copyright": "© 2025 AI 平台。保留所有权利。"
+    "agentPlatform": "小裨将 AI 平台",
+    "copyright": "© 2025 小裨将 AI 平台。保留所有权利。"
   },
   "nav": {
-    "agentPlatform": "AI 平台",
+    "agentPlatform": "小裨将 AI 平台",
     "dashboard": "仪表板",
     "flows": "工作流",
     "mcpTools": "MCP",

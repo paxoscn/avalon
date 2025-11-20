@@ -91,13 +91,13 @@ export function LLMConfigListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">LLM Configurations</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">大模型配置</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage large language model provider configurations
+            管理大模型供应商
           </p>
         </div>
         <Link to="/config/llm/new">
-          <Button>Add Configuration</Button>
+          <Button>增加配置</Button>
         </Link>
       </div>
 

@@ -26,9 +26,90 @@ export const FlowListPage = () => {
       if (filter !== 'all') {
         params.status = filter;
       }
+      
+      // 添加模拟数据
+      const mockFlows: Flow[] = [
+        {
+          id: 'mock-flow-1',
+          name: 'AI巡检流程',
+          description: '自动化门店巡检流程，包括图像识别、标准对比、问题记录和报告生成',
+          status: 'Active',
+          current_version: 2,
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        },
+        {
+          id: 'mock-flow-2',
+          name: 'Text2SQL流程',
+          description: '将自然语言查询转换为SQL语句，执行查询并返回结构化结果',
+          status: 'Active',
+          current_version: 3,
+          created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        },
+        {
+          id: 'mock-flow-3',
+          name: '销量报告流程',
+          description: '自动收集销售数据，进行多维度分析，生成可视化报告并发送给相关人员',
+          status: 'Active',
+          current_version: 1,
+          created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        },
+        {
+          id: 'mock-flow-4',
+          name: '客户反馈分析流程',
+          description: '收集客户反馈，进行情感分析和主题提取，生成改进建议',
+          status: 'Draft',
+          current_version: 1,
+          created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        },
+        {
+          id: 'mock-flow-5',
+          name: '智能选址评估流程',
+          description: '综合分析地理位置、人流量、竞争对手等因素，输出选址评分和建议',
+          status: 'Active',
+          current_version: 2,
+          created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        },
+        {
+          id: 'mock-flow-6',
+          name: '股票筛选流程',
+          description: '根据财务指标、技术指标和市场情绪筛选潜力股票',
+          status: 'Draft',
+          current_version: 1,
+          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          is_public: false
+        }
+      ];
+      
       const response = await flowService.getFlows(params);
-      setFlows(response.flows);
-      setTotal(response.total);
+      
+      // 根据filter过滤模拟数据
+      let filteredMockFlows = mockFlows;
+      if (filter !== 'all') {
+        filteredMockFlows = mockFlows.filter(flow => 
+          flow.status.toLowerCase() === filter.toLowerCase()
+        );
+      }
+      
+      // 将模拟数据添加到实际数据前面
+      setFlows([...filteredMockFlows, ...response.flows]);
+      setTotal(response.total + filteredMockFlows.length);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load flows');
     } finally {

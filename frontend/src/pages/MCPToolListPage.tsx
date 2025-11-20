@@ -19,8 +19,102 @@ export function MCPToolListPage() {
     try {
       setLoading(true);
       setError(null);
+      
+      // 添加模拟数据
+      const mockTools: MCPTool[] = [
+        {
+          id: 'mock-mcp-1',
+          name: '会员系统MCP',
+          description: '提供会员信息查询、积分管理、等级升级、优惠券发放等功能，支持会员全生命周期管理',
+          status: 'active',
+          current_version: '2.1.0',
+          created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-2',
+          name: '商品中心MCP',
+          description: '商品信息管理工具，包括商品查询、库存查看、价格更新、SKU管理、分类管理等核心功能',
+          status: 'active',
+          current_version: '3.0.2',
+          created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-3',
+          name: '门店中心MCP',
+          description: '门店管理系统接口，支持门店信息查询、营业状态管理、员工排班、业绩统计等功能',
+          status: 'active',
+          current_version: '1.5.1',
+          created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-4',
+          name: '订单系统MCP',
+          description: '订单全流程管理工具，包括订单创建、状态跟踪、退款处理、物流查询等功能',
+          status: 'active',
+          current_version: '2.3.0',
+          created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-5',
+          name: '营销活动MCP',
+          description: '营销活动管理平台，支持活动创建、规则配置、效果追踪、数据分析等功能',
+          status: 'inactive',
+          current_version: '1.2.0',
+          created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-6',
+          name: '数据分析MCP',
+          description: '数据查询和分析工具，提供多维度报表、趋势分析、数据导出等功能',
+          status: 'active',
+          current_version: '2.0.0',
+          created_at: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-7',
+          name: '消息通知MCP',
+          description: '统一消息推送服务，支持短信、邮件、站内信、APP推送等多种通知方式',
+          status: 'active',
+          current_version: '1.8.0',
+          created_at: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        },
+        {
+          id: 'mock-mcp-8',
+          name: '财务系统MCP',
+          description: '财务数据管理工具，包括账单查询、对账管理、结算处理、财务报表等功能',
+          status: 'inactive',
+          current_version: '1.0.5',
+          created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+          owner_id: 'user-1',
+          config: {}
+        }
+      ];
+      
       const data = await mcpService.listTools();
-      setTools(data);
+      // 将模拟数据添加到实际数据前面
+      setTools([...mockTools, ...data]);
     } catch (err: any) {
       setError(err.response?.data?.error || t('mcpTools.errors.loadFailed'));
     } finally {

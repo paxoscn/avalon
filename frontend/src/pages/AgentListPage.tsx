@@ -35,7 +35,78 @@ export function AgentListPage() {
           response = await agentService.listCreatedAgents({ page, page_size: 12 });
           break;
         case 'employed':
+          // 添加模拟数据
+          const mockEmployedAgents: Agent[] = [
+            {
+              id: 'mock-1',
+              name: '门店巡检专家',
+              system_prompt: '我是一位专业的门店巡检专家，擅长门店运营标准检查、陈列规范审核、服务质量评估等工作。我会帮助您发现门店运营中的问题并提供改进建议。',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=inspector&backgroundColor=b6e3f4',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              knowledge_base_ids: ['kb-1', 'kb-2'],
+              mcp_tool_ids: ['tool-1'],
+              flow_ids: ['flow-1'],
+              owner_id: 'user-1',
+              is_public: false
+            },
+            {
+              id: 'mock-2',
+              name: '数据分析师',
+              system_prompt: '我是一位资深数据分析师，精通数据挖掘、统计分析、可视化呈现等技能。我可以帮助您从海量数据中提取有价值的洞察，支持业务决策。',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=analyst&backgroundColor=c0aede',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              knowledge_base_ids: ['kb-3'],
+              mcp_tool_ids: ['tool-2', 'tool-3'],
+              flow_ids: [],
+              owner_id: 'user-1',
+              is_public: false
+            },
+            {
+              id: 'mock-3',
+              name: '门店选址专家',
+              system_prompt: '我是门店选址领域的专家，拥有丰富的商圈分析、人流量评估、竞争对手分析经验。我会综合考虑地理位置、人口密度、消费能力等因素，为您推荐最佳的门店位置。',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=location&backgroundColor=ffdfbf',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              knowledge_base_ids: ['kb-4', 'kb-5'],
+              mcp_tool_ids: ['tool-4'],
+              flow_ids: ['flow-2', 'flow-3'],
+              owner_id: 'user-1',
+              is_public: false
+            },
+            {
+              id: 'mock-4',
+              name: 'A股投资助理',
+              system_prompt: '我是您的A股投资助理，熟悉中国股市政策、行业动态、财务分析等知识。我可以帮助您分析个股基本面、追踪市场热点、评估投资风险，为您的投资决策提供参考。',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=stock&backgroundColor=d1f4dd',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              knowledge_base_ids: ['kb-6'],
+              mcp_tool_ids: ['tool-5', 'tool-6', 'tool-7'],
+              flow_ids: ['flow-4'],
+              owner_id: 'user-1',
+              is_public: false
+            },
+            {
+              id: 'mock-5',
+              name: '择校专家',
+              system_prompt: '我是教育领域的择校专家，深入了解各类学校的教学特色、师资力量、升学率等信息。我会根据孩子的特点和家庭需求，为您提供个性化的择校建议和规划方案。',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=education&backgroundColor=ffd5dc',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              knowledge_base_ids: ['kb-7', 'kb-8'],
+              mcp_tool_ids: ['tool-8'],
+              flow_ids: [],
+              owner_id: 'user-1',
+              is_public: false
+            }
+          ];
+          
           response = await agentService.listEmployedAgents({ page, page_size: 12 });
+          // 将模拟数据添加到实际数据前面
+          response.items = [...mockEmployedAgents, ...response.items];
           break;
         case 'allocated':
           response = await agentService.listAllocatedAgents({ page, page_size: 12 });
