@@ -143,6 +143,28 @@
       "success": "Agent tuned successfully",
       "saveFailed": "Failed to save tuning",
       "requirementsRequired": "Please enter additional requirements"
+    },
+    "interview": {
+      "title": "Interview Agent",
+      "description": "Evaluate the agent's capabilities and decide whether to employ",
+      "agentInfo": "Agent Information",
+      "createdAt": "Created At",
+      "evaluationScores": "Evaluation Scores",
+      "professionalism": "Professionalism",
+      "communication": "Communication",
+      "knowledge": "Knowledge",
+      "responsiveness": "Responsiveness",
+      "overall": "Overall",
+      "averageScore": "Average Score",
+      "feedback": "Interview Feedback",
+      "feedbackPlaceholder": "Please enter your evaluation and suggestions for this agent...",
+      "feedbackDescription": "Record your observations and evaluations during the interview",
+      "employDecision": "Employment Decision",
+      "employDecisionDescription": "If you are satisfied with this agent, click the employ button",
+      "employing": "Employing...",
+      "employSuccess": "Agent employed successfully!",
+      "preview": "Live Preview",
+      "previewDescription": "Test conversation with the agent"
     }
   },
   "language": {

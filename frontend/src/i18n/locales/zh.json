@@ -143,6 +143,28 @@
       "success": "数字人调优成功",
       "saveFailed": "保存调优失败",
       "requirementsRequired": "请输入附加要求"
+    },
+    "interview": {
+      "title": "面试数字人",
+      "description": "评估数字人的能力并决定是否雇佣",
+      "agentInfo": "数字人信息",
+      "createdAt": "创建时间",
+      "evaluationScores": "评估打分",
+      "professionalism": "专业性",
+      "communication": "沟通能力",
+      "knowledge": "知识储备",
+      "responsiveness": "响应速度",
+      "overall": "综合评价",
+      "averageScore": "平均分",
+      "feedback": "面试反馈",
+      "feedbackPlaceholder": "请输入您对这个数字人的面试评价和建议...",
+      "feedbackDescription": "记录您在面试过程中的观察和评价",
+      "employDecision": "雇佣决策",
+      "employDecisionDescription": "如果您对这个数字人满意，可以点击雇佣按钮",
+      "employing": "雇佣中...",
+      "employSuccess": "数字人雇佣成功！",
+      "preview": "实时预览",
+      "previewDescription": "与数字人进行对话测试"
     }
   },
   "language": {

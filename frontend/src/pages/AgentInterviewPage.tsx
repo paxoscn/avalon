@@ -1,0 +1,346 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { agentService } from '../services/agent.service';
+import type { Agent } from '../types';
+import { Button, Card, Loader, Alert, MobileChatPreview } from '../components/common';
+
+export function AgentInterviewPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const [scores, setScores] = useState({
+    professionalism: 5,
+    communication: 5,
+    knowledge: 5,
+    responsiveness: 5,
+    overall: 5,
+  });
+
+  const [feedback, setFeedback] = useState('');
+
+  useEffect(() => {
+    loadAgent();
+  }, [id]);
+
+  const loadAgent = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await agentService.getAgent(id!);
+      setAgent(data);
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.loadAgentFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScoreChange = (category: keyof typeof scores, value: number) => {
+    setScores((prev) => ({
+      ...prev,
+      [category]: value,
+    }));
+  };
+
+  const handleEmploy = async () => {
+    if (!agent) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      await agentService.employAgent(agent.id);
+      setSuccess(t('agents.interview.employSuccess'));
+      setTimeout(() => navigate('/agents'), 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.employFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!agent) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">{t('agents.errors.loadAgentFailed')}</p>
+      </div>
+    );
+  }
+
+  const averageScore = (
+    Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
+  ).toFixed(1);
+
+  return (
+    <div className="flex gap-6">
+      {/* 左侧评分表单 */}
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-900">
+              {t('agents.interview.title')}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {t('agents.interview.description')}
+            </p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/agents')}>
+            {t('common.cancel')}
+          </Button>
+        </div>
+
+        {error && (
+          <Alert type="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert type="success" onClose={() => setSuccess(null)}>
+            {success}
+          </Alert>
+        )}
+
+        {/* 数字人信息 */}
+        <Card>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {t('agents.interview.agentInfo')}
+          </h2>
+          <div className="flex items-center gap-4">
+            {agent.avatar ? (
+              <img
+                src={agent.avatar}
+                alt={agent.name}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                {agent.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h3 className="text-xl font-medium text-gray-900">{agent.name}</h3>
+              <p className="text-sm text-gray-500">
+                {t('agents.interview.createdAt')}: {new Date(agent.created_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* 评分表 */}
+        <Card>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {t('agents.interview.evaluationScores')}
+          </h2>
+          <div className="space-y-6">
+            {/* 专业性 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {t('agents.interview.professionalism')}
+                </label>
+                <span className="text-lg font-semibold text-blue-600">
+                  {scores.professionalism}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={scores.professionalism}
+                onChange={(e) => handleScoreChange('professionalism', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* 沟通能力 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {t('agents.interview.communication')}
+                </label>
+                <span className="text-lg font-semibold text-blue-600">
+                  {scores.communication}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={scores.communication}
+                onChange={(e) => handleScoreChange('communication', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* 知识储备 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {t('agents.interview.knowledge')}
+                </label>
+                <span className="text-lg font-semibold text-blue-600">
+                  {scores.knowledge}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={scores.knowledge}
+                onChange={(e) => handleScoreChange('knowledge', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* 响应速度 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {t('agents.interview.responsiveness')}
+                </label>
+                <span className="text-lg font-semibold text-blue-600">
+                  {scores.responsiveness}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={scores.responsiveness}
+                onChange={(e) => handleScoreChange('responsiveness', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* 综合评价 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {t('agents.interview.overall')}
+                </label>
+                <span className="text-lg font-semibold text-blue-600">
+                  {scores.overall}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={scores.overall}
+                onChange={(e) => handleScoreChange('overall', parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* 平均分 */}
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-medium text-gray-900">
+                  {t('agents.interview.averageScore')}
+                </span>
+                <span className="text-2xl font-bold text-blue-600">
+                  {averageScore}
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* 面试反馈 */}
+        <Card>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {t('agents.interview.feedback')}
+          </h2>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder={t('agents.interview.feedbackPlaceholder')}
+          />
+          <p className="mt-2 text-xs text-gray-500">
+            {t('agents.interview.feedbackDescription')}
+          </p>
+        </Card>
+
+        {/* 雇佣按钮 */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-medium text-gray-900">
+                {t('agents.interview.employDecision')}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {t('agents.interview.employDecisionDescription')}
+              </p>
+            </div>
+            <Button
+              onClick={handleEmploy}
+              disabled={submitting}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {submitting ? t('agents.interview.employing') : t('agents.actions.employ')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* 右侧预览 */}
+      <div className="w-96 sticky top-6 self-start">
+        <div className="mb-3 text-center">
+          <h3 className="text-sm font-medium text-gray-700">
+            {t('agents.interview.preview')}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {t('agents.interview.previewDescription')}
+          </p>
+        </div>
+        <MobileChatPreview
+          agentId={agent.id}
+          agentName={agent.name}
+          agentAvatar={agent.avatar}
+          greeting={agent.greeting}
+          systemPrompt={agent.system_prompt}
+          presetQuestions={agent.preset_questions}
+          className="h-[700px]"
+        />
+      </div>
+    </div>
+  );
+}

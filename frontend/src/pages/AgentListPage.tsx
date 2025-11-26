@@ -128,8 +128,7 @@ export function AgentListPage() {
   };
 
   const handleInterview = (id: string) => {
-    // Navigate to agent detail page for interview
-    window.location.href = `/agents/${id}`;
+    navigate(`/agents/${id}/interview`);
   };
 
   if (loading && page === 1) {
