@@ -255,20 +255,28 @@ pub struct AgentUsageStatsDto {
     pub agent_id: Uuid,
     pub agent_name: String,
     pub date: String,
+    pub interview_count: i64,
+    pub interview_passed_count: i64,
+    pub employment_count: i64,
     pub total_sessions: i64,
     pub total_messages: i64,
     pub total_tokens: i64,
     pub unique_users: i64,
+    pub revenue: f64,
     pub avg_session_duration_seconds: Option<f64>,
 }
 
 /// Agent usage stats summary DTO
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentUsageStatsSummaryDto {
+    pub total_interviews: i64,
+    pub total_interviews_passed: i64,
+    pub total_employments: i64,
     pub total_sessions: i64,
     pub total_messages: i64,
     pub total_tokens: i64,
     pub unique_users: i64,
+    pub total_revenue: f64,
 }
 
 /// Agent usage stats response DTO

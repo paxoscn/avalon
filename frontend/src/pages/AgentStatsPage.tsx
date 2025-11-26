@@ -150,6 +150,38 @@ export function AgentStatsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <div className="space-y-2">
+              <p className="text-sm text-gray-600">{t('agents.stats.totalInterviews')}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {summary.total_interviews.toLocaleString()}
+              </p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">{t('agents.stats.totalInterviewsPassed')}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {summary.total_interviews_passed.toLocaleString()}
+              </p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">{t('agents.stats.totalEmployments')}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {summary.total_employments.toLocaleString()}
+              </p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">{t('agents.stats.totalRevenue')}</p>
+              <p className="text-3xl font-bold text-gray-900">
+                ${summary.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </Card>
+          <Card>
+            <div className="space-y-2">
               <p className="text-sm text-gray-600">{t('agents.stats.totalSessions')}</p>
               <p className="text-3xl font-bold text-gray-900">
                 {summary.total_sessions.toLocaleString()}
@@ -206,6 +238,18 @@ export function AgentStatsPage() {
                       {t('agents.stats.date')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('agents.stats.interviews')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('agents.stats.interviewsPassed')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('agents.stats.employments')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('agents.stats.revenue')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {t('agents.stats.sessions')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -213,12 +257,6 @@ export function AgentStatsPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {t('agents.stats.tokens')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {t('agents.stats.users')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {t('agents.stats.avgDuration')}
                     </th>
                   </tr>
                 </thead>
@@ -229,6 +267,18 @@ export function AgentStatsPage() {
                         {new Date(stat.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {stat.interview_count.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {stat.interview_passed_count.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {stat.employment_count.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${stat.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {stat.total_sessions.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -236,14 +286,6 @@ export function AgentStatsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {stat.total_tokens.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {stat.unique_users.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {stat.avg_session_duration_seconds
-                          ? `${Math.round(stat.avg_session_duration_seconds)}s`
-                          : '-'}
                       </td>
                     </tr>
                   ))}

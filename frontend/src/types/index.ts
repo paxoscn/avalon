@@ -265,10 +265,14 @@ export interface AgentUsageStats {
   agent_id: string;
   agent_name: string;
   date: string;
+  interview_count: number;
+  interview_passed_count: number;
+  employment_count: number;
   total_sessions: number;
   total_messages: number;
   total_tokens: number;
   unique_users: number;
+  revenue: number;
   avg_session_duration_seconds?: number;
 }
 
@@ -286,9 +290,13 @@ export interface AgentUsageStatsResponse {
   total: number;
   total_pages: number;
   summary?: {
+    total_interviews: number;
+    total_interviews_passed: number;
+    total_employments: number;
     total_sessions: number;
     total_messages: number;
     total_tokens: number;
     unique_users: number;
+    total_revenue: number;
   };
 }

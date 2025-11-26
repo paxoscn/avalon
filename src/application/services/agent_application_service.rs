@@ -1201,19 +1201,27 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             .await?;
 
         let summary = if !summary_query.is_empty() {
+            let total_interviews: i64 = summary_query.iter().map(|s| s.interview_count).sum();
+            let total_interviews_passed: i64 = summary_query.iter().map(|s| s.interview_passed_count).sum();
+            let total_employments: i64 = summary_query.iter().map(|s| s.employment_count).sum();
             let total_sessions: i64 = summary_query.iter().map(|s| s.session_count).sum();
             let total_messages: i64 = summary_query.iter().map(|s| s.message_count).sum();
             let total_tokens: i64 = summary_query.iter().map(|s| s.token_count).sum();
+            let total_revenue: f64 = summary_query.iter().map(|s| s.revenue.to_string().parse::<f64>().unwrap_or(0.0)).sum();
             
             // For unique_users, we'll use a simple count for now
             // TODO: Implement proper unique user counting across date range
             let unique_users = total_sessions; // Placeholder
 
             Some(AgentUsageStatsSummaryDto {
+                total_interviews,
+                total_interviews_passed,
+                total_employments,
                 total_sessions,
                 total_messages,
                 total_tokens,
                 unique_users,
+                total_revenue,
             })
         } else {
             None
@@ -1226,10 +1234,14 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                 agent_id: stat.agent_id,
                 agent_name: agent.name.clone(),
                 date: stat.stat_date.format("%Y-%m-%d").to_string(),
+                interview_count: stat.interview_count,
+                interview_passed_count: stat.interview_passed_count,
+                employment_count: stat.employment_count,
                 total_sessions: stat.session_count,
                 total_messages: stat.message_count,
                 total_tokens: stat.token_count,
                 unique_users: 0, // TODO: Calculate unique users per day if needed
+                revenue: stat.revenue.to_string().parse::<f64>().unwrap_or(0.0),
                 avg_session_duration_seconds: None, // TODO: Calculate if needed
             })
             .collect();
