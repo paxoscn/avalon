@@ -221,3 +221,21 @@ impl Default for AgentListQuery {
         }
     }
 }
+
+/// Agent chat request DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentChatRequest {
+    pub message: String,
+    pub session_id: Option<Uuid>,
+    pub stream: Option<bool>,
+}
+
+/// Agent chat response DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentChatResponse {
+    pub session_id: Uuid,
+    pub message_id: Uuid,
+    pub reply_id: Uuid,
+    pub reply: String,
+    pub metadata: Option<serde_json::Value>,
+}

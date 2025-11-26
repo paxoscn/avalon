@@ -127,6 +127,16 @@ pub trait AgentApplicationService: Send + Sync {
 
     /// Remove flow from agent
     async fn remove_flow(&self, agent_id: AgentId, flow_id: FlowId, user_id: UserId) -> Result<()>;
+
+    /// Chat with an agent
+    async fn chat(
+        &self,
+        agent_id: AgentId,
+        message: String,
+        session_id: Option<crate::domain::value_objects::SessionId>,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<crate::application::dto::agent_dto::AgentChatResponse>;
 }
 
 /// Agent application service implementation
@@ -137,6 +147,9 @@ pub struct AgentApplicationServiceImpl {
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
     flow_repo: Arc<dyn FlowRepository>,
     user_repo: Arc<dyn UserRepository>,
+    session_service: Option<Arc<crate::application::services::SessionApplicationService>>,
+    llm_service: Option<Arc<dyn crate::domain::services::llm_service::LLMDomainService>>,
+    llm_config_repo: Option<Arc<dyn crate::domain::repositories::LLMConfigRepository>>,
 }
 
 impl AgentApplicationServiceImpl {
@@ -155,7 +168,28 @@ impl AgentApplicationServiceImpl {
             mcp_tool_repo,
             flow_repo,
             user_repo,
+            session_service: None,
+            llm_service: None,
+            llm_config_repo: None,
         }
+    }
+
+    /// Set session service for chat functionality
+    pub fn with_session_service(mut self, session_service: Arc<crate::application::services::SessionApplicationService>) -> Self {
+        self.session_service = Some(session_service);
+        self
+    }
+
+    /// Set LLM service for chat functionality
+    pub fn with_llm_service(mut self, llm_service: Arc<dyn crate::domain::services::llm_service::LLMDomainService>) -> Self {
+        self.llm_service = Some(llm_service);
+        self
+    }
+
+    /// Set LLM config repository for chat functionality
+    pub fn with_llm_config_repo(mut self, llm_config_repo: Arc<dyn crate::domain::repositories::LLMConfigRepository>) -> Self {
+        self.llm_config_repo = Some(llm_config_repo);
+        self
     }
 
     /// Verify that the user can modify the agent (is the creator)
@@ -901,5 +935,142 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         self.agent_repo.save(&agent).await?;
 
         Ok(())
+    }
+
+    async fn chat(
+        &self,
+        agent_id: AgentId,
+        message: String,
+        session_id: Option<crate::domain::value_objects::SessionId>,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<crate::application::dto::agent_dto::AgentChatResponse> {
+        use crate::domain::value_objects::{ChatMessage, MessageRole};
+        use crate::domain::value_objects::chat_message::MessageMetadata;
+
+        // Get the agent
+        let agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify agent belongs to the same tenant
+        if agent.tenant_id != tenant_id {
+            return Err(PlatformError::AgentUnauthorized(
+                "Agent does not belong to your tenant".to_string(),
+            ));
+        }
+
+        // Get or create session
+        let session_service = self.session_service.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("Session service not configured".to_string()))?;
+
+        let session_id = match session_id {
+            Some(sid) => sid,
+            None => {
+                // Create a new session
+                let session = session_service
+                    .create_session(tenant_id, user_id, Some(format!("Chat with {}", agent.name)))
+                    .await?;
+                session.id
+            }
+        };
+
+        // Add user message to session
+        let user_metadata = MessageMetadata {
+            model_used: None,
+            tokens_used: None,
+            response_time_ms: None,
+            tool_calls: None,
+            custom_data: std::collections::HashMap::from([
+                ("agent_id".to_string(), serde_json::json!(agent_id.0.to_string())),
+                ("agent_name".to_string(), serde_json::json!(agent.name.clone())),
+            ]),
+        };
+
+        let user_chat_message = ChatMessage {
+            role: MessageRole::User,
+            content: crate::domain::value_objects::chat_message::MessageContent::Text(message.clone()),
+            metadata: Some(user_metadata),
+            timestamp: chrono::Utc::now(),
+        };
+
+        let user_message = session_service
+            .add_message(&session_id, &tenant_id, &user_id, user_chat_message)
+            .await?;
+
+        // Get LLM service and config
+        let llm_service = self.llm_service.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("LLM service not configured".to_string()))?;
+
+        let llm_config_repo = self.llm_config_repo.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("LLM config repository not configured".to_string()))?;
+
+        // Get the first available LLM config for the tenant (TODO: allow agent to specify preferred config)
+        let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
+        let llm_config = llm_configs.first()
+            .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?;
+
+        // Build conversation history
+        let mut messages = vec![
+            ChatMessage::new_system_message(agent.system_prompt.clone()),
+        ];
+
+        // Add greeting if this is the first message
+        if let Some(greeting) = &agent.greeting {
+            messages.push(ChatMessage::new_assistant_message(greeting.clone()));
+        }
+
+        // Add user message
+        messages.push(ChatMessage::new_user_message(message));
+
+        // Call LLM
+        let response = llm_service
+            .chat_completion(
+                &llm_config.model_config,
+                messages,
+                tenant_id.0,
+                None,
+            )
+            .await
+            .map_err(|e| PlatformError::InternalError(format!("LLM error: {}", e)))?;
+
+        // Add assistant response to session
+        let assistant_metadata = MessageMetadata {
+            model_used: Some(response.model_used.clone()),
+            tokens_used: Some(response.usage.total_tokens),
+            response_time_ms: None,
+            tool_calls: None,
+            custom_data: std::collections::HashMap::from([
+                ("agent_id".to_string(), serde_json::json!(agent_id.0.to_string())),
+                ("agent_name".to_string(), serde_json::json!(agent.name.clone())),
+            ]),
+        };
+
+        let assistant_chat_message = ChatMessage {
+            role: MessageRole::Assistant,
+            content: crate::domain::value_objects::chat_message::MessageContent::Text(response.content.clone()),
+            metadata: Some(assistant_metadata),
+            timestamp: chrono::Utc::now(),
+        };
+
+        let assistant_message = session_service
+            .add_message(&session_id, &tenant_id, &user_id, assistant_chat_message)
+            .await?;
+
+        Ok(crate::application::dto::agent_dto::AgentChatResponse {
+            session_id: session_id.0,
+            message_id: user_message.id.0,
+            reply_id: assistant_message.id.0,
+            reply: response.content,
+            metadata: Some(serde_json::json!({
+                "model": response.model_used,
+                "tokens_used": response.usage.total_tokens,
+                "finish_reason": format!("{:?}", response.finish_reason),
+            })),
+        })
     }
 }

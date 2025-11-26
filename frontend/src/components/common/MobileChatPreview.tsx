@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { chatService } from '../../services/chat.service';
 
 export interface ChatMessage {
   id: string;
@@ -8,6 +9,7 @@ export interface ChatMessage {
 }
 
 export interface MobileChatPreviewProps {
+  agentId?: string;
   agentName: string;
   agentAvatar?: string;
   greeting?: string;
@@ -18,6 +20,7 @@ export interface MobileChatPreviewProps {
 }
 
 export function MobileChatPreview({
+  agentId,
   agentName,
   agentAvatar,
   greeting,
@@ -29,6 +32,8 @@ export function MobileChatPreview({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,32 +57,67 @@ export function MobileChatPreview({
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
+    setError(null);
 
     try {
       let responseContent = '';
       
+      // Use custom onSendMessage if provided
       if (onSendMessage) {
         responseContent = await onSendMessage(content);
-      } else {
-        // 模拟响应
+        
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: responseContent,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } 
+      // Use real chat service if agentId is provided
+      else if (agentId) {
+        const response = await chatService.chat({
+          agentId,
+          message: content.trim(),
+          sessionId,
+        });
+
+        // Update session ID if this is the first message
+        if (!sessionId) {
+          setSessionId(response.sessionId);
+        }
+
+        // Add assistant message from response
+        const assistantMessage: ChatMessage = {
+          id: response.reply.id,
+          role: 'assistant',
+          content: response.reply.content,
+          timestamp: new Date(response.reply.created_at),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } 
+      // Fallback to simulation
+      else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         responseContent = `这是一个模拟回复。我是 ${agentName}，收到了您的消息："${content}"`;
+        
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: responseContent,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
       }
-
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: responseContent,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Failed to send message:', error);
+      const errorMessage = error instanceof Error ? error.message : '发送消息时出现错误';
+      setError(errorMessage);
+      
       const error_message: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: '抱歉，发送消息时出现错误。',
+        content: `抱歉，${errorMessage}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, error_message]);
@@ -149,6 +189,12 @@ export function MobileChatPreview({
 
       {/* 聊天消息区域 */}
       <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-4" style={{ maxHeight: '500px' }}>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+        
         {messages.length === 0 && (
           <div className="text-center py-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white text-2xl font-bold mb-3">

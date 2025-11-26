@@ -35,6 +35,9 @@ pub fn agent_routes(service: Arc<dyn AgentApplicationService>) -> Router {
         // Created
         .route("/agents/created", get(agent_handlers::list_created_agents))
         
+        // Chat
+        .route("/agents/{agent_id}/chat", post(agent_handlers::chat_with_agent))
+        
         // Resource management - Knowledge Base
         .route(
             "/agents/{agent_id}/knowledge-bases/{config_id}",

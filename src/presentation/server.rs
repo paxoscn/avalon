@@ -143,7 +143,7 @@ impl Server {
 
         let llm_service: Arc<dyn LLMApplicationService> = Arc::new(LLMApplicationServiceImpl::new(
             llm_config_repository.clone(),
-            llm_domain_service,
+            llm_domain_service.clone(),
             llm_provider_registry,
         ));
 
@@ -206,7 +206,10 @@ impl Server {
                 mcp_tool_repository,
                 flow_repository,
                 user_repository,
-            ));
+            )
+            .with_session_service(session_service.clone())
+            .with_llm_service(llm_domain_service.clone())
+            .with_llm_config_repo(llm_config_repository.clone()));
 
         // Create file repository and service
         let file_repository = Arc::new(FileRepositoryImpl::new(

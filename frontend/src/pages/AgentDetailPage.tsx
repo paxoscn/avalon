@@ -463,6 +463,7 @@ export function AgentDetailPage() {
           <p className="text-xs text-gray-500">{t('agents.detail.previewDescription')}</p>
         </div>
         <MobileChatPreview
+          agentId={!isNew ? id : undefined}
           agentName={formData.name || t('agents.detail.defaultAgentName')}
           agentAvatar={formData.avatar}
           greeting={formData.greeting}

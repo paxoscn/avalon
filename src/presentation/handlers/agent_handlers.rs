@@ -17,6 +17,8 @@ use crate::{
     presentation::extractors::AuthenticatedUser,
 };
 
+use crate::application::dto::agent_dto::AgentChatRequest;
+
 // ============================================================================
 // CRUD Handlers
 // ============================================================================
@@ -284,4 +286,28 @@ pub async fn remove_flow(
         user.user_id,
     ).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================================
+// Chat Handler
+// ============================================================================
+
+/// Chat with an agent
+pub async fn chat_with_agent(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+    Json(req): Json<AgentChatRequest>,
+) -> Result<impl IntoResponse> {
+    let session_id = req.session_id.map(crate::domain::value_objects::SessionId);
+    
+    let response = service.chat(
+        AgentId::from_uuid(agent_id),
+        req.message,
+        session_id,
+        user.user_id,
+        user.tenant_id,
+    ).await?;
+
+    Ok((StatusCode::OK, Json(response)))
 }

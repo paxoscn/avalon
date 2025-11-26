@@ -110,6 +110,7 @@ export function EmbeddedChat({
             </button>
           </div>
           <MobileChatPreview
+            agentId={agentId}
             agentName={agentName}
             agentAvatar={agentAvatar}
             systemPrompt={systemPrompt}
