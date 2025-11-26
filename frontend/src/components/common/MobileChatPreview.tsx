@@ -16,6 +16,7 @@ export interface MobileChatPreviewProps {
   systemPrompt?: string;
   presetQuestions?: string[];
   onSendMessage?: (message: string) => Promise<string>;
+  onFirstMessage?: () => Promise<void>;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ export function MobileChatPreview({
   systemPrompt,
   presetQuestions = [],
   onSendMessage,
+  onFirstMessage,
   className = '',
 }: MobileChatPreviewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -34,6 +36,7 @@ export function MobileChatPreview({
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [isFirstMessage, setIsFirstMessage] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -46,6 +49,17 @@ export function MobileChatPreview({
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
+
+    // Call onFirstMessage callback if this is the first message
+    if (isFirstMessage && onFirstMessage) {
+      try {
+        await onFirstMessage();
+      } catch (error) {
+        console.error('Failed to record first message:', error);
+        // Continue with sending the message even if tracking fails
+      }
+      setIsFirstMessage(false);
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),

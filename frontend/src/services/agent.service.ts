@@ -124,6 +124,14 @@ class AgentService {
     const response = await apiClient.get<AgentUsageStatsResponse>(`/agents/${agentId}/stats`, { params });
     return response.data;
   }
+
+  async startInterview(id: string): Promise<void> {
+    await apiClient.post(`/agents/${id}/interview/start`);
+  }
+
+  async completeInterview(id: string, passed: boolean): Promise<void> {
+    await apiClient.post(`/agents/${id}/interview/complete`, { passed });
+  }
 }
 
 export const agentService = new AgentService();

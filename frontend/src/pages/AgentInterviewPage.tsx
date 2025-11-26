@@ -66,6 +66,17 @@ export function AgentInterviewPage() {
     }
   };
 
+  const handleFirstMessage = async () => {
+    if (!agent) return;
+    
+    try {
+      await agentService.startInterview(agent.id);
+    } catch (err: any) {
+      console.error('Failed to record interview start:', err);
+      // Don't show error to user, just log it
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -338,6 +349,7 @@ export function AgentInterviewPage() {
           greeting={agent.greeting}
           systemPrompt={agent.system_prompt}
           presetQuestions={agent.preset_questions}
+          onFirstMessage={handleFirstMessage}
           className="h-[700px]"
         />
       </div>
