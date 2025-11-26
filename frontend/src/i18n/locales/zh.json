@@ -78,8 +78,12 @@
       "basicInfo": "基本信息",
       "agentName": "数字人名称",
       "agentNamePlaceholder": "我的 AI 助手",
-      "avatarUrl": "头像链接（可选）",
+      "avatarUrl": "头像（可选）",
       "avatarUrlPlaceholder": "https://example.com/avatar.png",
+      "avatarDescription": "上传图片或输入图片链接",
+      "uploadAvatar": "上传头像",
+      "uploading": "上传中...",
+      "removeAvatar": "移除头像",
       "greeting": "问候语（可选）",
       "greetingPlaceholder": "您好！我是您的专属 AI 助手，有什么可以帮您的吗？",
       "greetingDescription": "用户首次与数字人对话时显示的欢迎消息",
@@ -121,11 +125,15 @@
       "saveFailed": "保存数字人失败",
       "updateKnowledgeBaseFailed": "更新知识库失败",
       "updateToolFailed": "更新 MCP 工具失败",
-      "updateFlowFailed": "更新工作流失败"
+      "updateFlowFailed": "更新工作流失败",
+      "invalidImageType": "请上传图片文件",
+      "imageTooLarge": "图片大小不能超过 5MB",
+      "uploadFailed": "上传失败"
     },
     "success": {
       "created": "数字人创建成功",
-      "updated": "数字人更新成功"
+      "updated": "数字人更新成功",
+      "avatarUploaded": "头像上传成功"
     },
     "tune": {
       "title": "调优数字人",

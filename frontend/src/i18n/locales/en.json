@@ -78,8 +78,12 @@
       "basicInfo": "Basic Information",
       "agentName": "Agent Name",
       "agentNamePlaceholder": "My AI Assistant",
-      "avatarUrl": "Avatar URL (optional)",
+      "avatarUrl": "Avatar (optional)",
       "avatarUrlPlaceholder": "https://example.com/avatar.png",
+      "avatarDescription": "Upload an image or enter an image URL",
+      "uploadAvatar": "Upload Avatar",
+      "uploading": "Uploading...",
+      "removeAvatar": "Remove Avatar",
       "greeting": "Greeting (optional)",
       "greetingPlaceholder": "Hello! I'm your AI assistant. How can I help you today?",
       "greetingDescription": "Welcome message displayed when users first interact with the agent",
@@ -121,11 +125,15 @@
       "saveFailed": "Failed to save agent",
       "updateKnowledgeBaseFailed": "Failed to update knowledge base",
       "updateToolFailed": "Failed to update MCP tool",
-      "updateFlowFailed": "Failed to update flow"
+      "updateFlowFailed": "Failed to update flow",
+      "invalidImageType": "Please upload an image file",
+      "imageTooLarge": "Image size cannot exceed 5MB",
+      "uploadFailed": "Upload failed"
     },
     "success": {
       "created": "Agent created successfully",
-      "updated": "Agent updated successfully"
+      "updated": "Agent updated successfully",
+      "avatarUploaded": "Avatar uploaded successfully"
     },
     "tune": {
       "title": "Tune Agent",

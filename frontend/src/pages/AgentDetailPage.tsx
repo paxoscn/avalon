@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { agentService, type CreateAgentRequest, type UpdateAgentRequest } from '../services/agent.service';
 import { llmService } from '../services/llm.service';
 import { mcpService } from '../services/mcp.service';
 import { flowService } from '../services/flow.service';
+import { fileService } from '../services/file.service';
 import type { Agent, VectorConfig, MCPTool, Flow } from '../types';
 import { Button, Card, Input, Loader, Alert, MobileChatPreview } from '../components/common';
 
@@ -17,8 +18,10 @@ export function AgentDetailPage() {
   const [, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [availableLLMConfigs, setAvailableLLMConfigs] = useState<any[]>([]);
   const [availableKnowledgeBases, setAvailableKnowledgeBases] = useState<VectorConfig[]>([]);
@@ -205,6 +208,38 @@ export function AgentDetailPage() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError(t('agents.errors.invalidImageType'));
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError(t('agents.errors.imageTooLarge'));
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+      const url = await fileService.uploadFile(file);
+      setFormData({ ...formData, avatar: url });
+      setSuccess(t('agents.success.avatarUploaded'));
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.uploadFailed'));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -252,12 +287,70 @@ export function AgentDetailPage() {
               placeholder={t('agents.detail.agentNamePlaceholder')}
             />
 
-            <Input
-              label={t('agents.detail.avatarUrl')}
-              value={formData.avatar}
-              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-              placeholder={t('agents.detail.avatarUrlPlaceholder')}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agents.detail.avatarUrl')}
+              </label>
+              <div className="flex items-start gap-3">
+                {/* Avatar Preview */}
+                <div className="flex-shrink-0">
+                  {formData.avatar ? (
+                    <img
+                      src={formData.avatar}
+                      alt="Avatar preview"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/80?text=Avatar';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload and URL Input */}
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="whitespace-nowrap"
+                    >
+                      {uploading ? t('agents.detail.uploading') : t('agents.detail.uploadAvatar')}
+                    </Button>
+                    {formData.avatar && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setFormData({ ...formData, avatar: '' })}
+                        className="whitespace-nowrap"
+                      >
+                        {t('agents.detail.removeAvatar')}
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    value={formData.avatar}
+                    onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                    placeholder={t('agents.detail.avatarUrlPlaceholder')}
+                  />
+                  <p className="text-xs text-gray-500">{t('agents.detail.avatarDescription')}</p>
+                </div>
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
