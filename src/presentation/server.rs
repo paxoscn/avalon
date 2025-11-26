@@ -209,7 +209,8 @@ impl Server {
             )
             .with_session_service(session_service.clone())
             .with_llm_service(llm_domain_service.clone())
-            .with_llm_config_repo(llm_config_repository.clone()));
+            .with_llm_config_repo(llm_config_repository.clone())
+            .with_db(self.database.connection()));
 
         // Create file repository and service (using OSS)
         let file_repository: Arc<dyn FileRepository> = Arc::new(

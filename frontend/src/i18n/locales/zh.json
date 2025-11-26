@@ -63,7 +63,8 @@
       "unallocate": "取消分配",
       "interview": "面试",
       "employ": "雇佣",
-      "allocate": "分配"
+      "allocate": "分配",
+      "stats": "用量统计"
     },
     "confirmDelete": "确定要删除此数字人吗？",
     "confirmFire": "确定要解雇此数字人吗？",
@@ -173,6 +174,28 @@
       "employSuccess": "数字人雇佣成功！",
       "preview": "实时预览",
       "previewDescription": "与数字人进行对话测试"
+    },
+    "stats": {
+      "title": "用量统计",
+      "description": "查看数字人的使用情况和统计数据",
+      "backToList": "返回列表",
+      "dateRange": "日期范围",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "search": "查询",
+      "totalSessions": "总会话数",
+      "totalMessages": "总消息数",
+      "totalTokens": "总Token数",
+      "uniqueUsers": "独立用户数",
+      "dailyStats": "每日统计",
+      "date": "日期",
+      "sessions": "会话数",
+      "messages": "消息数",
+      "tokens": "Token数",
+      "users": "用户数",
+      "avgDuration": "平均时长",
+      "noData": "暂无统计数据",
+      "loadFailed": "加载统计数据失败"
     }
   },
   "language": {

@@ -147,3 +147,7 @@ write a rust document about how to convert text to vector using embeding model a
 ---
 
 write a rust document about how to talk to llm
+
+---
+
+在数据库增加数据表用于按天统计已被雇佣的Agent的用量, 包括被面试次数, 面试被通过次数, 被雇佣次数, 总会话数, 总消息数, 总Token消耗数, 总收益.

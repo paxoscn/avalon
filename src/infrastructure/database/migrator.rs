@@ -27,6 +27,7 @@ impl MigratorTrait for Migrator {
             Box::new(migrations::m20241027_000002_create_agent_allocations::Migration),
             Box::new(migrations::m20241027_000003_refactor_agent::Migration),
             Box::new(migrations::m20241120_000001_create_api_keys::Migration),
+            Box::new(migrations::m20241126_000001_create_agent_daily_stats::Migration),
         ]
     }
 }

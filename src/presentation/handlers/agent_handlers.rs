@@ -311,3 +311,23 @@ pub async fn chat_with_agent(
 
     Ok((StatusCode::OK, Json(response)))
 }
+
+// ============================================================================
+// Statistics Handler
+// ============================================================================
+
+/// Get agent usage statistics
+pub async fn get_agent_usage_stats(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+    Query(query): Query<AgentUsageStatsQuery>,
+) -> Result<impl IntoResponse> {
+    let response = service.get_agent_usage_stats(
+        AgentId::from_uuid(agent_id),
+        query,
+        user.user_id,
+    ).await?;
+
+    Ok(Json(response))
+}

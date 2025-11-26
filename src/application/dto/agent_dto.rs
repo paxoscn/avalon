@@ -239,3 +239,45 @@ pub struct AgentChatResponse {
     pub reply: String,
     pub metadata: Option<serde_json::Value>,
 }
+
+/// Agent usage stats query parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentUsageStatsQuery {
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub page: Option<u64>,
+    pub page_size: Option<u64>,
+}
+
+/// Agent usage stats DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentUsageStatsDto {
+    pub agent_id: Uuid,
+    pub agent_name: String,
+    pub date: String,
+    pub total_sessions: i64,
+    pub total_messages: i64,
+    pub total_tokens: i64,
+    pub unique_users: i64,
+    pub avg_session_duration_seconds: Option<f64>,
+}
+
+/// Agent usage stats summary DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentUsageStatsSummaryDto {
+    pub total_sessions: i64,
+    pub total_messages: i64,
+    pub total_tokens: i64,
+    pub unique_users: i64,
+}
+
+/// Agent usage stats response DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentUsageStatsResponse {
+    pub items: Vec<AgentUsageStatsDto>,
+    pub page: u64,
+    pub page_size: u64,
+    pub total: u64,
+    pub total_pages: u64,
+    pub summary: Option<AgentUsageStatsSummaryDto>,
+}

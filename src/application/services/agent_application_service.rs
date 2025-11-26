@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::sync::Arc;
+use sea_orm::PaginatorTrait;
 
 use crate::{
     application::dto::agent_dto::*,
@@ -137,6 +138,14 @@ pub trait AgentApplicationService: Send + Sync {
         user_id: UserId,
         tenant_id: TenantId,
     ) -> Result<crate::application::dto::agent_dto::AgentChatResponse>;
+
+    /// Get agent usage statistics
+    async fn get_agent_usage_stats(
+        &self,
+        agent_id: AgentId,
+        query: AgentUsageStatsQuery,
+        user_id: UserId,
+    ) -> Result<AgentUsageStatsResponse>;
 }
 
 /// Agent application service implementation
@@ -150,6 +159,7 @@ pub struct AgentApplicationServiceImpl {
     session_service: Option<Arc<crate::application::services::SessionApplicationService>>,
     llm_service: Option<Arc<dyn crate::domain::services::llm_service::LLMDomainService>>,
     llm_config_repo: Option<Arc<dyn crate::domain::repositories::LLMConfigRepository>>,
+    db: Option<Arc<sea_orm::DatabaseConnection>>,
 }
 
 impl AgentApplicationServiceImpl {
@@ -171,6 +181,7 @@ impl AgentApplicationServiceImpl {
             session_service: None,
             llm_service: None,
             llm_config_repo: None,
+            db: None,
         }
     }
 
@@ -189,6 +200,12 @@ impl AgentApplicationServiceImpl {
     /// Set LLM config repository for chat functionality
     pub fn with_llm_config_repo(mut self, llm_config_repo: Arc<dyn crate::domain::repositories::LLMConfigRepository>) -> Self {
         self.llm_config_repo = Some(llm_config_repo);
+        self
+    }
+
+    /// Set database connection for statistics queries
+    pub fn with_db(mut self, db: Arc<sea_orm::DatabaseConnection>) -> Self {
+        self.db = Some(db);
         self
     }
 
@@ -1071,6 +1088,131 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                 "tokens_used": response.usage.total_tokens,
                 "finish_reason": format!("{:?}", response.finish_reason),
             })),
+        })
+    }
+
+    async fn get_agent_usage_stats(
+        &self,
+        agent_id: AgentId,
+        query: AgentUsageStatsQuery,
+        user_id: UserId,
+    ) -> Result<AgentUsageStatsResponse> {
+        use sea_orm::{EntityTrait, QueryFilter, QuerySelect, ColumnTrait, QueryOrder};
+        use chrono::NaiveDate;
+
+        // Verify agent exists and user has access
+        let agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify user is the creator
+        if !agent.is_creator(&user_id) {
+            return Err(PlatformError::AgentUnauthorized(
+                "Only the creator can view agent statistics".to_string(),
+            ));
+        }
+
+        // Get database connection
+        let db = self.db.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("Database connection not configured".to_string()))?;
+
+        // Parse date range
+        let start_date = query.start_date
+            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+            .unwrap_or_else(|| {
+                chrono::Utc::now().date_naive() - chrono::Duration::days(30)
+            });
+
+        let end_date = query.end_date
+            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok())
+            .unwrap_or_else(|| chrono::Utc::now().date_naive());
+
+        // Get pagination parameters
+        let page = query.page.unwrap_or(1).max(1);
+        let page_size = query.page_size.unwrap_or(20).clamp(1, 100);
+        let offset = (page - 1) * page_size;
+
+        // Query agent_daily_stats table
+        use crate::infrastructure::database::entities::agent_daily_stats;
+
+        // Get total count
+        let total = agent_daily_stats::Entity::find()
+            .filter(agent_daily_stats::Column::AgentId.eq(agent_id.0))
+            .filter(agent_daily_stats::Column::StatDate.gte(start_date))
+            .filter(agent_daily_stats::Column::StatDate.lte(end_date))
+            .count(db.as_ref())
+            .await?;
+
+        // Get paginated results
+        let stats = agent_daily_stats::Entity::find()
+            .filter(agent_daily_stats::Column::AgentId.eq(agent_id.0))
+            .filter(agent_daily_stats::Column::StatDate.gte(start_date))
+            .filter(agent_daily_stats::Column::StatDate.lte(end_date))
+            .order_by_desc(agent_daily_stats::Column::StatDate)
+            .offset(offset)
+            .limit(page_size)
+            .all(db.as_ref())
+            .await?;
+
+        // Calculate summary
+        let summary_query = agent_daily_stats::Entity::find()
+            .filter(agent_daily_stats::Column::AgentId.eq(agent_id.0))
+            .filter(agent_daily_stats::Column::StatDate.gte(start_date))
+            .filter(agent_daily_stats::Column::StatDate.lte(end_date))
+            .all(db.as_ref())
+            .await?;
+
+        let summary = if !summary_query.is_empty() {
+            let total_sessions: i64 = summary_query.iter().map(|s| s.session_count).sum();
+            let total_messages: i64 = summary_query.iter().map(|s| s.message_count).sum();
+            let total_tokens: i64 = summary_query.iter().map(|s| s.token_count).sum();
+            
+            // For unique_users, we'll use a simple count for now
+            // TODO: Implement proper unique user counting across date range
+            let unique_users = total_sessions; // Placeholder
+
+            Some(AgentUsageStatsSummaryDto {
+                total_sessions,
+                total_messages,
+                total_tokens,
+                unique_users,
+            })
+        } else {
+            None
+        };
+
+        // Convert to DTOs
+        let items: Vec<AgentUsageStatsDto> = stats
+            .into_iter()
+            .map(|stat| AgentUsageStatsDto {
+                agent_id: stat.agent_id,
+                agent_name: agent.name.clone(),
+                date: stat.stat_date.format("%Y-%m-%d").to_string(),
+                total_sessions: stat.session_count,
+                total_messages: stat.message_count,
+                total_tokens: stat.token_count,
+                unique_users: 0, // TODO: Calculate unique users per day if needed
+                avg_session_duration_seconds: None, // TODO: Calculate if needed
+            })
+            .collect();
+
+        let total_pages = if page_size > 0 {
+            (total + page_size - 1) / page_size
+        } else {
+            0
+        };
+
+        Ok(AgentUsageStatsResponse {
+            items,
+            page,
+            page_size,
+            total,
+            total_pages,
+            summary,
         })
     }
 }

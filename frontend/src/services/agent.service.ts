@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { Agent } from '../types';
+import type { Agent, AgentUsageStatsParams, AgentUsageStatsResponse } from '../types';
 
 export interface CreateAgentRequest {
   name: string;
@@ -118,6 +118,11 @@ class AgentService {
 
   async removeFlow(agentId: string, flowId: string): Promise<void> {
     await apiClient.delete(`/agents/${agentId}/flows/${flowId}`);
+  }
+
+  async getAgentUsageStats(agentId: string, params?: AgentUsageStatsParams): Promise<AgentUsageStatsResponse> {
+    const response = await apiClient.get<AgentUsageStatsResponse>(`/agents/${agentId}/stats`, { params });
+    return response.data;
   }
 }
 

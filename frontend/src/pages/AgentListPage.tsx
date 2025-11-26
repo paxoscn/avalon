@@ -131,6 +131,10 @@ export function AgentListPage() {
     navigate(`/agents/${id}/interview`);
   };
 
+  const handleViewStats = (id: string) => {
+    navigate(`/agents/${id}/stats`);
+  };
+
   if (loading && page === 1) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -312,8 +316,15 @@ export function AgentListPage() {
                       <div className="flex items-center gap-2">
                         <Button
                           variant="secondary"
+                          onClick={() => handleViewStats(agent.id)}
+                          className="flex-1"
+                        >
+                          {t('agents.actions.stats')}
+                        </Button>
+                        <Button
+                          variant="secondary"
                           onClick={() => handleDelete(agent.id)}
-                          className="w-full text-red-600 hover:text-red-700"
+                          className="flex-1 text-red-600 hover:text-red-700"
                         >
                           {t('agents.actions.delete')}
                         </Button>

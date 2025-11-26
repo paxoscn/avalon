@@ -260,3 +260,35 @@ export interface AgentAllocation {
   tenant_id: string;
   allocated_at: string;
 }
+
+export interface AgentUsageStats {
+  agent_id: string;
+  agent_name: string;
+  date: string;
+  total_sessions: number;
+  total_messages: number;
+  total_tokens: number;
+  unique_users: number;
+  avg_session_duration_seconds?: number;
+}
+
+export interface AgentUsageStatsParams {
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface AgentUsageStatsResponse {
+  items: AgentUsageStats[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  summary?: {
+    total_sessions: number;
+    total_messages: number;
+    total_tokens: number;
+    unique_users: number;
+  };
+}
