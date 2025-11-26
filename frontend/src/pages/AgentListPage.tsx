@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { agentService } from '../services/agent.service';
 import type { Agent } from '../types';
@@ -9,6 +9,7 @@ type TabType = 'created' | 'employed' | 'allocated' | 'visible';
 
 export function AgentListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('created');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,8 +124,7 @@ export function AgentListPage() {
   };
 
   const handleTune = (id: string) => {
-    // Navigate to agent detail page for tuning
-    window.location.href = `/agents/${id}`;
+    navigate(`/agents/${id}/tune`);
   };
 
   const handleInterview = (id: string) => {
@@ -354,6 +354,7 @@ export function AgentListPage() {
 
                   {activeTab === 'allocated' && (
                     <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                      {/*}
                       <Button
                         variant="secondary"
                         onClick={() => handleTune(agent.id)}
@@ -361,6 +362,7 @@ export function AgentListPage() {
                       >
                         {t('agents.actions.tune')}
                       </Button>
+                      */}
                       <Button
                         variant="secondary"
                         onClick={() => handleUnallocate(agent.id)}

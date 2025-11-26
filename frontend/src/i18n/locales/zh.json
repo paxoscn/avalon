@@ -126,6 +126,23 @@
     "success": {
       "created": "数字人创建成功",
       "updated": "数字人更新成功"
+    },
+    "tune": {
+      "title": "调优数字人",
+      "description": "为数字人添加额外的要求和指令",
+      "agentInfo": "数字人信息",
+      "createdAt": "创建时间",
+      "currentPrompt": "当前系统提示词",
+      "additionalRequirements": "附加要求",
+      "requirementsDescription": "输入您希望数字人遵循的额外要求或指令，这些内容将追加到现有的系统提示词后面。",
+      "requirementsPlaceholder": "例如：\n- 回答时请使用更专业的术语\n- 对技术问题提供详细的代码示例\n- 保持友好和耐心的语气",
+      "preview": "实时预览",
+      "previewDescription": "查看调优后的效果",
+      "saveChanges": "保存调优",
+      "saving": "保存中...",
+      "success": "数字人调优成功",
+      "saveFailed": "保存调优失败",
+      "requirementsRequired": "请输入附加要求"
     }
   },
   "language": {

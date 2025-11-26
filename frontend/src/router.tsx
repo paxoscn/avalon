@@ -21,6 +21,7 @@ import { VectorConfigDetailPage } from './pages/VectorConfigDetailPage';
 import { VectorConfigTestPage } from './pages/VectorConfigTestPage';
 import { AgentListPage } from './pages/AgentListPage';
 import { AgentDetailPage } from './pages/AgentDetailPage';
+import { AgentTunePage } from './pages/AgentTunePage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { AuditLogDetailPage } from './pages/AuditLogDetailPage';
 import { ExecutionHistoryPage } from './pages/ExecutionHistoryPage';
@@ -120,6 +121,10 @@ export const router = createBrowserRouter([
       {
         path: 'agents/:id',
         element: <AgentDetailPage />,
+      },
+      {
+        path: 'agents/:id/tune',
+        element: <AgentTunePage />,
       },
       {
         path: 'audit/logs',

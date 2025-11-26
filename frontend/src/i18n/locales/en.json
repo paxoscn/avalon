@@ -126,6 +126,23 @@
     "success": {
       "created": "Agent created successfully",
       "updated": "Agent updated successfully"
+    },
+    "tune": {
+      "title": "Tune Agent",
+      "description": "Add additional requirements and instructions for the agent",
+      "agentInfo": "Agent Information",
+      "createdAt": "Created At",
+      "currentPrompt": "Current System Prompt",
+      "additionalRequirements": "Additional Requirements",
+      "requirementsDescription": "Enter additional requirements or instructions you want the agent to follow. These will be appended to the existing system prompt.",
+      "requirementsPlaceholder": "For example:\n- Use more professional terminology in responses\n- Provide detailed code examples for technical questions\n- Maintain a friendly and patient tone",
+      "preview": "Live Preview",
+      "previewDescription": "View the tuned effect",
+      "saveChanges": "Save Tuning",
+      "saving": "Saving...",
+      "success": "Agent tuned successfully",
+      "saveFailed": "Failed to save tuning",
+      "requirementsRequired": "Please enter additional requirements"
     }
   },
   "language": {
