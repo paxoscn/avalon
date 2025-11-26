@@ -3,7 +3,7 @@
 
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 use std::time::{Duration, Instant};
-use tracing::{info, warn};
+use log::{info, warn};
 
 pub struct QueryOptimizer {
     db: DatabaseConnection,

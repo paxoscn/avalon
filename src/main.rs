@@ -5,8 +5,8 @@ mod application;
 mod infrastructure;
 mod presentation;
 
+use tklog::LOG;
 use std::sync::Arc;
-use tracing_subscriber;
 use crate::config::AppConfig;
 use crate::infrastructure::database::Database;
 use crate::infrastructure::cache::RedisCache;
@@ -14,11 +14,7 @@ use crate::presentation::server::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG) // 设置日志级别为 DEBUG
-        .with_test_writer() // 使用测试写入器
-        .init();
+    LOG.uselog();
     // tracing_subscriber::fmt::init();
 
     // Load configuration

@@ -4,7 +4,7 @@ use crate::error::{PlatformError, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, warn, error};
+use log::{info, warn, error};
 
 /// Configuration for LLM service factory
 #[derive(Debug, Clone)]

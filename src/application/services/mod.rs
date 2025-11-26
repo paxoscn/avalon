@@ -14,6 +14,8 @@ pub mod execution_history_application_service;
 pub mod flow_application_service;
 pub mod agent_application_service;
 pub mod file_service;
+pub mod api_key_application_service;
+pub mod mcp_server_application_service;
 
 #[cfg(test)]
 pub mod integrated_llm_service_test;
@@ -29,6 +31,9 @@ pub mod vector_storage_application_service_test;
 
 #[cfg(test)]
 pub mod mcp_application_service_test;
+
+#[cfg(test)]
+pub mod mcp_server_application_service_test;
 
 pub use auth_application_service::*;
 pub use llm_application_service::*;
@@ -46,3 +51,5 @@ pub use execution_history_application_service::*;
 pub use flow_application_service::*;
 pub use agent_application_service::*;
 pub use file_service::*;
+pub use api_key_application_service::*;
+pub use mcp_server_application_service::*;

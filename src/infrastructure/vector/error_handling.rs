@@ -56,7 +56,7 @@ impl VectorRetryWrapper {
                         return Err(error);
                     }
                     
-                    tracing::warn!(
+                    log::warn!(
                         "Vector operation attempt {} failed: {}, retrying in {:?}",
                         attempt, error_msg, delay
                     );

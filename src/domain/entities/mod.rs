@@ -10,6 +10,7 @@ pub mod audit_log;
 pub mod execution_history;
 pub mod agent;
 pub mod agent_allocation;
+mod api_key;
 
 pub use user::*;
 pub use tenant::*;
@@ -23,3 +24,4 @@ pub use audit_log::*;
 pub use execution_history::*;
 pub use agent::*;
 pub use agent_allocation::*;
+pub use api_key::APIKey;

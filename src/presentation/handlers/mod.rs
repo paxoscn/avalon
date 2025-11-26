@@ -11,6 +11,8 @@ pub mod session_audit_handlers;
 pub mod health_handlers;
 pub mod agent_handlers;
 pub mod file_handlers;
+pub mod api_key_handlers;
+pub mod counter;
 
 #[cfg(test)]
 mod auth_handlers_test;
@@ -25,3 +27,4 @@ pub use config_handlers::*;
 pub use session_audit_handlers::*;
 pub use health_handlers::*;
 pub use agent_handlers::*;
+pub use counter::*;

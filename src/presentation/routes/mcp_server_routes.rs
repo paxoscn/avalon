@@ -4,9 +4,11 @@ use axum::{
 };
 use std::sync::Arc;
 
+use rmcp::transport::StreamableHttpService;
+
 use crate::{
     infrastructure::mcp::mcp_server_handler::MCPServerHandler,
-    presentation::handlers::mcp_server_handlers,
+    presentation::handlers::{mcp_server_handlers, Counter},
 };
 
 /// 创建MCP Server协议路由
@@ -20,11 +22,10 @@ pub fn create_mcp_server_routes() -> Router<Arc<MCPServerHandler>> {
 
 /// 创建完整的MCP Server API路由
 pub fn create_mcp_server_api_routes(
-    mcp_server_handler: Arc<MCPServerHandler>,
+    streamable_http_service: StreamableHttpService<Counter>,
 ) -> Router {
     Router::new()
-        .nest("/mcp/server", create_mcp_server_routes())
-        .with_state(mcp_server_handler)
+        .nest_service("/mcp", streamable_http_service)
 }
 
 #[cfg(test)]

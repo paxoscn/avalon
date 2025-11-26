@@ -227,11 +227,11 @@ impl SessionApplicationService {
                 match self.cleanup_expired_sessions().await {
                     Ok(count) => {
                         if count > 0 {
-                            tracing::info!("Cleaned up {} expired sessions", count);
+                            log::info!("Cleaned up {} expired sessions", count);
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Failed to cleanup expired sessions: {}", e);
+                        log::error!("Failed to cleanup expired sessions: {}", e);
                     }
                 }
             }

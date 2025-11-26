@@ -76,6 +76,7 @@ Access the application:
 ```bash
 # Install dependencies
 cargo build
+cargo build --release --target x86_64-unknown-linux-musl
 
 # Set up environment
 cp .env.example .env

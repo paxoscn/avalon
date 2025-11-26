@@ -8,6 +8,7 @@ pub mod session_audit_routes;
 pub mod vector_config_routes;
 pub mod vector_storage_routes;
 pub mod file_routes;
+pub mod api_key_routes;
 
 pub use auth_routes::*;
 
@@ -21,3 +22,4 @@ pub use session_audit_routes::{audit_routes, execution_history_routes, session_r
 pub use vector_config_routes::create_vector_config_routes;
 pub use vector_storage_routes::create_vector_storage_routes;
 pub use file_routes::file_routes;
+pub use api_key_routes::api_key_routes;

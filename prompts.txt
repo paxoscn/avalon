@@ -134,3 +134,16 @@ structured_output:
   }
 }
 ```
+
+---
+
+增加API KEY实体, 用于对各种资源如Agent, Flow, MCP工具, 知识库的访问进行限制. API KEY可配置可访问指定的资源类型和资源ID, 用户可以申请API KEY, API KEY可以过期或禁用.
+使用rmcp实现MCP Server, 提供工具列表和工具调用能力. 要通过API KEY进行认证.
+
+---
+
+write a rust document about how to convert text to vector using embeding model and save into or search from postgresql with vector plugin
+
+---
+
+write a rust document about how to talk to llm

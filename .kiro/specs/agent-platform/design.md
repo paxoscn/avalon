@@ -731,7 +731,7 @@ where
             Ok(result) => return Ok(result),
             Err(e) if attempt == config.max_attempts => return Err(e),
             Err(e) => {
-                tracing::warn!("Attempt {} failed: {:?}, retrying in {:?}", attempt, e, delay);
+                log::warn!("Attempt {} failed: {:?}, retrying in {:?}", attempt, e, delay);
                 tokio::time::sleep(delay).await;
                 delay = std::cmp::min(
                     Duration::from_millis((delay.as_millis() as f64 * config.backoff_multiplier) as u64),

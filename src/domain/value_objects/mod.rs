@@ -5,6 +5,7 @@ pub mod chat_message;
 pub mod tool_config;
 pub mod auth;
 pub mod vector_storage;
+mod api_key;
 
 pub use ids::*;
 pub use flow_definition::*;
@@ -13,6 +14,7 @@ pub use chat_message::*;
 pub use tool_config::*;
 pub use auth::*;
 pub use vector_storage::*;
+pub use api_key::{APIKeyToken, PermissionScope, ResourceType};
 
 use serde::{Deserialize, Serialize};
 

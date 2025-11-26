@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use log::{info, warn, error};
 use uuid::Uuid;
 
 /// Load balancing strategy for multiple providers

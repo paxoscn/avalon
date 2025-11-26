@@ -210,7 +210,7 @@ impl AuthenticationDomainService for AuthenticationDomainServiceImpl {
 
         // TODO: Store revoked token ID in Redis or database
         // For now, this is a placeholder implementation
-        tracing::info!("Token {} revoked", claims.claims.jti);
+        log::info!("Token {} revoked", claims.claims.jti);
 
         Ok(())
     }

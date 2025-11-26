@@ -98,7 +98,7 @@ pub async fn rate_limit_middleware(
             }
         }
         Err(e) => {
-            tracing::error!("Rate limit check failed: {}", e);
+            log::error!("Rate limit check failed: {}", e);
             // On error, allow the request (fail open)
             next.run(req).await
         }

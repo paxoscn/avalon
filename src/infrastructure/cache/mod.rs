@@ -5,128 +5,137 @@ use crate::error::Result;
 use uuid::Uuid;
 
 pub struct RedisCache {
-    client: Client,
 }
 
 impl RedisCache {
     pub async fn new(redis_url: &str) -> Result<Self> {
-        let client = Client::open(redis_url)?;
-        
-        // Test connection
-        let mut conn = client.get_async_connection().await?;
-        redis::cmd("PING").query_async::<_, String>(&mut conn).await?;
-        
-        Ok(RedisCache { client })
-    }
-    
-    pub async fn get<T>(&self, key: &str) -> Result<Option<T>>
-    where
-        T: for<'de> Deserialize<'de>,
-    {
-        let mut conn = self.client.get_async_connection().await?;
-        let value: Option<String> = redis::cmd("GET")
-            .arg(key)
-            .query_async(&mut conn)
-            .await?;
-            
-        match value {
-            Some(json_str) => {
-                let deserialized = serde_json::from_str(&json_str)?;
-                Ok(Some(deserialized))
-            }
-            None => Ok(None),
-        }
-    }
-    
-    pub async fn set<T>(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<()>
-    where
-        T: Serialize,
-    {
-        let mut conn = self.client.get_async_connection().await?;
-        let json_str = serde_json::to_string(value)?;
-        
-        match ttl {
-            Some(duration) => {
-                redis::cmd("SETEX")
-                    .arg(key)
-                    .arg(duration.as_secs())
-                    .arg(json_str)
-                    .query_async::<_, ()>(&mut conn)
-                    .await?;
-            }
-            None => {
-                redis::cmd("SET")
-                    .arg(key)
-                    .arg(json_str)
-                    .query_async::<_, ()>(&mut conn)
-                    .await?;
-            }
-        }
-        
-        Ok(())
-    }
-    
-    pub async fn delete(&self, key: &str) -> Result<()> {
-        let mut conn = self.client.get_async_connection().await?;
-        redis::cmd("DEL")
-            .arg(key)
-            .query_async::<_, ()>(&mut conn)
-            .await?;
-        Ok(())
-    }
-
-    // Requirement 2.3, 6.3, 7.3: Cache invalidation patterns
-    pub async fn invalidate_pattern(&self, pattern: &str) -> Result<()> {
-        let mut conn = self.client.get_async_connection().await?;
-        let keys: Vec<String> = redis::cmd("KEYS")
-            .arg(pattern)
-            .query_async(&mut conn)
-            .await?;
-        
-        if !keys.is_empty() {
-            redis::cmd("DEL")
-                .arg(&keys)
-                .query_async::<_, ()>(&mut conn)
-                .await?;
-        }
-        
-        Ok(())
-    }
-
-    pub async fn exists(&self, key: &str) -> Result<bool> {
-        let mut conn = self.client.get_async_connection().await?;
-        let exists: bool = redis::cmd("EXISTS")
-            .arg(key)
-            .query_async(&mut conn)
-            .await?;
-        Ok(exists)
-    }
-
-    // Cache key builders for consistent naming
-    pub fn flow_key(tenant_id: &Uuid, flow_id: &Uuid) -> String {
-        format!("flow:{}:{}", tenant_id, flow_id)
-    }
-
-    pub fn flow_list_key(tenant_id: &Uuid, page: u64, limit: u64) -> String {
-        format!("flows:{}:{}:{}", tenant_id, page, limit)
-    }
-
-    pub fn llm_config_key(tenant_id: &Uuid, config_id: &Uuid) -> String {
-        format!("llm_config:{}:{}", tenant_id, config_id)
-    }
-
-    pub fn vector_config_key(tenant_id: &Uuid, config_id: &Uuid) -> String {
-        format!("vector_config:{}:{}", tenant_id, config_id)
-    }
-
-    pub fn session_key(session_id: &Uuid) -> String {
-        format!("session:{}", session_id)
-    }
-
-    pub fn mcp_tool_key(tenant_id: &Uuid, tool_id: &Uuid) -> String {
-        format!("mcp_tool:{}:{}", tenant_id, tool_id)
+        Ok(RedisCache {})
     }
 }
+
+// pub struct RedisCache {
+//     client: Client,
+// }
+
+// impl RedisCache {
+//     pub async fn new(redis_url: &str) -> Result<Self> {
+//         let client = Client::open(redis_url)?;
+        
+//         // Test connection
+//         let mut conn = client.get_async_connection().await?;
+//         redis::cmd("PING").query_async::<_, String>(&mut conn).await?;
+        
+//         Ok(RedisCache { client })
+//     }
+    
+//     pub async fn get<T>(&self, key: &str) -> Result<Option<T>>
+//     where
+//         T: for<'de> Deserialize<'de>,
+//     {
+//         let mut conn = self.client.get_async_connection().await?;
+//         let value: Option<String> = redis::cmd("GET")
+//             .arg(key)
+//             .query_async(&mut conn)
+//             .await?;
+            
+//         match value {
+//             Some(json_str) => {
+//                 let deserialized = serde_json::from_str(&json_str)?;
+//                 Ok(Some(deserialized))
+//             }
+//             None => Ok(None),
+//         }
+//     }
+    
+//     pub async fn set<T>(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<()>
+//     where
+//         T: Serialize,
+//     {
+//         let mut conn = self.client.get_async_connection().await?;
+//         let json_str = serde_json::to_string(value)?;
+        
+//         match ttl {
+//             Some(duration) => {
+//                 redis::cmd("SETEX")
+//                     .arg(key)
+//                     .arg(duration.as_secs())
+//                     .arg(json_str)
+//                     .query_async::<_, ()>(&mut conn)
+//                     .await?;
+//             }
+//             None => {
+//                 redis::cmd("SET")
+//                     .arg(key)
+//                     .arg(json_str)
+//                     .query_async::<_, ()>(&mut conn)
+//                     .await?;
+//             }
+//         }
+        
+//         Ok(())
+//     }
+    
+//     pub async fn delete(&self, key: &str) -> Result<()> {
+//         let mut conn = self.client.get_async_connection().await?;
+//         redis::cmd("DEL")
+//             .arg(key)
+//             .query_async::<_, ()>(&mut conn)
+//             .await?;
+//         Ok(())
+//     }
+
+//     // Requirement 2.3, 6.3, 7.3: Cache invalidation patterns
+//     pub async fn invalidate_pattern(&self, pattern: &str) -> Result<()> {
+//         let mut conn = self.client.get_async_connection().await?;
+//         let keys: Vec<String> = redis::cmd("KEYS")
+//             .arg(pattern)
+//             .query_async(&mut conn)
+//             .await?;
+        
+//         if !keys.is_empty() {
+//             redis::cmd("DEL")
+//                 .arg(&keys)
+//                 .query_async::<_, ()>(&mut conn)
+//                 .await?;
+//         }
+        
+//         Ok(())
+//     }
+
+//     pub async fn exists(&self, key: &str) -> Result<bool> {
+//         let mut conn = self.client.get_async_connection().await?;
+//         let exists: bool = redis::cmd("EXISTS")
+//             .arg(key)
+//             .query_async(&mut conn)
+//             .await?;
+//         Ok(exists)
+//     }
+
+//     // Cache key builders for consistent naming
+//     pub fn flow_key(tenant_id: &Uuid, flow_id: &Uuid) -> String {
+//         format!("flow:{}:{}", tenant_id, flow_id)
+//     }
+
+//     pub fn flow_list_key(tenant_id: &Uuid, page: u64, limit: u64) -> String {
+//         format!("flows:{}:{}:{}", tenant_id, page, limit)
+//     }
+
+//     pub fn llm_config_key(tenant_id: &Uuid, config_id: &Uuid) -> String {
+//         format!("llm_config:{}:{}", tenant_id, config_id)
+//     }
+
+//     pub fn vector_config_key(tenant_id: &Uuid, config_id: &Uuid) -> String {
+//         format!("vector_config:{}:{}", tenant_id, config_id)
+//     }
+
+//     pub fn session_key(session_id: &Uuid) -> String {
+//         format!("session:{}", session_id)
+//     }
+
+//     pub fn mcp_tool_key(tenant_id: &Uuid, tool_id: &Uuid) -> String {
+//         format!("mcp_tool:{}:{}", tenant_id, tool_id)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

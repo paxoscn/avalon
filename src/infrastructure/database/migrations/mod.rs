@@ -16,3 +16,4 @@ pub mod m20231201_000015_create_agent_employments;
 pub mod m20241027_000001_add_greeting_to_agents;
 pub mod m20241027_000002_create_agent_allocations;
 pub mod m20241027_000003_refactor_agent;
+pub mod m20241120_000001_create_api_keys;

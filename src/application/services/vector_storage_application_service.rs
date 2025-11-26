@@ -217,13 +217,13 @@ impl VectorStorageApplicationService {
                             results.insert(config.name, store_results);
                         }
                         Err(e) => {
-                            tracing::warn!("Failed to search in store '{}': {}", config.name, e);
+                            log::warn!("Failed to search in store '{}': {}", config.name, e);
                             // Continue with other stores
                         }
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to get store '{}': {}", config.name, e);
+                    log::warn!("Failed to get store '{}': {}", config.name, e);
                     // Continue with other stores
                 }
             }

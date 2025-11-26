@@ -10,10 +10,12 @@ use crate::{
     presentation::{
         middleware::auth_middleware,
         routes::{
-            agent_routes, audit_routes, create_app_router, create_mcp_api_routes,
+            agent_routes, api_key_routes, audit_routes, create_app_router, create_mcp_api_routes,
+            create_mcp_server_api_routes,
             execution_history_routes, file_routes, flow_routes, llm_config_routes, session_routes,
             vector_config_routes,
         },
+        handlers::Counter,
     },
 };
 use axum::{middleware, Router};
@@ -22,6 +24,8 @@ use tower_http::{
     cors::{Any, CorsLayer},
     services::fs::ServeDir,
 };
+use rmcp::transport::StreamableHttpService;
+use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 
 pub struct Server {
     config: AppConfig,
@@ -43,7 +47,7 @@ impl Server {
         let app = self.create_app();
 
         let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
-        tracing::info!("Starting server on {}", addr);
+        log::info!("Starting server on {}", addr);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.map_err(|e| {
             crate::error::PlatformError::InternalError(format!("Failed to bind to {}: {}", addr, e))
@@ -84,6 +88,7 @@ impl Server {
         let agent_allocation_repository = Arc::new(AgentAllocationRepositoryImpl::new(
             self.database.connection(),
         ));
+        let api_key_repository = Arc::new(APIKeyRepositoryImpl::new(self.database.connection()));
 
         let vector_store_registry = Arc::new(VectorStoreRegistry::new());
         let llm_provider_registry = Arc::new(LLMProviderRegistry::new());
@@ -107,6 +112,8 @@ impl Server {
             Arc::new(SessionDomainService::new(30));
         let audit_domain_service: Arc<dyn AuditService> =
             Arc::new(AuditServiceImpl::new(audit_repository));
+        let api_key_domain_service: Arc<dyn APIKeyService> =
+            Arc::new(APIKeyDomainService::new(api_key_repository.clone()));
 
         let execution_engine = ExecutionEngineFactory::create_with_services(
             llm_domain_service.clone(),
@@ -156,6 +163,19 @@ impl Server {
             mcp_proxy_service,
         ));
 
+        let mcp_proxy_service = Arc::new(MCPProxyServiceImpl::new());
+
+        let mcp_server_service: Arc<dyn MCPServerApplicationService> = Arc::new(MCPServerApplicationServiceImpl::new(
+            mcp_tool_repository.clone(),
+            mcp_proxy_service,
+        ));
+
+        let streamable_http_service = StreamableHttpService::new(
+            || Ok(Counter::new()),
+            LocalSessionManager::default().into(),
+            Default::default(),
+        );
+
         let session_service = Arc::new(SessionApplicationService::new(
             session_repository,
             message_repository,
@@ -163,6 +183,12 @@ impl Server {
         ));
 
         let audit_service = Arc::new(AuditApplicationService::new(audit_domain_service));
+
+        let api_key_service = Arc::new(APIKeyApplicationService::new(
+            api_key_domain_service,
+            api_key_repository,
+            audit_service.clone(),
+        ));
 
         let execution_history_service = Arc::new(ExecutionHistoryServiceImpl::new(
             execution_history_repository,
@@ -222,10 +248,14 @@ impl Server {
                     .merge(create_mcp_api_routes(mcp_service))
                     // File upload routes
                     .merge(file_routes(file_service))
+                    // API key management routes
+                    .merge(api_key_routes(api_key_service))
                     .route_layer(middleware::from_fn_with_state(
                         auth_service.clone(),
                         auth_middleware,
-                    )),
+                    ))
+                    // MCP server routes
+                    .merge(create_mcp_server_api_routes(streamable_http_service)),
             )
             // Serve uploaded files (no auth required for downloads)
             .nest_service("/files", ServeDir::new("/tmp/uploads"));

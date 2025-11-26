@@ -12,7 +12,7 @@ use futures::Stream;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, warn, error};
+use log::{info, warn, error};
 
 /// Comprehensive LLM integration service that coordinates all LLM operations
 /// This service acts as the main entry point for all LLM-related functionality

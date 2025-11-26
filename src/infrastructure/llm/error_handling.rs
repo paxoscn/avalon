@@ -65,7 +65,7 @@ impl RetryWrapper {
                         break;
                     }
 
-                    tracing::warn!(
+                    log::warn!(
                         "LLM operation failed on attempt {}/{}: {}. Retrying in {:?}",
                         attempt,
                         self.config.max_attempts,
