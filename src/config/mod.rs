@@ -10,6 +10,17 @@ pub struct AppConfig {
     pub bcrypt_cost: u32,
     pub cors: CorsConfig,
     pub downloading_base_url: String,
+    pub oss: OssConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct OssConfig {
+    pub endpoint: String,
+    pub access_key_id: String,
+    pub access_key_secret: String,
+    pub bucket: String,
+    pub upload_path: String,
+    pub download_domain: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -66,6 +77,20 @@ impl AppConfig {
         let downloading_base_url = env::var("APP_DOWNLOADING_BASE_URL")
             .unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
 
+        // OSS configuration
+        let oss_endpoint = env::var("OSS_ENDPOINT")
+            .unwrap_or_else(|_| "oss-cn-beijing.aliyuncs.com".to_string());
+        let oss_access_key_id = env::var("OSS_ACCESS_KEY_ID")
+            .unwrap_or_else(|_| String::new());
+        let oss_access_key_secret = env::var("OSS_ACCESS_KEY_SECRET")
+            .unwrap_or_else(|_| String::new());
+        let oss_bucket = env::var("OSS_BUCKET")
+            .unwrap_or_else(|_| "my-bucket".to_string());
+        let oss_upload_path = env::var("OSS_UPLOAD_PATH")
+            .unwrap_or_else(|_| "uploads".to_string());
+        let oss_download_domain = env::var("OSS_DOWNLOAD_DOMAIN")
+            .unwrap_or_else(|_| format!("https://{}.{}", oss_bucket, oss_endpoint));
+
         Ok(AppConfig {
             server: ServerConfig { host, port },
             database_url,
@@ -77,6 +102,14 @@ impl AppConfig {
                 allow_all_localhost,
             },
             downloading_base_url,
+            oss: OssConfig {
+                endpoint: oss_endpoint,
+                access_key_id: oss_access_key_id,
+                access_key_secret: oss_access_key_secret,
+                bucket: oss_bucket,
+                upload_path: oss_upload_path,
+                download_domain: oss_download_domain,
+            },
         })
     }
 }

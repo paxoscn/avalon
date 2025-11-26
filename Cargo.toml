@@ -82,6 +82,9 @@ rmcp = { version = "0.8.0", features = [
     "schemars",
 ] }
 
+# Aliyun OSS
+aliyun-oss-client = "0.11"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockall = "0.12"

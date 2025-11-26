@@ -1,7 +1,7 @@
 use crate::{
     application::services::*,
     config::AppConfig,
-    domain::services::*,
+    domain::{repositories::FileRepository, services::*},
     error::Result,
     infrastructure::{
         llm::LLMProviderRegistry, mcp::MCPProxyServiceImpl, repositories::*,
@@ -211,15 +211,11 @@ impl Server {
             .with_llm_service(llm_domain_service.clone())
             .with_llm_config_repo(llm_config_repository.clone()));
 
-        // Create file repository and service
-        let file_repository = Arc::new(FileRepositoryImpl::new(
-            std::path::PathBuf::from("/tmp/uploads"),
-            // format!(
-            //     "http://{}:{}",
-            //     self.config.server.host, self.config.server.port
-            // ),
-            self.config.downloading_base_url.clone(),
-        ));
+        // Create file repository and service (using OSS)
+        let file_repository: Arc<dyn FileRepository> = Arc::new(
+            OssFileRepositoryImpl::new(self.config.oss.clone())
+                .expect("Failed to initialize OSS client")
+        );
         let file_service: Arc<dyn FileApplicationService> =
             Arc::new(FileApplicationServiceImpl::new(file_repository));
 
