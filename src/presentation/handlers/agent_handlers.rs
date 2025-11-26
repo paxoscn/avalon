@@ -17,7 +17,7 @@ use crate::{
     presentation::extractors::AuthenticatedUser,
 };
 
-use crate::application::dto::agent_dto::AgentChatRequest;
+use crate::application::dto::agent_dto::{AgentChatRequest, CompleteInterviewRequest};
 
 // ============================================================================
 // CRUD Handlers
@@ -330,4 +330,40 @@ pub async fn get_agent_usage_stats(
     ).await?;
 
     Ok(Json(response))
+}
+
+// ============================================================================
+// Interview Handlers
+// ============================================================================
+
+/// Start an interview with an agent
+pub async fn start_interview(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    service.start_interview(
+        AgentId::from_uuid(agent_id),
+        user.user_id,
+        user.tenant_id,
+    ).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Complete an interview (pass or fail)
+pub async fn complete_interview(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+    Json(req): Json<CompleteInterviewRequest>,
+) -> Result<impl IntoResponse> {
+    service.complete_interview(
+        AgentId::from_uuid(agent_id),
+        user.user_id,
+        user.tenant_id,
+        req.passed,
+    ).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

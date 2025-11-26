@@ -146,6 +146,12 @@ pub trait AgentApplicationService: Send + Sync {
         query: AgentUsageStatsQuery,
         user_id: UserId,
     ) -> Result<AgentUsageStatsResponse>;
+
+    /// Start an interview with an agent
+    async fn start_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<()>;
+
+    /// Complete an interview (pass or fail)
+    async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()>;
 }
 
 /// Agent application service implementation
@@ -160,6 +166,7 @@ pub struct AgentApplicationServiceImpl {
     llm_service: Option<Arc<dyn crate::domain::services::llm_service::LLMDomainService>>,
     llm_config_repo: Option<Arc<dyn crate::domain::repositories::LLMConfigRepository>>,
     db: Option<Arc<sea_orm::DatabaseConnection>>,
+    stats_service: Option<Arc<crate::domain::services::AgentStatsService>>,
 }
 
 impl AgentApplicationServiceImpl {
@@ -182,6 +189,7 @@ impl AgentApplicationServiceImpl {
             llm_service: None,
             llm_config_repo: None,
             db: None,
+            stats_service: None,
         }
     }
 
@@ -206,6 +214,12 @@ impl AgentApplicationServiceImpl {
     /// Set database connection for statistics queries
     pub fn with_db(mut self, db: Arc<sea_orm::DatabaseConnection>) -> Self {
         self.db = Some(db);
+        self
+    }
+
+    /// Set stats service for usage tracking
+    pub fn with_stats_service(mut self, stats_service: Arc<crate::domain::services::AgentStatsService>) -> Self {
+        self.stats_service = Some(stats_service);
         self
     }
 
@@ -658,6 +672,11 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         // Save the employed agent
         self.agent_repo.save(&employed_agent).await?;
 
+        // Record employment statistics
+        if let Some(stats_service) = &self.stats_service {
+            let _ = stats_service.record_employment(agent_id, source_agent.tenant_id).await;
+        }
+
         Ok(self.agent_to_dto(&employed_agent))
     }
 
@@ -985,6 +1004,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let session_service = self.session_service.as_ref()
             .ok_or_else(|| PlatformError::InternalError("Session service not configured".to_string()))?;
 
+        let is_new_session = session_id.is_none();
         let session_id = match session_id {
             Some(sid) => sid,
             None => {
@@ -992,6 +1012,12 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                 let session = session_service
                     .create_session(tenant_id, user_id, Some(format!("Chat with {}", agent.name)))
                     .await?;
+                
+                // Record new session statistics
+                if let Some(stats_service) = &self.stats_service {
+                    let _ = stats_service.record_session(agent_id, tenant_id).await;
+                }
+                
                 session.id
             }
         };
@@ -1077,6 +1103,14 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let assistant_message = session_service
             .add_message(&session_id, &tenant_id, &user_id, assistant_chat_message)
             .await?;
+
+        // Record message and token statistics
+        if let Some(stats_service) = &self.stats_service {
+            // Record 2 messages (user + assistant)
+            let _ = stats_service.record_messages(agent_id, tenant_id, 2).await;
+            // Record tokens used
+            let _ = stats_service.record_tokens(agent_id, tenant_id, response.usage.total_tokens as i64).await;
+        }
 
         Ok(crate::application::dto::agent_dto::AgentChatResponse {
             session_id: session_id.0,
@@ -1214,5 +1248,57 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             total_pages,
             summary,
         })
+    }
+
+    async fn start_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<()> {
+        // Verify agent exists
+        let agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify agent belongs to the same tenant
+        if agent.tenant_id != tenant_id {
+            return Err(PlatformError::AgentUnauthorized(
+                "Agent does not belong to your tenant".to_string(),
+            ));
+        }
+
+        // Record interview statistics
+        if let Some(stats_service) = &self.stats_service {
+            stats_service.record_interview(agent_id, tenant_id).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()> {
+        // Verify agent exists
+        let agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify agent belongs to the same tenant
+        if agent.tenant_id != tenant_id {
+            return Err(PlatformError::AgentUnauthorized(
+                "Agent does not belong to your tenant".to_string(),
+            ));
+        }
+
+        // Record interview passed statistics if passed
+        if passed {
+            if let Some(stats_service) = &self.stats_service {
+                stats_service.record_interview_passed(agent_id, tenant_id).await?;
+            }
+        }
+
+        Ok(())
     }
 }

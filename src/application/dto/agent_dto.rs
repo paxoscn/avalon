@@ -281,3 +281,9 @@ pub struct AgentUsageStatsResponse {
     pub total_pages: u64,
     pub summary: Option<AgentUsageStatsSummaryDto>,
 }
+
+/// Complete interview request DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompleteInterviewRequest {
+    pub passed: bool,
+}

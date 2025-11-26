@@ -12,6 +12,7 @@ pub mod session_service;
 pub mod audit_service;
 pub mod execution_history_service;
 pub mod api_key_service;
+pub mod agent_stats_service;
 
 #[cfg(test)]
 mod execution_engine_test;
@@ -33,3 +34,4 @@ pub use session_service::*;
 pub use audit_service::*;
 pub use execution_history_service::*;
 pub use api_key_service::*;
+pub use agent_stats_service::*;

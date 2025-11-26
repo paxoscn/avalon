@@ -198,6 +198,11 @@ impl Server {
             ExecutionHistoryApplicationService::new(execution_history_service),
         );
 
+        // Create agent daily stats repository and service
+        let agent_daily_stats_repository: Arc<dyn crate::domain::repositories::AgentDailyStatsRepository> = 
+            Arc::new(AgentDailyStatsRepositoryImpl::new(self.database.connection()));
+        let agent_stats_service = Arc::new(AgentStatsService::new(agent_daily_stats_repository));
+
         let agent_service: Arc<dyn AgentApplicationService> =
             Arc::new(AgentApplicationServiceImpl::new(
                 agent_repository,
@@ -210,7 +215,8 @@ impl Server {
             .with_session_service(session_service.clone())
             .with_llm_service(llm_domain_service.clone())
             .with_llm_config_repo(llm_config_repository.clone())
-            .with_db(self.database.connection()));
+            .with_db(self.database.connection())
+            .with_stats_service(agent_stats_service));
 
         // Create file repository and service (using OSS)
         let file_repository: Arc<dyn FileRepository> = Arc::new(
