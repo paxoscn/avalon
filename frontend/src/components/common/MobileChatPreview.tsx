@@ -197,9 +197,17 @@ export function MobileChatPreview({
         
         {messages.length === 0 && (
           <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white text-2xl font-bold mb-3">
-              {agentName.charAt(0).toUpperCase()}
-            </div>
+            {agentAvatar ? (
+              <img
+                src={agentAvatar}
+                alt={agentName}
+                className="inline-flex w-16 h-16 rounded-full items-center justify-center object-cover border-2 border-white"
+              />
+            ) : (
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white text-2xl font-bold mb-3">
+                {agentName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <h4 className="text-lg font-semibold text-gray-900 mb-2">开始对话</h4>
             <p className="text-sm text-gray-500 mb-4">
               {greeting || systemPrompt || `我是 ${agentName}，很高兴为您服务`}
