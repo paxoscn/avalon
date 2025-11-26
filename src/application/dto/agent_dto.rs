@@ -230,6 +230,20 @@ pub struct AgentChatRequest {
     pub stream: Option<bool>,
 }
 
+/// Agent chat stream chunk DTO (for SSE)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentChatStreamChunk {
+    #[serde(rename = "type")]
+    pub chunk_type: String,
+    pub content: Option<String>,
+    pub session_id: Option<Uuid>,
+    pub message_id: Option<Uuid>,
+    pub reply_id: Option<Uuid>,
+    pub metadata: Option<serde_json::Value>,
+    pub finish_reason: Option<String>,
+    pub error: Option<String>,
+}
+
 /// Agent chat response DTO
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentChatResponse {

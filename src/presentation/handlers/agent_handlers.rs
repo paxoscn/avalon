@@ -312,6 +312,58 @@ pub async fn chat_with_agent(
     Ok((StatusCode::OK, Json(response)))
 }
 
+/// Chat with an agent (SSE streaming)
+pub async fn chat_with_agent_stream(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+    Json(req): Json<AgentChatRequest>,
+) -> Result<impl IntoResponse> {
+    use axum::response::sse::{Event, Sse};
+    use futures::stream::StreamExt;
+
+    let session_id = req.session_id.map(crate::domain::value_objects::SessionId);
+    
+    let stream = service.chat_stream(
+        AgentId::from_uuid(agent_id),
+        req.message,
+        session_id,
+        user.user_id,
+        user.tenant_id,
+    ).await?;
+
+    // Transform the stream into SSE events
+    let sse_stream = stream.map(|chunk_result| {
+        let event = match chunk_result {
+            Ok(chunk) => {
+                let json = serde_json::to_string(&chunk).unwrap_or_else(|_| "{}".to_string());
+                Event::default().data(json)
+            }
+            Err(e) => {
+                let error_chunk = crate::application::dto::agent_dto::AgentChatStreamChunk {
+                    chunk_type: "error".to_string(),
+                    content: None,
+                    session_id: None,
+                    message_id: None,
+                    reply_id: None,
+                    metadata: None,
+                    finish_reason: None,
+                    error: Some(format!("{}", e)),
+                };
+                let json = serde_json::to_string(&error_chunk).unwrap_or_else(|_| "{}".to_string());
+                Event::default().data(json)
+            }
+        };
+        Ok::<_, std::convert::Infallible>(event)
+    });
+
+    Ok(Sse::new(sse_stream).keep_alive(
+        axum::response::sse::KeepAlive::new()
+            .interval(std::time::Duration::from_secs(15))
+            .text("keep-alive")
+    ))
+}
+
 // ============================================================================
 // Statistics Handler
 // ============================================================================

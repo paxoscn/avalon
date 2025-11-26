@@ -139,6 +139,16 @@ pub trait AgentApplicationService: Send + Sync {
         tenant_id: TenantId,
     ) -> Result<crate::application::dto::agent_dto::AgentChatResponse>;
 
+    /// Chat with an agent (streaming)
+    async fn chat_stream(
+        &self,
+        agent_id: AgentId,
+        message: String,
+        session_id: Option<crate::domain::value_objects::SessionId>,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<Box<dyn futures::Stream<Item = Result<crate::application::dto::agent_dto::AgentChatStreamChunk>> + Send + Unpin>>;
+
     /// Get agent usage statistics
     async fn get_agent_usage_stats(
         &self,
@@ -1312,5 +1322,235 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         }
 
         Ok(())
+    }
+
+    async fn chat_stream(
+        &self,
+        agent_id: AgentId,
+        message: String,
+        session_id: Option<crate::domain::value_objects::SessionId>,
+        user_id: UserId,
+        tenant_id: TenantId,
+    ) -> Result<Box<dyn futures::Stream<Item = Result<crate::application::dto::agent_dto::AgentChatStreamChunk>> + Send + Unpin>> {
+        use crate::domain::value_objects::{ChatMessage, MessageRole};
+        use crate::domain::value_objects::chat_message::MessageMetadata;
+        use futures::StreamExt;
+
+        // Get the agent
+        let agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify agent belongs to the same tenant
+        if agent.tenant_id != tenant_id {
+            return Err(PlatformError::AgentUnauthorized(
+                "Agent does not belong to your tenant".to_string(),
+            ));
+        }
+
+        // Get or create session
+        let session_service = self.session_service.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("Session service not configured".to_string()))?
+            .clone();
+
+        let is_new_session = session_id.is_none();
+        let session_id = match session_id {
+            Some(sid) => sid,
+            None => {
+                // Create a new session
+                let session = session_service
+                    .create_session(tenant_id, user_id, Some(format!("Chat with {}", agent.name)))
+                    .await?;
+                
+                // Record new session statistics
+                if let Some(stats_service) = &self.stats_service {
+                    let _ = stats_service.record_session(agent_id, tenant_id).await;
+                }
+                
+                session.id
+            }
+        };
+
+        // Add user message to session
+        let user_metadata = MessageMetadata {
+            model_used: None,
+            tokens_used: None,
+            response_time_ms: None,
+            tool_calls: None,
+            custom_data: std::collections::HashMap::from([
+                ("agent_id".to_string(), serde_json::json!(agent_id.0.to_string())),
+                ("agent_name".to_string(), serde_json::json!(agent.name.clone())),
+            ]),
+        };
+
+        let user_chat_message = ChatMessage {
+            role: MessageRole::User,
+            content: crate::domain::value_objects::chat_message::MessageContent::Text(message.clone()),
+            metadata: Some(user_metadata),
+            timestamp: chrono::Utc::now(),
+        };
+
+        let user_message = session_service
+            .add_message(&session_id, &tenant_id, &user_id, user_chat_message)
+            .await?;
+
+        // Get LLM service and config
+        let llm_service = self.llm_service.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("LLM service not configured".to_string()))?
+            .clone();
+
+        let llm_config_repo = self.llm_config_repo.as_ref()
+            .ok_or_else(|| PlatformError::InternalError("LLM config repository not configured".to_string()))?
+            .clone();
+
+        // Get the first available LLM config for the tenant
+        let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
+        let llm_config = llm_configs.first()
+            .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?
+            .clone();
+
+        // Build conversation history
+        let mut messages = vec![
+            ChatMessage::new_system_message(agent.system_prompt.clone()),
+        ];
+
+        // Add greeting if this is the first message
+        if let Some(greeting) = &agent.greeting {
+            messages.push(ChatMessage::new_assistant_message(greeting.clone()));
+        }
+
+        // Add user message
+        messages.push(ChatMessage::new_user_message(message));
+
+        // Call LLM streaming
+        let stream = llm_service
+            .stream_chat_completion(
+                &llm_config.model_config,
+                messages,
+                tenant_id.0,
+            )
+            .await
+            .map_err(|e| PlatformError::InternalError(format!("LLM error: {}", e)))?;
+
+        // Transform the stream
+        let agent_id_clone = agent_id;
+        let agent_name = agent.name.clone();
+        let session_id_clone = session_id;
+        let user_message_id = user_message.id;
+        let session_service_clone = session_service.clone();
+        let tenant_id_clone = tenant_id;
+        let user_id_clone = user_id;
+        let stats_service = self.stats_service.clone();
+
+        let mut accumulated_content = String::new();
+        let mut total_tokens = 0u32;
+        let mut model_used = String::new();
+        let mut reply_message_id: Option<crate::domain::value_objects::MessageId> = None;
+
+        let transformed_stream = stream.then(move |chunk_result| {
+            let session_service = session_service_clone.clone();
+            let agent_name = agent_name.clone();
+            let stats_service = stats_service.clone();
+            let mut accumulated_content = accumulated_content.clone();
+            let mut model_used = model_used.clone();
+            
+            async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        // Accumulate content
+                        if let Some(content) = &chunk.content {
+                            accumulated_content.push_str(content);
+                        }
+
+                        // Update usage info
+                        if let Some(usage) = &chunk.usage {
+                            total_tokens = usage.total_tokens;
+                        }
+
+                        // Check if this is the final chunk
+                        if let Some(finish_reason) = &chunk.finish_reason {
+                            // Save the complete assistant message
+                            let assistant_metadata = MessageMetadata {
+                                model_used: Some(model_used.clone()),
+                                tokens_used: Some(total_tokens),
+                                response_time_ms: None,
+                                tool_calls: None,
+                                custom_data: std::collections::HashMap::from([
+                                    ("agent_id".to_string(), serde_json::json!(agent_id_clone.0.to_string())),
+                                    ("agent_name".to_string(), serde_json::json!(agent_name.clone())),
+                                ]),
+                            };
+
+                            let assistant_chat_message = ChatMessage {
+                                role: MessageRole::Assistant,
+                                content: crate::domain::value_objects::chat_message::MessageContent::Text(accumulated_content.clone()),
+                                metadata: Some(assistant_metadata),
+                                timestamp: chrono::Utc::now(),
+                            };
+
+                            if let Ok(assistant_message) = session_service
+                                .add_message(&session_id_clone, &tenant_id_clone, &user_id_clone, assistant_chat_message)
+                                .await
+                            {
+                                reply_message_id = Some(assistant_message.id);
+
+                                // Record statistics
+                                if let Some(stats_svc) = &stats_service {
+                                    let _ = stats_svc.record_messages(agent_id_clone, tenant_id_clone, 2).await;
+                                    let _ = stats_svc.record_tokens(agent_id_clone, tenant_id_clone, total_tokens as i64).await;
+                                }
+
+                                // Return final chunk with all IDs
+                                return Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
+                                    chunk_type: "done".to_string(),
+                                    content: None,
+                                    session_id: Some(session_id_clone.0),
+                                    message_id: Some(user_message_id.0),
+                                    reply_id: Some(assistant_message.id.0),
+                                    metadata: Some(serde_json::json!({
+                                        "model": model_used,
+                                        "tokens_used": total_tokens,
+                                        "finish_reason": format!("{:?}", finish_reason),
+                                    })),
+                                    finish_reason: Some(format!("{:?}", finish_reason)),
+                                    error: None,
+                                });
+                            }
+                        }
+
+                        // Return content chunk
+                        Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
+                            chunk_type: "content".to_string(),
+                            content: chunk.content,
+                            session_id: Some(session_id_clone.0),
+                            message_id: Some(user_message_id.0),
+                            reply_id: reply_message_id.map(|id| id.0),
+                            metadata: None,
+                            finish_reason: None,
+                            error: None,
+                        })
+                    }
+                    Err(e) => {
+                        // Return error chunk
+                        Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
+                            chunk_type: "error".to_string(),
+                            content: None,
+                            session_id: Some(session_id_clone.0),
+                            message_id: Some(user_message_id.0),
+                            reply_id: None,
+                            metadata: None,
+                            finish_reason: None,
+                            error: Some(format!("{}", e)),
+                        })
+                    }
+                }
+            }
+        });
+
+        Ok(Box::new(Box::pin(transformed_stream)))
     }
 }

@@ -37,6 +37,7 @@ pub fn agent_routes(service: Arc<dyn AgentApplicationService>) -> Router {
         
         // Chat
         .route("/agents/{agent_id}/chat", post(agent_handlers::chat_with_agent))
+        .route("/agents/{agent_id}/chat/stream", post(agent_handlers::chat_with_agent_stream))
         
         // Statistics
         .route("/agents/{agent_id}/stats", get(agent_handlers::get_agent_usage_stats))
