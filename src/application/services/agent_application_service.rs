@@ -162,6 +162,12 @@ pub trait AgentApplicationService: Send + Sync {
 
     /// Complete an interview (pass or fail)
     async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()>;
+
+    /// Publish an agent
+    async fn publish_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
+
+    /// Unpublish an agent
+    async fn unpublish_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
 }
 
 /// Agent application service implementation
@@ -258,6 +264,8 @@ impl AgentApplicationServiceImpl {
             creator_id: agent.creator_id.0,
             employer_id: agent.employer_id.map(|id| id.0),
             fired_at: agent.fired_at,
+            is_published: agent.is_published,
+            published_at: agent.published_at,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         }
@@ -303,6 +311,8 @@ impl AgentApplicationServiceImpl {
             is_creator: agent.is_creator(user_id),
             is_fired: agent.is_fired(),
             fired_at: agent.fired_at,
+            is_published: agent.is_published,
+            published_at: agent.published_at,
             created_at: agent.created_at,
         })
     }
@@ -415,6 +425,8 @@ impl AgentApplicationServiceImpl {
             is_creator: agent.is_creator(user_id),
             is_fired: agent.is_fired(),
             fired_at: agent.fired_at,
+            is_published: agent.is_published,
+            published_at: agent.published_at,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         })
@@ -560,18 +572,15 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let limit = params.get_limit();
         let offset = params.get_offset() as usize;
 
-        // Get all agents by tenant (filter by fired status)
-        let agents = if include_fired {
-            self.agent_repo.find_by_tenant(&tenant_id).await?
-        } else {
-            self.agent_repo.find_by_tenant_active(&tenant_id).await?
-        };
+        // Get published agents by tenant (only show published agents to other users)
+        let agents = self.agent_repo.find_by_tenant_published(&tenant_id).await?;
 
-        // Filter out employed agents (those with employer_id set)
-        let visible_agents: Vec<_> = agents
-            .into_iter()
-            .filter(|agent| agent.employer_id.is_none())
-            .collect();
+        // Filter by fired status if needed
+        let visible_agents: Vec<_> = if include_fired {
+            agents
+        } else {
+            agents.into_iter().filter(|agent| !agent.is_fired()).collect()
+        };
 
         let total = visible_agents.len() as u64;
 
@@ -1555,5 +1564,51 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         });
 
         Ok(Box::new(Box::pin(transformed_stream)))
+    }
+
+    async fn publish_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify permission - only creator can publish
+        self.verify_can_modify(&agent, &user_id).await?;
+
+        // Publish the agent
+        agent
+            .publish()
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
+
+        // Save the updated agent
+        self.agent_repo.save(&agent).await?;
+
+        Ok(())
+    }
+
+    async fn unpublish_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()> {
+        let mut agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Verify permission - only creator can unpublish
+        self.verify_can_modify(&agent, &user_id).await?;
+
+        // Unpublish the agent
+        agent
+            .unpublish()
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
+
+        // Save the updated agent
+        self.agent_repo.save(&agent).await?;
+
+        Ok(())
     }
 }

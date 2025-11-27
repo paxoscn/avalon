@@ -42,6 +42,8 @@ pub struct AgentDto {
     pub creator_id: Uuid,
     pub employer_id: Option<Uuid>,
     pub fired_at: Option<DateTime<Utc>>,
+    pub is_published: bool,
+    pub published_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -60,6 +62,8 @@ pub struct AgentCardDto {
     pub is_creator: bool,
     pub is_fired: bool,
     pub fired_at: Option<DateTime<Utc>>,
+    pub is_published: bool,
+    pub published_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -85,6 +89,8 @@ pub struct AgentDetailDto {
     pub is_creator: bool,
     pub is_fired: bool,
     pub fired_at: Option<DateTime<Utc>>,
+    pub is_published: bool,
+    pub published_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

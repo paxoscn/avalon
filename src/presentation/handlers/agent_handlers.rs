@@ -420,3 +420,27 @@ pub async fn complete_interview(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+// ============================================================================
+// Publish Handlers
+// ============================================================================
+
+/// Publish an agent
+pub async fn publish_agent(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    service.publish_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Unpublish an agent
+pub async fn unpublish_agent(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    service.unpublish_agent(AgentId::from_uuid(agent_id), user.user_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}

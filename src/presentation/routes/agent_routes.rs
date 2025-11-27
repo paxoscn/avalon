@@ -46,6 +46,10 @@ pub fn agent_routes(service: Arc<dyn AgentApplicationService>) -> Router {
         .route("/agents/{agent_id}/interview/start", post(agent_handlers::start_interview))
         .route("/agents/{agent_id}/interview/complete", post(agent_handlers::complete_interview))
         
+        // Publish
+        .route("/agents/{agent_id}/publish", post(agent_handlers::publish_agent))
+        .route("/agents/{agent_id}/unpublish", post(agent_handlers::unpublish_agent))
+        
         // Resource management - Knowledge Base
         .route(
             "/agents/{agent_id}/knowledge-bases/{config_id}",

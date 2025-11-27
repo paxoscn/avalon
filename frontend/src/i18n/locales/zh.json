@@ -64,7 +64,13 @@
       "interview": "面试",
       "employ": "雇佣",
       "allocate": "分配",
-      "stats": "用量统计"
+      "stats": "用量统计",
+      "publish": "发布",
+      "unpublish": "取消发布"
+    },
+    "status": {
+      "published": "已发布",
+      "draft": "未发布"
     },
     "confirmDelete": "确定要删除此数字人吗？",
     "confirmFire": "确定要解雇此数字人吗？",
@@ -129,7 +135,9 @@
       "updateFlowFailed": "更新工作流失败",
       "invalidImageType": "请上传图片文件",
       "imageTooLarge": "图片大小不能超过 5MB",
-      "uploadFailed": "上传失败"
+      "uploadFailed": "上传失败",
+      "publishFailed": "发布数字人失败",
+      "unpublishFailed": "取消发布数字人失败"
     },
     "success": {
       "created": "数字人创建成功",

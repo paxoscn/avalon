@@ -19,6 +19,8 @@ pub struct Agent {
     pub creator_id: UserId,
     pub employer_id: Option<UserId>,
     pub fired_at: Option<DateTime<Utc>>,
+    pub is_published: bool,
+    pub published_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -61,6 +63,8 @@ impl Agent {
             creator_id,
             employer_id: None,
             fired_at: None,
+            is_published: false,
+            published_at: None,
             created_at: now,
             updated_at: now,
         })
@@ -187,6 +191,8 @@ impl Agent {
             creator_id: new_creator_id,
             employer_id: None,
             fired_at: None,
+            is_published: false,
+            published_at: None,
             created_at: now,
             updated_at: now,
         }
@@ -211,6 +217,8 @@ impl Agent {
             creator_id: self.creator_id,
             employer_id: Some(employer_id),
             fired_at: None,
+            is_published: false,
+            published_at: None,
             created_at: now,
             updated_at: now,
         }
@@ -255,6 +263,28 @@ impl Agent {
             Some(employer) => employer == user_id,
             None => false,
         }
+    }
+
+    pub fn publish(&mut self) -> Result<(), String> {
+        if self.is_published {
+            return Err("Agent is already published".to_string());
+        }
+
+        self.is_published = true;
+        self.published_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+        Ok(())
+    }
+
+    pub fn unpublish(&mut self) -> Result<(), String> {
+        if !self.is_published {
+            return Err("Agent is not published".to_string());
+        }
+
+        self.is_published = false;
+        self.published_at = None;
+        self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn validate(&self) -> Result<(), String> {

@@ -47,6 +47,8 @@ impl AgentRepositoryImpl {
             creator_id: UserId::from_uuid(entity.creator_id),
             employer_id: entity.employer_id.map(UserId::from_uuid),
             fired_at: entity.fired_at,
+            is_published: entity.is_published,
+            published_at: entity.published_at,
             created_at: entity.created_at,
             updated_at: entity.updated_at,
         })
@@ -86,6 +88,8 @@ impl AgentRepositoryImpl {
             creator_id: Set(agent.creator_id.0),
             employer_id: Set(agent.employer_id.map(|id| id.0)),
             fired_at: Set(agent.fired_at),
+            is_published: Set(agent.is_published),
+            published_at: Set(agent.published_at),
             created_at: Set(agent.created_at),
             updated_at: Set(agent.updated_at),
         })
@@ -271,6 +275,22 @@ impl AgentRepository for AgentRepositoryImpl {
             .order_by_desc(entities::agent::Column::CreatedAt)
             .offset(offset)
             .limit(limit)
+            .all(self.db.as_ref())
+            .await?;
+
+        let mut result = Vec::new();
+        for entity in agents {
+            result.push(Self::entity_to_domain(entity)?);
+        }
+        Ok(result)
+    }
+
+    async fn find_by_tenant_published(&self, tenant_id: &TenantId) -> Result<Vec<Agent>> {
+        let agents = entities::agent::Entity::find()
+            .filter(entities::agent::Column::TenantId.eq(tenant_id.0))
+            .filter(entities::agent::Column::IsPublished.eq(true))
+            .filter(entities::agent::Column::EmployerId.is_null())
+            .order_by_desc(entities::agent::Column::CreatedAt)
             .all(self.db.as_ref())
             .await?;
 

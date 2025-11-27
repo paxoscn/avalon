@@ -135,6 +135,24 @@ export function AgentListPage() {
     navigate(`/agents/${id}/stats`);
   };
 
+  const handlePublish = async (id: string) => {
+    try {
+      await agentService.publishAgent(id);
+      await loadAgents();
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.publishFailed'));
+    }
+  };
+
+  const handleUnpublish = async (id: string) => {
+    try {
+      await agentService.unpublishAgent(id);
+      await loadAgents();
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.unpublishFailed'));
+    }
+  };
+
   if (loading && page === 1) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -294,6 +312,15 @@ export function AgentListPage() {
                         {agent.flow_ids.length} Flows
                       </span>
                     )}
+                    {agent.is_published ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded font-medium">
+                        {t('agents.status.published')}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                        {t('agents.status.draft')}
+                      </span>
+                    )}
                   </div>
 
                   {/* Action buttons based on active tab */}
@@ -314,6 +341,22 @@ export function AgentListPage() {
                         </Button>
                       </div>
                       <div className="flex items-center gap-2">
+                        {agent.is_published ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleUnpublish(agent.id)}
+                            className="flex-1"
+                          >
+                            {t('agents.actions.unpublish')}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handlePublish(agent.id)}
+                            className="flex-1"
+                          >
+                            {t('agents.actions.publish')}
+                          </Button>
+                        )}
                         <Button
                           variant="secondary"
                           onClick={() => handleViewStats(agent.id)}
@@ -321,6 +364,8 @@ export function AgentListPage() {
                         >
                           {t('agents.actions.stats')}
                         </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Button
                           variant="secondary"
                           onClick={() => handleDelete(agent.id)}

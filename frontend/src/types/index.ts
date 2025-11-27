@@ -241,6 +241,8 @@ export interface Agent {
   preset_questions: string[];
   source_agent_id?: string;
   creator_id: string;
+  is_published: boolean;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }

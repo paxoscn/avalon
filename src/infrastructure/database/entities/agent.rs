@@ -21,6 +21,8 @@ pub struct Model {
     pub creator_id: Uuid,
     pub employer_id: Option<Uuid>,
     pub fired_at: Option<DateTime<Utc>>,
+    pub is_published: bool,
+    pub published_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

@@ -64,7 +64,13 @@
       "interview": "Interview",
       "employ": "Employ",
       "allocate": "Allocate",
-      "stats": "Usage Stats"
+      "stats": "Usage Stats",
+      "publish": "Publish",
+      "unpublish": "Unpublish"
+    },
+    "status": {
+      "published": "Published",
+      "draft": "Draft"
     },
     "confirmDelete": "Are you sure you want to delete this agent?",
     "confirmFire": "Are you sure you want to fire this agent?",
@@ -129,7 +135,9 @@
       "updateFlowFailed": "Failed to update flow",
       "invalidImageType": "Please upload an image file",
       "imageTooLarge": "Image size cannot exceed 5MB",
-      "uploadFailed": "Upload failed"
+      "uploadFailed": "Upload failed",
+      "publishFailed": "Failed to publish agent",
+      "unpublishFailed": "Failed to unpublish agent"
     },
     "success": {
       "created": "Agent created successfully",

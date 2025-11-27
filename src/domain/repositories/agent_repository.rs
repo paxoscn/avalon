@@ -51,6 +51,9 @@ pub trait AgentRepository: Send + Sync {
         offset: u64,
         limit: u64,
     ) -> Result<Vec<Agent>>;
+    
+    /// Find published agents by tenant
+    async fn find_by_tenant_published(&self, tenant_id: &TenantId) -> Result<Vec<Agent>>;
 }
 
 /// Agent employment repository interface for managing employment relationships

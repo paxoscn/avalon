@@ -132,6 +132,14 @@ class AgentService {
   async completeInterview(id: string, passed: boolean): Promise<void> {
     await apiClient.post(`/agents/${id}/interview/complete`, { passed });
   }
+
+  async publishAgent(id: string): Promise<void> {
+    await apiClient.post(`/agents/${id}/publish`);
+  }
+
+  async unpublishAgent(id: string): Promise<void> {
+    await apiClient.post(`/agents/${id}/unpublish`);
+  }
 }
 
 export const agentService = new AgentService();
