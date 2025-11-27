@@ -14,6 +14,7 @@ pub mod audit_log;
 pub mod agent;
 pub mod agent_allocation;
 pub mod agent_daily_stats;
+pub mod interview_record;
 pub mod api_key;
 
 pub use tenant::Entity as Tenant;
@@ -32,4 +33,5 @@ pub use audit_log::Entity as AuditLog;
 pub use agent::Entity as Agent;
 pub use agent_allocation::Entity as AgentAllocation;
 pub use agent_daily_stats::Entity as AgentDailyStats;
+pub use interview_record::Entity as InterviewRecord;
 pub use api_key::Entity as ApiKey;

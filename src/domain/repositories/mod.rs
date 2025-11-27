@@ -10,6 +10,7 @@ pub mod audit_log_repository;
 pub mod execution_history_repository;
 pub mod agent_repository;
 pub mod agent_daily_stats_repository;
+pub mod interview_record_repository;
 pub mod file_repository;
 pub mod api_key_repository;
 
@@ -25,5 +26,6 @@ pub use audit_log_repository::*;
 pub use execution_history_repository::*;
 pub use agent_repository::*;
 pub use agent_daily_stats_repository::*;
+pub use interview_record_repository::*;
 pub use file_repository::*;
 pub use api_key_repository::*;

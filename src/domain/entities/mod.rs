@@ -11,6 +11,7 @@ pub mod execution_history;
 pub mod agent;
 pub mod agent_allocation;
 pub mod agent_daily_stats;
+pub mod interview_record;
 mod api_key;
 
 pub use user::*;
@@ -26,4 +27,5 @@ pub use execution_history::*;
 pub use agent::*;
 pub use agent_allocation::*;
 pub use agent_daily_stats::*;
+pub use interview_record::*;
 pub use api_key::APIKey;
