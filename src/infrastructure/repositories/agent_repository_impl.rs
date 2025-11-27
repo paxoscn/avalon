@@ -49,6 +49,7 @@ impl AgentRepositoryImpl {
             fired_at: entity.fired_at,
             is_published: entity.is_published,
             published_at: entity.published_at,
+            price: entity.price,
             created_at: entity.created_at,
             updated_at: entity.updated_at,
         })
@@ -90,6 +91,7 @@ impl AgentRepositoryImpl {
             fired_at: Set(agent.fired_at),
             is_published: Set(agent.is_published),
             published_at: Set(agent.published_at),
+            price: Set(agent.price),
             created_at: Set(agent.created_at),
             updated_at: Set(agent.updated_at),
         })

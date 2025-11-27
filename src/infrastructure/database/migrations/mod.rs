@@ -19,3 +19,4 @@ pub mod m20241027_000003_refactor_agent;
 pub mod m20241120_000001_create_api_keys;
 pub mod m20241126_000001_create_agent_daily_stats;
 pub mod m20241127_000001_add_published_to_agents;
+pub mod m20241127_000002_add_price_to_agents;

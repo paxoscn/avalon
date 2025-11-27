@@ -1,5 +1,6 @@
 use crate::domain::value_objects::{AgentId, ConfigId, FlowId, MCPToolId, TenantId, UserId};
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -21,6 +22,7 @@ pub struct Agent {
     pub fired_at: Option<DateTime<Utc>>,
     pub is_published: bool,
     pub published_at: Option<DateTime<Utc>>,
+    pub price: Option<Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -65,6 +67,7 @@ impl Agent {
             fired_at: None,
             is_published: false,
             published_at: None,
+            price: None,
             created_at: now,
             updated_at: now,
         })
@@ -106,6 +109,22 @@ impl Agent {
     pub fn update_additional_settings(&mut self, settings: Option<String>) {
         self.additional_settings = settings;
         self.updated_at = Utc::now();
+    }
+
+    pub fn update_price(&mut self, price: Option<Decimal>) -> Result<(), String> {
+        if let Some(p) = price {
+            if p < Decimal::ZERO {
+                return Err("Price cannot be negative".to_string());
+            }
+            // Validate precision (4 decimal places)
+            if p.scale() > 4 {
+                return Err("Price precision cannot exceed 4 decimal places".to_string());
+            }
+        }
+
+        self.price = price;
+        self.updated_at = Utc::now();
+        Ok(())
     }
 
     pub fn set_preset_questions(&mut self, questions: Vec<String>) -> Result<(), String> {
@@ -193,6 +212,7 @@ impl Agent {
             fired_at: None,
             is_published: false,
             published_at: None,
+            price: self.price,
             created_at: now,
             updated_at: now,
         }
@@ -219,6 +239,7 @@ impl Agent {
             fired_at: None,
             is_published: false,
             published_at: None,
+            price: self.price,
             created_at: now,
             updated_at: now,
         }

@@ -266,6 +266,7 @@ impl AgentApplicationServiceImpl {
             fired_at: agent.fired_at,
             is_published: agent.is_published,
             published_at: agent.published_at,
+            price: agent.price,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         }
@@ -313,6 +314,7 @@ impl AgentApplicationServiceImpl {
             fired_at: agent.fired_at,
             is_published: agent.is_published,
             published_at: agent.published_at,
+            price: agent.price,
             created_at: agent.created_at,
         })
     }
@@ -427,6 +429,7 @@ impl AgentApplicationServiceImpl {
             fired_at: agent.fired_at,
             is_published: agent.is_published,
             published_at: agent.published_at,
+            price: agent.price,
             created_at: agent.created_at,
             updated_at: agent.updated_at,
         })
@@ -449,6 +452,8 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         agent.update_avatar(dto.avatar);
         agent.update_greeting(dto.greeting);
         agent.update_additional_settings(dto.additional_settings);
+        agent.update_price(dto.price)
+            .map_err(|e| PlatformError::AgentValidationError(e))?;
 
         if !dto.preset_questions.is_empty() {
             agent
@@ -531,6 +536,12 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         if let Some(preset_questions) = dto.preset_questions {
             agent
                 .set_preset_questions(preset_questions)
+                .map_err(|e| PlatformError::AgentValidationError(e))?;
+        }
+
+        if let Some(price) = dto.price {
+            agent
+                .update_price(Some(price))
                 .map_err(|e| PlatformError::AgentValidationError(e))?;
         }
 

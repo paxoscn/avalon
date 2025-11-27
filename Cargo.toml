@@ -30,6 +30,9 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 url = "2.4"
 
+# Decimal numbers
+rust_decimal = { version = "1.33", features = ["serde"] }
+
 # Error handling
 thiserror = "1.0"
 

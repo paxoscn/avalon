@@ -14,6 +14,7 @@ pub struct CreateAgentDto {
     pub knowledge_base_ids: Vec<Uuid>,
     pub mcp_tool_ids: Vec<Uuid>,
     pub flow_ids: Vec<Uuid>,
+    pub price: Option<rust_decimal::Decimal>,
 }
 
 /// Update Agent request DTO
@@ -25,6 +26,7 @@ pub struct UpdateAgentDto {
     pub system_prompt: Option<String>,
     pub additional_settings: Option<String>,
     pub preset_questions: Option<Vec<String>>,
+    pub price: Option<rust_decimal::Decimal>,
 }
 
 /// Agent response DTO
@@ -44,6 +46,7 @@ pub struct AgentDto {
     pub fired_at: Option<DateTime<Utc>>,
     pub is_published: bool,
     pub published_at: Option<DateTime<Utc>>,
+    pub price: Option<rust_decimal::Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -64,6 +67,7 @@ pub struct AgentCardDto {
     pub fired_at: Option<DateTime<Utc>>,
     pub is_published: bool,
     pub published_at: Option<DateTime<Utc>>,
+    pub price: Option<rust_decimal::Decimal>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -91,6 +95,7 @@ pub struct AgentDetailDto {
     pub fired_at: Option<DateTime<Utc>>,
     pub is_published: bool,
     pub published_at: Option<DateTime<Utc>>,
+    pub price: Option<rust_decimal::Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

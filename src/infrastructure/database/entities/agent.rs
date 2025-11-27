@@ -23,6 +23,7 @@ pub struct Model {
     pub fired_at: Option<DateTime<Utc>>,
     pub is_published: bool,
     pub published_at: Option<DateTime<Utc>>,
+    pub price: Option<Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

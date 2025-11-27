@@ -34,6 +34,7 @@ dependencies = [
  "reqwest 0.11.27",
  "ring",
  "rmcp",
+ "rust_decimal",
  "sea-orm",
  "sea-orm-migration",
  "serde",
