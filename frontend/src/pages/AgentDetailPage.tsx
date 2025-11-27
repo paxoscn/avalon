@@ -39,6 +39,7 @@ export function AgentDetailPage() {
     knowledgeBaseIds: [] as string[],
     mcpToolIds: [] as string[],
     flowIds: [] as string[],
+    price: '',
   });
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export function AgentDetailPage() {
         knowledgeBaseIds: data.knowledge_base_ids || [],
         mcpToolIds: data.mcp_tools.map(function(mcp_tool) { return mcp_tool.id }) || [],
         flowIds: data.flows.map(function(flow) { return flow.id }) || [],
+        price: data.price != null ? String(data.price) : '',
       });
     } catch (err: any) {
       setError(err.response?.data?.error || t('agents.errors.loadAgentFailed'));
@@ -114,6 +116,7 @@ export function AgentDetailPage() {
           mcp_tool_ids: formData.mcpToolIds,
           flow_ids: formData.flowIds,
           ...(formData.llmConfigId && { llm_config_id: formData.llmConfigId } as any),
+          ...(formData.price && { price: parseFloat(formData.price) }),
         };
         const newAgent = await agentService.createAgent(request);
         setSuccess(t('agents.success.created'));
@@ -127,6 +130,7 @@ export function AgentDetailPage() {
           additional_settings: formData.additionalSettings || undefined,
           preset_questions: presetQuestions,
           ...(formData.llmConfigId && { llm_config_id: formData.llmConfigId } as any),
+          ...(formData.price && { price: parseFloat(formData.price) }),
         };
         await agentService.updateAgent(id!, request);
         setSuccess(t('agents.success.updated'));
@@ -286,6 +290,21 @@ export function AgentDetailPage() {
               required
               placeholder={t('agents.detail.agentNamePlaceholder')}
             />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('agents.detail.price')}
+              </label>
+              <Input
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder={t('agents.detail.pricePlaceholder')}
+                step="0.0001"
+                min="0"
+              />
+              <p className="mt-1 text-xs text-gray-500">{t('agents.detail.priceDescription')}</p>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

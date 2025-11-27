@@ -243,6 +243,7 @@ export interface Agent {
   creator_id: string;
   is_published: boolean;
   published_at?: string;
+  price?: number;
   created_at: string;
   updated_at: string;
 }

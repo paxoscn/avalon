@@ -118,7 +118,10 @@
       "updateAgent": "更新数字人",
       "preview": "实时预览",
       "previewDescription": "查看手机端聊天界面效果",
-      "defaultAgentName": "AI 助手"
+      "defaultAgentName": "AI 助手",
+      "price": "每千Token价格",
+      "pricePlaceholder": "0.0000",
+      "priceDescription": "每1000个Token收取的价格（最多4位小数）"
     },
     "errors": {
       "loadFailed": "加载数字人失败",

@@ -11,6 +11,7 @@ export interface CreateAgentRequest {
   knowledge_base_ids?: string[];
   mcp_tool_ids?: string[];
   flow_ids?: string[];
+  price?: number;
 }
 
 export interface UpdateAgentRequest {
@@ -20,6 +21,7 @@ export interface UpdateAgentRequest {
   system_prompt?: string;
   additional_settings?: string;
   preset_questions?: string[];
+  price?: number;
 }
 
 export interface ListAgentsParams {

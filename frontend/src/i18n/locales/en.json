@@ -118,7 +118,10 @@
       "updateAgent": "Update Agent",
       "preview": "Live Preview",
       "previewDescription": "View mobile chat interface effect",
-      "defaultAgentName": "AI Assistant"
+      "defaultAgentName": "AI Assistant",
+      "price": "Price per 1K Tokens",
+      "pricePlaceholder": "0.0000",
+      "priceDescription": "Price charged per 1000 tokens (up to 4 decimal places)"
     },
     "errors": {
       "loadFailed": "Failed to load agents",
