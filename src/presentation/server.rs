@@ -11,7 +11,7 @@ use crate::{
         middleware::auth_middleware,
         routes::{
             agent_routes, api_key_routes, audit_routes, create_app_router, create_mcp_api_routes,
-            create_mcp_server_api_routes,
+            create_mcp_server_api_routes, dashboard_routes,
             execution_history_routes, file_routes, flow_routes, llm_config_routes, session_routes,
             vector_config_routes,
         },
@@ -177,9 +177,9 @@ impl Server {
         );
 
         let session_service = Arc::new(SessionApplicationService::new(
-            session_repository,
-            message_repository,
-            session_domain_service,
+            session_repository.clone(),
+            message_repository.clone(),
+            session_domain_service.clone(),
         ));
 
         let audit_service = Arc::new(AuditApplicationService::new(audit_domain_service));
@@ -209,13 +209,13 @@ impl Server {
 
         let agent_service: Arc<dyn AgentApplicationService> =
             Arc::new(AgentApplicationServiceImpl::new(
-                agent_repository,
-                agent_allocation_repository,
-                vector_config_repository,
-                mcp_tool_repository,
-                flow_repository,
-                user_repository,
-                interview_record_repository,
+                agent_repository.clone(),
+                agent_allocation_repository.clone(),
+                vector_config_repository.clone(),
+                mcp_tool_repository.clone(),
+                flow_repository.clone(),
+                user_repository.clone(),
+                interview_record_repository.clone(),
             )
             .with_session_service(session_service.clone())
             .with_llm_service(llm_domain_service.clone())
@@ -230,6 +230,16 @@ impl Server {
         );
         let file_service: Arc<dyn FileApplicationService> =
             Arc::new(FileApplicationServiceImpl::new(file_repository));
+
+        // Create dashboard service
+        let dashboard_service: Arc<dyn DashboardApplicationService> =
+            Arc::new(DashboardApplicationServiceImpl::new(
+                agent_repository.clone(),
+                flow_repository.clone(),
+                mcp_tool_repository.clone(),
+                vector_config_repository.clone(),
+                session_repository.clone(),
+            ));
 
         // Configure CORS
         let cors = self.create_cors_layer();
@@ -261,6 +271,8 @@ impl Server {
                     .merge(file_routes(file_service))
                     // API key management routes
                     .merge(api_key_routes(api_key_service))
+                    // Dashboard statistics routes
+                    .merge(dashboard_routes(dashboard_service))
                     .route_layer(middleware::from_fn_with_state(
                         auth_service.clone(),
                         auth_middleware,

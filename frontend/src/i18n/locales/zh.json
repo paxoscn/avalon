@@ -245,9 +245,11 @@
   "dashboard": {
     "title": "仪表板",
     "welcomeBack": "欢迎回来，{{name}}！",
-    "totalFlows": "工作流总数",
+    "agents": "数字人",
+    "totalFlows": "工作流",
     "activeExecutions": "活跃执行",
     "mcpTools": "MCP 工具",
+    "knowledgeBases": "知识库",
     "sessions": "会话",
     "recentActivity": "最近活动",
     "latestActions": "您的最新操作",

@@ -112,7 +112,7 @@ export const FlowVersionsPage = () => {
       </div>
 
       {error && (
-        <Alert variant="error" onClose={() => setError(null)}>
+        <Alert type="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}

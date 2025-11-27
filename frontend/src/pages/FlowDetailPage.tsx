@@ -52,25 +52,26 @@ export const FlowDetailPage = () => {
   const handleExecute = async () => {
     if (!id) return;
 
-    try {
-      setExecuting(true);
-      let variables = {};
-      try {
-        variables = JSON.parse(executionVariables);
-      } catch {
-        setError('Invalid JSON format for variables');
-        return;
-      }
+    // TODO Mergen
+    // try {
+    //   setExecuting(true);
+    //   let variables = {};
+    //   try {
+    //     variables = JSON.parse(executionVariables);
+    //   } catch {
+    //     setError('Invalid JSON format for variables');
+    //     return;
+    //   }
 
-      const result = await flowService.executeFlow(id, { variables });
-      setShowExecuteModal(false);
-      setExecutionVariables('{}');
-      navigate(`/flows/${id}/executions/${result.executionId}`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to execute flow');
-    } finally {
-      setExecuting(false);
-    }
+    //   const result = await flowService.executeFlow(id, { variables });
+    //   setShowExecuteModal(false);
+    //   setExecutionVariables('{}');
+    //   navigate(`/flows/${id}/executions/${result.executionId}`);
+    // } catch (err: any) {
+    //   setError(err.response?.data?.error || 'Failed to execute flow');
+    // } finally {
+    //   setExecuting(false);
+    // }
   };
 
   const getStatusColor = (status: string) => {

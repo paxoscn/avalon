@@ -302,14 +302,14 @@ export function AgentListPage() {
                         {agent.knowledge_base_ids.length} KB
                       </span>
                     )}
-                    {agent.mcp_tool_ids != null && agent.mcp_tool_ids.length > 0 && (
+                    {agent.mcp_tools != null && agent.mcp_tools.length > 0 && (
                       <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-                        {agent.mcp_tool_ids.length} Tools
+                        {agent.mcp_tools.length} Tools
                       </span>
                     )}
-                    {agent.flow_ids != null && agent.flow_ids.length > 0 && (
+                    {agent.flows != null && agent.flows.length > 0 && (
                       <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
-                        {agent.flow_ids.length} Flows
+                        {agent.flows.length} Flows
                       </span>
                     )}
                     {agent.is_published ? (

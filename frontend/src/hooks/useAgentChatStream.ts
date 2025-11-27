@@ -152,8 +152,8 @@ export function useAgentChatStream({
                   setCurrentResponse('');
                   setCurrentReasoning('');
                 } else if (data.type === 'error') {
-                  const errorMessage = data.error || 'Unknown error';
-                  onError?.(errorMessage);
+                  const error_message = data.error || 'Unknown error';
+                  onError?.(error_message);
                   setIsStreaming(false);
                   setCurrentResponse('');
                   setCurrentReasoning('');

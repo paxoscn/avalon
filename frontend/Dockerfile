@@ -8,10 +8,12 @@ RUN npm config set registry https://registry.npmmirror.com
 
 WORKDIR /app
 COPY . .
+RUN rm .env
+ENV VITE_API_BASE_URL=https://platform.agentcool.cn/api
 RUN npm install
 RUN npm run build
 
 FROM nginx:stable-alpine
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

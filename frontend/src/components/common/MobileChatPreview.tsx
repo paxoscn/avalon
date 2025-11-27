@@ -168,13 +168,13 @@ export function MobileChatPreview({
               setError(errorMsg);
               setCurrentReasoning('');
               // 添加错误消息
-              const errorMessage: ChatMessage = {
+              const error_message: ChatMessage = {
                 id: `error-${Date.now()}`,
                 role: 'assistant',
                 content: `抱歉，${errorMsg}`,
                 timestamp: new Date(),
               };
-              setMessages((prev) => [...prev, errorMessage]);
+              setMessages((prev) => [...prev, error_message]);
             },
           }
         );
@@ -194,13 +194,13 @@ export function MobileChatPreview({
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      const errorMessage = error instanceof Error ? error.message : '发送消息时出现错误';
-      setError(errorMessage);
+      const error_message_str = error instanceof Error ? error.message : '发送消息时出现错误';
+      setError(error_message_str);
       
       const error_message: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `抱歉，${errorMessage}`,
+        content: `抱歉，${error_message_str}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, error_message]);

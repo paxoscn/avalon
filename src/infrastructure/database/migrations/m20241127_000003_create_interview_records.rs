@@ -31,8 +31,18 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(InterviewRecords::Feedback).text())
                     .col(ColumnDef::new(InterviewRecords::Questions).json())
                     .col(ColumnDef::new(InterviewRecords::Answers).json())
-                    .col(ColumnDef::new(InterviewRecords::StartedAt).timestamp_with_time_zone())
-                    .col(ColumnDef::new(InterviewRecords::CompletedAt).timestamp_with_time_zone())
+                    .col(
+                        ColumnDef::new(InterviewRecords::StartedAt)
+                            .timestamp_with_time_zone()
+                            .default(Expr::value("1970-01-01 08:00:01"))
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(InterviewRecords::CompletedAt)
+                            .timestamp_with_time_zone()
+                            .default(Expr::value("1970-01-01 08:00:01"))
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(InterviewRecords::CreatedAt)
                             .timestamp_with_time_zone()

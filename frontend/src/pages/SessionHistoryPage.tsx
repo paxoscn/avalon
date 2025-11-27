@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sessionService, type SessionFilters, type SessionStats } from '../services/session.service';
+import { sessionService, type SessionFilters } from '../services/session.service';
+import type { SessionStats } from '../types';
 import type { ChatSession } from '../types';
 import { Card, Button, Input, Loader, Alert } from '../components/common';
 
@@ -98,7 +99,7 @@ export function SessionHistoryPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Session History</h1>
       </div>
 
-      {error && <Alert variant="error" message={error} onClose={() => setError(null)} />}
+      {error && <Alert type="error" onClose={() => setError(null)}>{error}</Alert>}
 
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -163,3 +163,15 @@ write a rust document about how to talk to llm
 ---
 
 将聊天界面与服务端的通信改为使用SSE协议
+
+---
+
+以下这些表的这些字段需要默认为空:
+
+flow_executions.completed_at
+execution_steps.completed_at
+agents.fired_at
+api_keys.expires_at
+api_keys.last_used_at
+interview_records.started_at
+interview_records.completed_at

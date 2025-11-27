@@ -47,7 +47,7 @@ export function AuditLogDetailPage() {
   if (error || !log) {
     return (
       <div className="space-y-4">
-        <Alert variant="error" message={error || 'Audit log not found'} />
+        <Alert type="error">{error || 'Audit log not found'}</Alert>
         <Button onClick={() => navigate('/audit/logs')}>Back to Audit Logs</Button>
       </div>
     );

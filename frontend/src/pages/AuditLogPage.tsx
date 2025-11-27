@@ -119,7 +119,7 @@ export function AuditLogPage() {
         </div>
       </div>
 
-      {error && <Alert variant="error" message={error} onClose={() => setError(null)} />}
+      {error && <Alert type="error" onClose={() => setError(null)}>{error}</Alert>}
 
       <Card>
         <div className="p-6 space-y-4">

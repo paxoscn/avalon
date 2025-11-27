@@ -41,5 +41,5 @@ impl MigrationTrait for Migration {
 #[derive(Iden)]
 enum Agents {
     Table,
-    PricePer1kTokens,
+    Price,
 }

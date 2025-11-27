@@ -245,9 +245,11 @@
   "dashboard": {
     "title": "Dashboard",
     "welcomeBack": "Welcome back, {{name}}!",
+    "agents": "Agents",
     "totalFlows": "Total Flows",
     "activeExecutions": "Active Executions",
     "mcpTools": "MCP Tools",
+    "knowledgeBases": "Knowledge Bases",
     "sessions": "Sessions",
     "recentActivity": "Recent Activity",
     "latestActions": "Your latest actions",

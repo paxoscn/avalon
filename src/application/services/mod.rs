@@ -16,6 +16,7 @@ pub mod agent_application_service;
 pub mod file_service;
 pub mod api_key_application_service;
 pub mod mcp_server_application_service;
+pub mod dashboard_application_service;
 
 #[cfg(test)]
 pub mod integrated_llm_service_test;
@@ -53,3 +54,4 @@ pub use agent_application_service::*;
 pub use file_service::*;
 pub use api_key_application_service::*;
 pub use mcp_server_application_service::*;
+pub use dashboard_application_service::*;

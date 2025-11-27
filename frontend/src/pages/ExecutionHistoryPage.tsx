@@ -106,7 +106,7 @@ export function ExecutionHistoryPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Execution History</h1>
       </div>
 
-      {error && <Alert variant="error" message={error} onClose={() => setError(null)} />}
+      {error && <Alert type="error" onClose={() => setError(null)}>{error}</Alert>}
 
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -110,7 +110,7 @@ export function ExecutionDetailPage() {
   if (error || !execution) {
     return (
       <div className="space-y-4">
-        <Alert variant="error" message={error || 'Execution not found'} />
+        <Alert type="error" onClose={() => setError(null)}>{error || 'Execution not found'}</Alert>
         <Button onClick={() => navigate('/executions')}>Back to Execution History</Button>
       </div>
     );

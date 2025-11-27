@@ -13,6 +13,7 @@ pub mod agent_handlers;
 pub mod file_handlers;
 pub mod api_key_handlers;
 pub mod counter;
+pub mod dashboard_handlers;
 
 #[cfg(test)]
 mod auth_handlers_test;

@@ -102,7 +102,7 @@ export function SessionDetailPage() {
   if (error || !session) {
     return (
       <div className="space-y-4">
-        <Alert variant="error" message={error || 'Session not found'} />
+        <Alert type="error">{error || 'Session not found'}</Alert>
         <Button onClick={() => navigate('/sessions')}>Back to Session History</Button>
       </div>
     );
