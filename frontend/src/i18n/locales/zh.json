@@ -194,7 +194,16 @@
       "employing": "雇佣中...",
       "employSuccess": "数字人雇佣成功！",
       "preview": "实时预览",
-      "previewDescription": "与数字人进行对话测试"
+      "previewDescription": "与数字人进行对话测试",
+      "history": "面试历史",
+      "noHistory": "暂无面试记录",
+      "score": "评分",
+      "completedAt": "完成时间",
+      "statusPending": "待处理",
+      "statusInProgress": "进行中",
+      "statusPassed": "已通过",
+      "statusFailed": "未通过",
+      "statusCancelled": "已取消"
     },
     "stats": {
       "title": "用量统计",

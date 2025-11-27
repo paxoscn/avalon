@@ -303,3 +303,20 @@ export interface AgentUsageStatsResponse {
     total_revenue: number;
   };
 }
+
+export interface InterviewRecord {
+  id: string;
+  agent_id: string;
+  tenant_id: string;
+  user_id?: string;
+  session_id?: string;
+  status: 'pending' | 'in_progress' | 'passed' | 'failed' | 'cancelled';
+  score?: number;
+  feedback?: string;
+  questions?: any;
+  answers?: any;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}

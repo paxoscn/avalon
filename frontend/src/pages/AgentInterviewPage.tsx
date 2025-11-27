@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { agentService } from '../services/agent.service';
-import type { Agent } from '../types';
+import type { Agent, InterviewRecord } from '../types';
 import { Button, Card, Loader, Alert, MobileChatPreview } from '../components/common';
 
 export function AgentInterviewPage() {
@@ -11,7 +11,9 @@ export function AgentInterviewPage() {
   const { t } = useTranslation();
 
   const [agent, setAgent] = useState<Agent | null>(null);
+  const [interviewRecords, setInterviewRecords] = useState<InterviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRecords, setLoadingRecords] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function AgentInterviewPage() {
 
   useEffect(() => {
     loadAgent();
+    loadInterviewRecords();
   }, [id]);
 
   const loadAgent = async () => {
@@ -40,6 +43,19 @@ export function AgentInterviewPage() {
       setError(err.response?.data?.error || t('agents.errors.loadAgentFailed'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInterviewRecords = async () => {
+    try {
+      setLoadingRecords(true);
+      const records = await agentService.getInterviewRecords(id!);
+      setInterviewRecords(records);
+    } catch (err: any) {
+      console.error('Failed to load interview records:', err);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingRecords(false);
     }
   };
 
@@ -66,6 +82,9 @@ export function AgentInterviewPage() {
         setSuccess(t('agents.interview.failSuccess'));
       }
       
+      // Reload interview records
+      await loadInterviewRecords();
+      
       setTimeout(() => navigate('/agents'), 1500);
     } catch (err: any) {
       setError(err.response?.data?.error || t('agents.errors.interviewFailed'));
@@ -88,6 +107,10 @@ export function AgentInterviewPage() {
       await agentService.employAgent(agent.id);
       
       setSuccess(t('agents.interview.employSuccess'));
+      
+      // Reload interview records
+      await loadInterviewRecords();
+      
       setTimeout(() => navigate('/agents'), 1500);
     } catch (err: any) {
       setError(err.response?.data?.error || t('agents.errors.employFailed'));
@@ -127,38 +150,112 @@ export function AgentInterviewPage() {
     Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
   ).toFixed(1);
 
+  const getStatusBadge = (status: InterviewRecord['status']) => {
+    const statusConfig = {
+      pending: { text: t('agents.interview.statusPending'), className: 'bg-gray-100 text-gray-800' },
+      in_progress: { text: t('agents.interview.statusInProgress'), className: 'bg-blue-100 text-blue-800' },
+      passed: { text: t('agents.interview.statusPassed'), className: 'bg-green-100 text-green-800' },
+      failed: { text: t('agents.interview.statusFailed'), className: 'bg-red-100 text-red-800' },
+      cancelled: { text: t('agents.interview.statusCancelled'), className: 'bg-gray-100 text-gray-800' },
+    };
+    const config = statusConfig[status];
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
+        {config.text}
+      </span>
+    );
+  };
+
   return (
     <div className="flex gap-6">
-      {/* 左侧评分表单 */}
-      <div className="flex-1 space-y-6">
-        <div className="flex items-center justify-between">
+      {/* 左侧区域 - 分为两列 */}
+      <div className="flex-1 flex gap-6">
+        {/* 左子列 - 面试历史 */}
+        <div className="w-80 space-y-6">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">
-              {t('agents.interview.title')}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              {t('agents.interview.description')}
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {t('agents.interview.history')}
+            </h2>
+            
+            {loadingRecords ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader size="md" />
+              </div>
+            ) : interviewRecords.length === 0 ? (
+              <Card>
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500">{t('agents.interview.noHistory')}</p>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto">
+                {interviewRecords.map((record) => (
+                  <Card key={record.id} className="hover:shadow-md transition-shadow">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {new Date(record.created_at).toLocaleString()}
+                        </span>
+                        {getStatusBadge(record.status)}
+                      </div>
+                      
+                      {record.score !== undefined && record.score !== null && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">{t('agents.interview.score')}:</span>
+                          <span className="text-lg font-semibold text-blue-600">{record.score}</span>
+                        </div>
+                      )}
+                      
+                      {record.feedback && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-1">{t('agents.interview.feedback')}:</p>
+                          <p className="text-sm text-gray-700 line-clamp-3">{record.feedback}</p>
+                        </div>
+                      )}
+                      
+                      {record.completed_at && (
+                        <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                          {t('agents.interview.completedAt')}: {new Date(record.completed_at).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
-          <Button variant="secondary" onClick={() => navigate('/agents')}>
-            {t('common.cancel')}
-          </Button>
         </div>
 
-        {error && (
-          <Alert type="error" onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+        {/* 右子列 - 面试评价操作 */}
+        <div className="flex-1 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-gray-900">
+                {t('agents.interview.title')}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {t('agents.interview.description')}
+              </p>
+            </div>
+            <Button variant="secondary" onClick={() => navigate('/agents')}>
+              {t('common.cancel')}
+            </Button>
+          </div>
 
-        {success && (
-          <Alert type="success" onClose={() => setSuccess(null)}>
-            {success}
-          </Alert>
-        )}
+          {error && (
+            <Alert type="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
 
-        {/* 数字人信息 */}
-        <Card>
+          {success && (
+            <Alert type="success" onClose={() => setSuccess(null)}>
+              {success}
+            </Alert>
+          )}
+
+          {/* 数字人信息 */}
+          <Card>
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             {t('agents.interview.agentInfo')}
           </h2>
@@ -385,6 +482,7 @@ export function AgentInterviewPage() {
             </div>
           </div>
         </Card>
+        </div>
       </div>
 
       {/* 右侧预览 */}

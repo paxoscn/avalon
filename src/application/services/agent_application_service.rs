@@ -166,6 +166,9 @@ pub trait AgentApplicationService: Send + Sync {
     /// Complete an interview (pass or fail)
     async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()>;
 
+    /// Get interview records for an agent
+    async fn get_interview_records(&self, agent_id: AgentId, user_id: UserId) -> Result<Vec<InterviewRecordDto>>;
+
     /// Publish an agent
     async fn publish_agent(&self, agent_id: AgentId, user_id: UserId) -> Result<()>;
 
@@ -181,6 +184,7 @@ pub struct AgentApplicationServiceImpl {
     mcp_tool_repo: Arc<dyn MCPToolRepository>,
     flow_repo: Arc<dyn FlowRepository>,
     user_repo: Arc<dyn UserRepository>,
+    interview_record_repo: Arc<dyn crate::domain::repositories::InterviewRecordRepository>,
     session_service: Option<Arc<crate::application::services::SessionApplicationService>>,
     llm_service: Option<Arc<dyn crate::domain::services::llm_service::LLMDomainService>>,
     llm_config_repo: Option<Arc<dyn crate::domain::repositories::LLMConfigRepository>>,
@@ -196,6 +200,7 @@ impl AgentApplicationServiceImpl {
         mcp_tool_repo: Arc<dyn MCPToolRepository>,
         flow_repo: Arc<dyn FlowRepository>,
         user_repo: Arc<dyn UserRepository>,
+        interview_record_repo: Arc<dyn crate::domain::repositories::InterviewRecordRepository>,
     ) -> Self {
         Self {
             agent_repo,
@@ -204,6 +209,7 @@ impl AgentApplicationServiceImpl {
             mcp_tool_repo,
             flow_repo,
             user_repo,
+            interview_record_repo,
             session_service: None,
             llm_service: None,
             llm_config_repo: None,
@@ -1296,8 +1302,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn start_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<()> {
-        // Verify agent exists
-        let agent = self
+        use crate::domain::entities::InterviewRecord;
+
+        // Verify agent exists and belongs to the same tenant
+        let _agent = self
             .agent_repo
             .find_by_id(&agent_id)
             .await?
@@ -1306,10 +1314,30 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             })?;
 
         // Verify agent belongs to the same tenant
-        if agent.tenant_id != tenant_id {
+        if _agent.tenant_id != tenant_id {
             return Err(PlatformError::AgentUnauthorized(
                 "Agent does not belong to your tenant".to_string(),
             ));
+        }
+
+        // Check if there's already a pending or in-progress interview for this user
+        let existing_records = self.interview_record_repo.find_by_agent(&agent_id).await?;
+        let has_active_interview = existing_records.iter().any(|r| {
+            r.user_id == Some(user_id) && 
+            (matches!(r.status, crate::domain::entities::InterviewStatus::Pending) ||
+             matches!(r.status, crate::domain::entities::InterviewStatus::InProgress))
+        });
+
+        // Only create a new interview record if there's no active one
+        if !has_active_interview {
+            // Create and save interview record
+            let mut interview_record = InterviewRecord::new(agent_id, tenant_id, Some(user_id));
+            
+            // Start the interview (this will set status to InProgress)
+            interview_record.start(uuid::Uuid::new_v4()); // Generate a session ID
+            
+            // Save to database
+            self.interview_record_repo.create(&interview_record).await?;
         }
 
         // Record interview statistics
@@ -1321,8 +1349,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
     }
 
     async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()> {
-        // Verify agent exists
-        let agent = self
+        use crate::domain::entities::{InterviewRecord, InterviewStatus};
+
+        // Verify agent exists and belongs to the same tenant
+        let _agent = self
             .agent_repo
             .find_by_id(&agent_id)
             .await?
@@ -1331,11 +1361,27 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             })?;
 
         // Verify agent belongs to the same tenant
-        if agent.tenant_id != tenant_id {
+        if _agent.tenant_id != tenant_id {
             return Err(PlatformError::AgentUnauthorized(
                 "Agent does not belong to your tenant".to_string(),
             ));
         }
+
+        // Create and save interview record
+        let mut interview_record = InterviewRecord::new(agent_id, tenant_id, Some(user_id));
+        
+        // Set the status based on passed/failed
+        let status = if passed {
+            InterviewStatus::Passed
+        } else {
+            InterviewStatus::Failed
+        };
+        
+        // Complete the interview with the status
+        interview_record.complete(status, None, None);
+        
+        // Save to database
+        self.interview_record_repo.create(&interview_record).await?;
 
         // Record interview passed statistics if passed
         if passed {
@@ -1345,6 +1391,56 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         }
 
         Ok(())
+    }
+
+    async fn get_interview_records(&self, agent_id: AgentId, _user_id: UserId) -> Result<Vec<InterviewRecordDto>> {
+        // Get the agent to verify access
+        let _agent = self
+            .agent_repo
+            .find_by_id(&agent_id)
+            .await?
+            .ok_or_else(|| {
+                PlatformError::AgentNotFound(format!("Agent {} not found", agent_id.0))
+            })?;
+
+        // Get interview records
+        let records = self
+            .interview_record_repo
+            .find_by_agent(&agent_id)
+            .await?;
+
+        // Convert to DTOs
+        let dtos = records
+            .into_iter()
+            .map(|record| {
+                let status = match record.status {
+                    crate::domain::entities::InterviewStatus::Pending => "pending",
+                    crate::domain::entities::InterviewStatus::InProgress => "in_progress",
+                    crate::domain::entities::InterviewStatus::Passed => "passed",
+                    crate::domain::entities::InterviewStatus::Failed => "failed",
+                    crate::domain::entities::InterviewStatus::Cancelled => "cancelled",
+                };
+
+                InterviewRecordDto {
+                    id: record.id.to_string(),
+                    agent_id: record.agent_id.0.to_string(),
+                    tenant_id: record.tenant_id.0.to_string(),
+                    user_id: record.user_id.map(|id| id.0.to_string()),
+                    session_id: record.session_id.map(|id| id.to_string()),
+                    status: status.to_string(),
+                    score: record.score,
+                    feedback: record.feedback,
+                    questions: record.questions,
+                    answers: record.answers,
+                    started_at: record.started_at.map(|dt| dt.to_rfc3339()),
+                    completed_at: record.completed_at.map(|dt| dt.to_rfc3339()),
+                    created_at: record.created_at.to_rfc3339(),
+                    updated_at: record.updated_at.to_rfc3339(),
+                }
+            })
+            .collect();
+
+        Ok(dtos)
     }
 
     async fn chat_stream(

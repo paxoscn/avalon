@@ -421,6 +421,20 @@ pub async fn complete_interview(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Get interview records for an agent
+pub async fn get_interview_records(
+    State(service): State<Arc<dyn AgentApplicationService>>,
+    user: AuthenticatedUser,
+    Path(agent_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    let records = service.get_interview_records(
+        AgentId::from_uuid(agent_id),
+        user.user_id,
+    ).await?;
+
+    Ok(Json(serde_json::json!({ "records": records })))
+}
+
 // ============================================================================
 // Publish Handlers
 // ============================================================================

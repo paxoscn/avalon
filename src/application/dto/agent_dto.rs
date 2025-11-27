@@ -321,3 +321,22 @@ pub struct AgentUsageStatsResponse {
 pub struct CompleteInterviewRequest {
     pub passed: bool,
 }
+
+/// Interview record DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InterviewRecordDto {
+    pub id: String,
+    pub agent_id: String,
+    pub tenant_id: String,
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub status: String,
+    pub score: Option<i32>,
+    pub feedback: Option<String>,
+    pub questions: Option<serde_json::Value>,
+    pub answers: Option<serde_json::Value>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}

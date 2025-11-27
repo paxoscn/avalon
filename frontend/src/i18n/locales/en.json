@@ -194,7 +194,16 @@
       "employing": "Employing...",
       "employSuccess": "Agent employed successfully!",
       "preview": "Live Preview",
-      "previewDescription": "Test conversation with the agent"
+      "previewDescription": "Test conversation with the agent",
+      "history": "Interview History",
+      "noHistory": "No interview records",
+      "score": "Score",
+      "completedAt": "Completed At",
+      "statusPending": "Pending",
+      "statusInProgress": "In Progress",
+      "statusPassed": "Passed",
+      "statusFailed": "Failed",
+      "statusCancelled": "Cancelled"
     },
     "stats": {
       "title": "Usage Statistics",

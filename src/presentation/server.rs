@@ -203,6 +203,10 @@ impl Server {
             Arc::new(AgentDailyStatsRepositoryImpl::new(self.database.connection()));
         let agent_stats_service = Arc::new(AgentStatsService::new(agent_daily_stats_repository));
 
+        // Create interview record repository
+        let interview_record_repository: Arc<dyn crate::domain::repositories::InterviewRecordRepository> = 
+            Arc::new(crate::infrastructure::repositories::InterviewRecordRepositoryImpl::new(self.database.connection()));
+
         let agent_service: Arc<dyn AgentApplicationService> =
             Arc::new(AgentApplicationServiceImpl::new(
                 agent_repository,
@@ -211,6 +215,7 @@ impl Server {
                 mcp_tool_repository,
                 flow_repository,
                 user_repository,
+                interview_record_repository,
             )
             .with_session_service(session_service.clone())
             .with_llm_service(llm_domain_service.clone())

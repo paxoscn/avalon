@@ -142,6 +142,11 @@ class AgentService {
   async unpublishAgent(id: string): Promise<void> {
     await apiClient.post(`/agents/${id}/unpublish`);
   }
+
+  async getInterviewRecords(agentId: string): Promise<import('../types').InterviewRecord[]> {
+    const response = await apiClient.get<{ records: import('../types').InterviewRecord[] }>(`/agents/${agentId}/interviews`);
+    return response.data.records;
+  }
 }
 
 export const agentService = new AgentService();
