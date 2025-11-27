@@ -1508,6 +1508,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                                 return Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
                                     chunk_type: "done".to_string(),
                                     content: None,
+                                    reasoning_content: None,
                                     session_id: Some(session_id_clone.0),
                                     message_id: Some(user_message_id.0),
                                     reply_id: Some(assistant_message.id.0),
@@ -1526,6 +1527,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                         Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
                             chunk_type: "content".to_string(),
                             content: chunk.content,
+                            reasoning_content: chunk.reasoning_content,
                             session_id: Some(session_id_clone.0),
                             message_id: Some(user_message_id.0),
                             reply_id: reply_message_id.map(|id| id.0),
@@ -1539,6 +1541,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                         Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
                             chunk_type: "error".to_string(),
                             content: None,
+                            reasoning_content: None,
                             session_id: Some(session_id_clone.0),
                             message_id: Some(user_message_id.0),
                             reply_id: None,

@@ -158,3 +158,8 @@ write a rust document about how to talk to llm
 
 ---
 
+写一个文档详解大模型智能体应用可能面临的安全问题和解法
+
+---
+
+将聊天界面与服务端的通信改为使用SSE协议

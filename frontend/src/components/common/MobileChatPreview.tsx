@@ -88,27 +88,66 @@ export function MobileChatPreview({
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } 
-      // Use real chat service if agentId is provided
+      // Use real chat service with SSE streaming if agentId is provided
       else if (agentId) {
-        const response = await chatService.chat({
-          agentId,
-          message: content.trim(),
-          sessionId,
-        });
-
-        // Update session ID if this is the first message
-        if (!sessionId) {
-          setSessionId(response.sessionId);
-        }
-
-        // Add assistant message from response
+        // Create a temporary message for streaming
+        const tempMessageId = `temp-${Date.now()}`;
         const assistantMessage: ChatMessage = {
-          id: response.reply.id,
+          id: tempMessageId,
           role: 'assistant',
-          content: response.reply.content,
-          timestamp: new Date(response.reply.created_at),
+          content: '',
+          timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
+
+        let fullContent = '';
+        
+        await chatService.chatStream(
+          {
+            agentId,
+            message: content.trim(),
+            sessionId,
+          },
+          {
+            onContent: (chunk) => {
+              fullContent += chunk;
+              // Update the message content in real-time
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempMessageId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            },
+            onDone: (data) => {
+              // Update session ID if this is the first message
+              if (!sessionId) {
+                setSessionId(data.sessionId);
+              }
+              
+              // Update the message with final ID
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempMessageId
+                    ? { ...msg, id: data.replyId }
+                    : msg
+                )
+              );
+            },
+            onError: (errorMsg) => {
+              setError(errorMsg);
+              // Update the message to show error
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempMessageId
+                    ? { ...msg, content: `抱歉，${errorMsg}` }
+                    : msg
+                )
+              );
+            },
+          }
+        );
       } 
       // Fallback to simulation
       else {

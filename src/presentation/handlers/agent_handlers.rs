@@ -343,6 +343,7 @@ pub async fn chat_with_agent_stream(
                 let error_chunk = crate::application::dto::agent_dto::AgentChatStreamChunk {
                     chunk_type: "error".to_string(),
                     content: None,
+                    reasoning_content: None,
                     session_id: None,
                     message_id: None,
                     reply_id: None,

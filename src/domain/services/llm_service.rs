@@ -64,6 +64,7 @@ pub struct ChatResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChatStreamChunk {
     pub content: Option<String>,
+    pub reasoning_content: Option<String>,
     pub finish_reason: Option<FinishReason>,
     pub usage: Option<TokenUsage>,
 }

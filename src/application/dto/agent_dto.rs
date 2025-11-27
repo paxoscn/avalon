@@ -236,6 +236,7 @@ pub struct AgentChatStreamChunk {
     #[serde(rename = "type")]
     pub chunk_type: String,
     pub content: Option<String>,
+    pub reasoning_content: Option<String>,
     pub session_id: Option<Uuid>,
     pub message_id: Option<Uuid>,
     pub reply_id: Option<Uuid>,

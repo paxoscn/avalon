@@ -36,6 +36,7 @@ impl LLMStream {
                 if data_content.trim() == "[DONE]" {
                     return Ok(Some(ChatStreamChunk {
                         content: None,
+                        reasoning_content: None,
                         finish_reason: Some(FinishReason::Stop),
                         usage: None,
                     }));
@@ -66,6 +67,12 @@ impl LLMStream {
                     .and_then(|c| c.as_str())
                     .map(|s| s.to_string());
 
+                let reasoning_content = choice
+                    .get("delta")
+                    .and_then(|d| d.get("reasoning_content"))
+                    .and_then(|c| c.as_str())
+                    .map(|s| s.to_string());
+
                 let finish_reason = choice
                     .get("finish_reason")
                     .and_then(|r| r.as_str())
@@ -89,6 +96,7 @@ impl LLMStream {
 
                 return Ok(Some(ChatStreamChunk {
                     content,
+                    reasoning_content,
                     finish_reason,
                     usage,
                 }));
@@ -107,6 +115,7 @@ impl LLMStream {
 
                     return Ok(Some(ChatStreamChunk {
                         content,
+                        reasoning_content: None,
                         finish_reason: None,
                         usage: None,
                     }));
@@ -114,6 +123,7 @@ impl LLMStream {
                 "message_stop" => {
                     return Ok(Some(ChatStreamChunk {
                         content: None,
+                        reasoning_content: None,
                         finish_reason: Some(FinishReason::Stop),
                         usage: None,
                     }));
@@ -126,6 +136,7 @@ impl LLMStream {
         if let Some(content) = json.get("content").and_then(|c| c.as_str()) {
             return Ok(Some(ChatStreamChunk {
                 content: Some(content.to_string()),
+                reasoning_content: None,
                 finish_reason: None,
                 usage: None,
             }));
@@ -164,7 +175,9 @@ impl Stream for LLMStream {
                             cx.waker().wake_by_ref();
                             Poll::Pending
                         }
-                        Err(e) => Poll::Ready(Some(Err(e))),
+                        Err(e) => {
+                            Poll::Ready(Some(Err(e)))
+                        },
                     }
                 } else {
                     // Need more data to complete the event
@@ -177,16 +190,34 @@ impl Stream for LLMStream {
                 Poll::Ready(Some(Err(e)))
             }
             Poll::Ready(None) => {
-                self.finished = true;
-                
                 // Process any remaining data in buffer
                 if !self.buffer.trim().is_empty() {
-                    match Self::parse_sse_chunk(&self.buffer) {
-                        Ok(Some(chunk)) => Poll::Ready(Some(Ok(chunk))),
-                        Ok(None) => Poll::Ready(None),
-                        Err(e) => Poll::Ready(Some(Err(e))),
+                    if let Some(double_newline_pos) = self.buffer.find("\n\n") {
+                        let event_data = self.buffer[..double_newline_pos].to_string();
+                        self.buffer.drain(..double_newline_pos + 2);
+                        
+                        match Self::parse_sse_chunk(&event_data) {
+                            Ok(Some(chunk)) => {
+                                if chunk.finish_reason.is_some() {
+                                    self.finished = true;
+                                }
+                                Poll::Ready(Some(Ok(chunk)))
+                            }
+                            Ok(None) => {
+                                // Continue polling for next chunk
+                                cx.waker().wake_by_ref();
+                                Poll::Pending
+                            }
+                            Err(e) => {
+                                Poll::Ready(Some(Err(e)))
+                            },
+                        }
+                    } else {
+                        Poll::Ready(None)
                     }
                 } else {
+                    self.finished = true;
+                
                     Poll::Ready(None)
                 }
             }
@@ -233,6 +264,7 @@ impl StreamAdapter {
 struct BufferedStream {
     inner: Box<dyn Stream<Item = Result<ChatStreamChunk, LLMError>> + Send + Unpin>,
     buffer: String,
+    reasoning_buffer: String,
     buffer_size: usize,
     finished: bool,
 }
@@ -248,6 +280,7 @@ impl BufferedStream {
         Self {
             inner: stream,
             buffer: String::new(),
+            reasoning_buffer: String::new(),
             buffer_size,
             finished: false,
         }
@@ -269,6 +302,10 @@ impl Stream for BufferedStream {
                         self.buffer.push_str(&content);
                     }
 
+                    if let Some(reasoning_content) = chunk.reasoning_content {
+                        self.reasoning_buffer.push_str(&reasoning_content);
+                    }
+
                     // If we have a finish reason or buffer is full, emit the chunk
                     if chunk.finish_reason.is_some() || self.buffer.len() >= self.buffer_size {
                         let buffered_content = if self.buffer.is_empty() {
@@ -277,12 +314,19 @@ impl Stream for BufferedStream {
                             Some(std::mem::take(&mut self.buffer))
                         };
 
+                        let buffered_reasoning_content = if self.reasoning_buffer.is_empty() {
+                            None
+                        } else {
+                            Some(std::mem::take(&mut self.reasoning_buffer))
+                        };
+
                         if chunk.finish_reason.is_some() {
                             self.finished = true;
                         }
 
                         return Poll::Ready(Some(Ok(ChatStreamChunk {
                             content: buffered_content,
+                            reasoning_content: buffered_reasoning_content,
                             finish_reason: chunk.finish_reason,
                             usage: chunk.usage,
                         })));
@@ -295,31 +339,93 @@ impl Stream for BufferedStream {
                 }
                 Poll::Ready(None) => {
                     self.finished = true;
+
+                    let content = if !self.buffer.is_empty() {
+                        std::mem::take(&mut self.buffer)
+                    } else {
+                        String::new()
+                    };
+
+                    let reasoning_content = if !self.reasoning_buffer.is_empty() {
+                        std::mem::take(&mut self.reasoning_buffer)
+                    } else {
+                        String::new()
+                    };
                     
                     // Emit any remaining buffered content
-                    if !self.buffer.is_empty() {
-                        let content = std::mem::take(&mut self.buffer);
-                        return Poll::Ready(Some(Ok(ChatStreamChunk {
-                            content: Some(content),
-                            finish_reason: Some(FinishReason::Stop),
-                            usage: None,
-                        })));
+                    if !content.is_empty() {
+                        if !reasoning_content.is_empty() {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: Some(content),
+                                reasoning_content: Some(reasoning_content),
+                                finish_reason: Some(FinishReason::Stop),
+                                usage: None,
+                            })));
+                        } else {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: Some(content),
+                                reasoning_content: None,
+                                finish_reason: Some(FinishReason::Stop),
+                                usage: None,
+                            })));
+                        }
+                    } else {
+                        if !reasoning_content.is_empty() {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: None,
+                                reasoning_content: Some(reasoning_content),
+                                finish_reason: Some(FinishReason::Stop),
+                                usage: None,
+                            })));
+                        } else {
+                            return Poll::Ready(None);
+                        }
                     }
-                    
-                    return Poll::Ready(None);
                 }
                 Poll::Pending => {
                     // If we have buffered content and no more data is immediately available,
                     // emit what we have
-                    if !self.buffer.is_empty() {
-                        let content = std::mem::take(&mut self.buffer);
-                        return Poll::Ready(Some(Ok(ChatStreamChunk {
-                            content: Some(content),
-                            finish_reason: None,
-                            usage: None,
-                        })));
+                    let content = if !self.buffer.is_empty() {
+                        std::mem::take(&mut self.buffer)
+                    } else {
+                        String::new()
+                    };
+
+                    let reasoning_content = if !self.reasoning_buffer.is_empty() {
+                        std::mem::take(&mut self.reasoning_buffer)
+                    } else {
+                        String::new()
+                    };
+                    
+                    // Emit any remaining buffered content
+                    if !content.is_empty() {
+                        if !reasoning_content.is_empty() {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: Some(content),
+                                reasoning_content: Some(reasoning_content),
+                                finish_reason: None,
+                                usage: None,
+                            })));
+                        } else {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: Some(content),
+                                reasoning_content: None,
+                                finish_reason: None,
+                                usage: None,
+                            })));
+                        }
+                    } else {
+                        if !reasoning_content.is_empty() {
+                            return Poll::Ready(Some(Ok(ChatStreamChunk {
+                                content: None,
+                                reasoning_content: Some(reasoning_content),
+                                finish_reason: None,
+                                usage: None,
+                            })));
+                        } else {
+                            return Poll::Pending;
+                        }
                     }
-                    return Poll::Pending;
                 }
             }
         }
