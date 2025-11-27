@@ -50,13 +50,43 @@ export function AgentInterviewPage() {
     }));
   };
 
+  const handleInterviewResult = async (passed: boolean) => {
+    if (!agent) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      
+      // 保存面试结果
+      await agentService.completeInterview(agent.id, passed);
+      
+      if (passed) {
+        setSuccess(t('agents.interview.passSuccess'));
+      } else {
+        setSuccess(t('agents.interview.failSuccess'));
+      }
+      
+      setTimeout(() => navigate('/agents'), 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('agents.errors.interviewFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleEmploy = async () => {
     if (!agent) return;
 
     try {
       setSubmitting(true);
       setError(null);
+      
+      // 先标记面试通过
+      await agentService.completeInterview(agent.id, true);
+      
+      // 然后雇佣
       await agentService.employAgent(agent.id);
+      
       setSuccess(t('agents.interview.employSuccess'));
       setTimeout(() => navigate('/agents'), 1500);
     } catch (err: any) {
@@ -310,24 +340,49 @@ export function AgentInterviewPage() {
           </p>
         </Card>
 
-        {/* 雇佣按钮 */}
+        {/* 面试结果决策 */}
         <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-medium text-gray-900">
-                {t('agents.interview.employDecision')}
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {t('agents.interview.employDecisionDescription')}
-              </p>
+          <div>
+            <h3 className="text-base font-medium text-gray-900 mb-2">
+              {t('agents.interview.decision')}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('agents.interview.decisionDescription')}
+            </p>
+            
+            <div className="flex gap-3">
+              {/* 面试通过按钮 */}
+              <Button
+                onClick={() => handleInterviewResult(true)}
+                disabled={submitting}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {submitting ? t('common.submitting') : t('agents.interview.pass')}
+              </Button>
+              
+              {/* 面试不通过按钮 */}
+              <Button
+                onClick={() => handleInterviewResult(false)}
+                disabled={submitting}
+                variant="secondary"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white border-red-600"
+              >
+                {submitting ? t('common.submitting') : t('agents.interview.fail')}
+              </Button>
             </div>
-            <Button
-              onClick={handleEmploy}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {submitting ? t('agents.interview.employing') : t('agents.actions.employ')}
-            </Button>
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-3">
+                {t('agents.interview.employNote')}
+              </p>
+              <Button
+                onClick={handleEmploy}
+                disabled={submitting}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {submitting ? t('agents.interview.employing') : t('agents.interview.passAndEmploy')}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

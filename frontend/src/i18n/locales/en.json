@@ -17,7 +17,8 @@
     "of": "of",
     "actions": "Actions",
     "close": "Close",
-    "tenant": "Tenant"
+    "tenant": "Tenant",
+    "submitting": "Submitting..."
   },
   "auth": {
     "login": "Sign In",
@@ -140,7 +141,8 @@
       "imageTooLarge": "Image size cannot exceed 5MB",
       "uploadFailed": "Upload failed",
       "publishFailed": "Failed to publish agent",
-      "unpublishFailed": "Failed to unpublish agent"
+      "unpublishFailed": "Failed to unpublish agent",
+      "interviewFailed": "Failed to save interview result"
     },
     "success": {
       "created": "Agent created successfully",
@@ -179,6 +181,14 @@
       "feedback": "Interview Feedback",
       "feedbackPlaceholder": "Please enter your evaluation and suggestions for this agent...",
       "feedbackDescription": "Record your observations and evaluations during the interview",
+      "decision": "Interview Decision",
+      "decisionDescription": "Based on your evaluation, decide whether to pass or fail this interview",
+      "pass": "Pass Interview",
+      "fail": "Fail Interview",
+      "passSuccess": "Interview passed successfully!",
+      "failSuccess": "Interview result recorded",
+      "employNote": "If you want to employ this agent immediately after passing the interview:",
+      "passAndEmploy": "Pass & Employ",
       "employDecision": "Employment Decision",
       "employDecisionDescription": "If you are satisfied with this agent, click the employ button",
       "employing": "Employing...",

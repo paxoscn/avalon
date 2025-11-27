@@ -17,7 +17,8 @@
     "of": "页，共",
     "actions": "操作",
     "close": "关闭",
-    "tenant": "租户"
+    "tenant": "租户",
+    "submitting": "提交中..."
   },
   "auth": {
     "login": "登录",
@@ -140,7 +141,8 @@
       "imageTooLarge": "图片大小不能超过 5MB",
       "uploadFailed": "上传失败",
       "publishFailed": "发布数字人失败",
-      "unpublishFailed": "取消发布数字人失败"
+      "unpublishFailed": "取消发布数字人失败",
+      "interviewFailed": "保存面试结果失败"
     },
     "success": {
       "created": "数字人创建成功",
@@ -179,6 +181,14 @@
       "feedback": "面试反馈",
       "feedbackPlaceholder": "请输入您对这个数字人的面试评价和建议...",
       "feedbackDescription": "记录您在面试过程中的观察和评价",
+      "decision": "面试决策",
+      "decisionDescription": "根据您的评估，决定此次面试是否通过",
+      "pass": "面试通过",
+      "fail": "面试不通过",
+      "passSuccess": "面试通过已记录！",
+      "failSuccess": "面试结果已记录",
+      "employNote": "如果您想在面试通过后立即雇佣此数字人：",
+      "passAndEmploy": "通过并雇佣",
       "employDecision": "雇佣决策",
       "employDecisionDescription": "如果您对这个数字人满意，可以点击雇佣按钮",
       "employing": "雇佣中...",
