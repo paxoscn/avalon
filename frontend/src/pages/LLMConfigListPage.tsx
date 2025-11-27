@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { llmService } from '../services/llm.service';
 import type { LLMConfig } from '../types';
 import { Button, Card, Loader, Alert } from '../components/common';
 
 export function LLMConfigListPage() {
+  const { t } = useTranslation();
   const [configs, setConfigs] = useState<LLMConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function LLMConfigListPage() {
       const data = await llmService.listConfigs();
       setConfigs(data);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load LLM configurations');
+      setError(err.response?.data?.error || t('llmConfig.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -33,12 +35,12 @@ export function LLMConfigListPage() {
       setError(null);
       const result = await llmService.testConnection(id);
       if (result.success) {
-        alert('Connection test successful!');
+        alert(t('llmConfig.testSuccess'));
       } else {
-        alert(`Connection test failed: ${result.message}`);
+        alert(t('llmConfig.testFailed', { message: result.message }));
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Connection test failed');
+      setError(err.response?.data?.error || t('llmConfig.errors.testFailed'));
     } finally {
       setTestingId(null);
     }
@@ -49,12 +51,12 @@ export function LLMConfigListPage() {
       await llmService.setDefault(id);
       await loadConfigs();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to set default configuration');
+      setError(err.response?.data?.error || t('llmConfig.errors.setDefaultFailed'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this configuration?')) {
+    if (!confirm(t('llmConfig.confirmDelete'))) {
       return;
     }
 
@@ -62,7 +64,7 @@ export function LLMConfigListPage() {
       await llmService.deleteConfig(id);
       await loadConfigs();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete configuration');
+      setError(err.response?.data?.error || t('llmConfig.errors.deleteFailed'));
     }
   };
 
@@ -91,13 +93,13 @@ export function LLMConfigListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">LLM Configurations</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('llmConfig.title')}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage large language model provider configurations
+            {t('llmConfig.description')}
           </p>
         </div>
         <Link to="/config/llm/new">
-          <Button>Add Configuration</Button>
+          <Button>{t('llmConfig.addConfig')}</Button>
         </Link>
       </div>
 
@@ -123,13 +125,13 @@ export function LLMConfigListPage() {
                 d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No configurations</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('llmConfig.noConfigs')}</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by adding a new LLM configuration.
+              {t('llmConfig.getStarted')}
             </p>
             <div className="mt-6">
               <Link to="/config/llm/new">
-                <Button>Add Configuration</Button>
+                <Button>{t('llmConfig.addConfig')}</Button>
               </Link>
             </div>
           </div>
@@ -151,25 +153,25 @@ export function LLMConfigListPage() {
                   </div>
                   {config.is_default && (
                     <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Default
+                      {t('llmConfig.default')}
                     </span>
                   )}
                 </div>
 
                 <div className="text-sm text-gray-500">
-                  <div>Model: {config.model_name || 'N/A'}</div>
-                  <div>Created: {new Date(config.created_at).toLocaleDateString()}</div>
+                  <div>{t('llmConfig.model')}: {config.model_name || 'N/A'}</div>
+                  <div>{t('llmConfig.created')}: {new Date(config.created_at).toLocaleDateString()}</div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                   <Link to={`/config/llm/${config.id}`} className="flex-1">
                     <Button variant="secondary" className="w-full">
-                      Configure
+                      {t('llmConfig.configure')}
                     </Button>
                   </Link>
                   <Link to={`/config/llm/${config.id}/test`} className="flex-1">
                     <Button variant="secondary" className="w-full">
-                      Test
+                      {t('llmConfig.test')}
                     </Button>
                   </Link>
                 </div>
@@ -181,7 +183,7 @@ export function LLMConfigListPage() {
                     disabled={testingId === config.id}
                     className="flex-1"
                   >
-                    {testingId === config.id ? 'Testing...' : 'Test Connection'}
+                    {testingId === config.id ? t('llmConfig.testing') : t('llmConfig.testConnection')}
                   </Button> */}
                   {!config.is_default && (
                     <Button
@@ -189,7 +191,7 @@ export function LLMConfigListPage() {
                       onClick={() => handleSetDefault(config.id)}
                       className="flex-1"
                     >
-                      Set Default
+                      {t('llmConfig.setDefault')}
                     </Button>
                   )}
                   {!config.is_default && (
@@ -198,7 +200,7 @@ export function LLMConfigListPage() {
                       onClick={() => handleDelete(config.id)}
                       className="flex-1 text-red-600 hover:text-red-700"
                     >
-                      Delete
+                      {t('common.delete')}
                     </Button>
                   )}
                 </div>

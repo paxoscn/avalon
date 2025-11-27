@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { flowService } from '../services/flow.service';
 import type { Flow } from '../types';
 import { Button, Card, Table, Loader, Alert } from '../components/common';
 
 export const FlowListPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export const FlowListPage = () => {
       setFlows(response.flows);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load flows');
+      setError(err.response?.data?.error || t('flows.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -43,9 +45,9 @@ export const FlowListPage = () => {
   const handleExecute = async (flowId: string) => {
     try {
       const result = await flowService.executeFlow(flowId, {});
-      navigate(`/flows/${flowId}/executions/${result.executionId}`);
+      navigate(`/flows/${flowId}/executions/${result.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to execute flow');
+      setError(err.response?.data?.error || t('flows.errors.executeFailed'));
     }
   };
 
@@ -58,7 +60,7 @@ export const FlowListPage = () => {
       }
       await loadFlows();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update flow status');
+      setError(err.response?.data?.error || t('flows.errors.updateStatusFailed'));
     }
   };
 
@@ -78,7 +80,7 @@ export const FlowListPage = () => {
   const columns = [
     {
       key: 'name',
-      label: 'Name',
+      header: t('flows.columns.name'),
       render: (flow: Flow) => (
         <div>
           <div className="font-medium text-gray-900">{flow.name}</div>
@@ -90,25 +92,25 @@ export const FlowListPage = () => {
     },
     {
       key: 'status',
-      label: 'Status',
+      header: t('flows.columns.status'),
       render: (flow: Flow) => (
         <span
           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
             flow.status
           )}`}
         >
-          {flow.status}
+          {t(`flows.status.${flow.status.toLowerCase()}`)}
         </span>
       ),
     },
     {
       key: 'current_version',
-      label: 'Version',
+      header: t('flows.columns.version'),
       render: (flow: Flow) => <span className="text-gray-900">v{flow.current_version}</span>,
     },
     {
       key: 'updated_at',
-      label: 'Last Updated',
+      header: t('flows.columns.lastUpdated'),
       render: (flow: Flow) => (
         <span className="text-gray-500">
           {new Date(flow.updated_at).toLocaleDateString()}
@@ -117,11 +119,11 @@ export const FlowListPage = () => {
     },
     {
       key: 'actions',
-      label: 'Actions',
+      header: t('common.actions'),
       render: (flow: Flow) => (
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => handleViewDetails(flow.id)}>
-            View
+            {t('flows.actions.view')}
           </Button>
           {flow.status !== 'Archived' && (
             <Button
@@ -129,12 +131,12 @@ export const FlowListPage = () => {
               variant={flow.status === 'Active' ? 'secondary' : 'primary'}
               onClick={() => handleToggleStatus(flow.id, flow.status)}
             >
-              {flow.status === 'Active' ? 'Deactivate' : 'Activate'}
+              {flow.status === 'Active' ? t('flows.actions.deactivate') : t('flows.actions.activate')}
             </Button>
           )}
           {flow.status === 'Active' && (
             <Button size="sm" onClick={() => handleExecute(flow.id)}>
-              Execute
+              {t('flows.actions.execute')}
             </Button>
           )}
         </div>
@@ -153,24 +155,24 @@ export const FlowListPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Agent Flows</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{t('flows.title')}</h1>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => navigate('/flows/import')}>
-            Import DSL
+            {t('flows.importDSL')}
           </Button>
-          <Button onClick={() => navigate('/flows/new')}>Create Flow</Button>
+          <Button onClick={() => navigate('/flows/new')}>{t('flows.createFlow')}</Button>
         </div>
       </div>
 
       {error && (
-        <Alert variant="error" onClose={() => setError(null)}>
+        <Alert type="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       <Card>
         <div className="mb-4 flex gap-2">
-          {['All', 'Active', 'Draft', 'Archived'].map((status) => (
+          {['all', 'active', 'draft', 'archived'].map((status) => (
             <button
               key={status}
               onClick={() => {
@@ -182,7 +184,7 @@ export const FlowListPage = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {t(`flows.filters.${status}`)}
             </button>
           ))}
         </div>
@@ -192,8 +194,11 @@ export const FlowListPage = () => {
         {total > limit && (
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}{' '}
-              results
+              {t('flows.pagination.showing', {
+                from: (page - 1) * limit + 1,
+                to: Math.min(page * limit, total),
+                total: total
+              })}
             </div>
             <div className="flex gap-2">
               <Button
@@ -202,7 +207,7 @@ export const FlowListPage = () => {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                Previous
+                {t('common.previous')}
               </Button>
               <Button
                 size="sm"
@@ -210,7 +215,7 @@ export const FlowListPage = () => {
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * limit >= total}
               >
-                Next
+                {t('common.next')}
               </Button>
             </div>
           </div>

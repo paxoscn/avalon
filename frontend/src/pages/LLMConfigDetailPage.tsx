@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { llmService, type CreateLLMConfigRequest, type UpdateLLMConfigRequest } from '../services/llm.service';
 import type { LLMConfig } from '../types';
 import { Button, Card, Input, Loader, Alert } from '../components/common';
 
 export function LLMConfigDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = id === 'new';
@@ -55,7 +57,7 @@ export function LLMConfigDetailPage() {
         isDefault: data.is_default,
       });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load configuration');
+      setError(err.response?.data?.error || t('llmConfig.errors.loadConfigFailed'));
     } finally {
       setLoading(false);
     }
@@ -106,7 +108,7 @@ export function LLMConfigDetailPage() {
           isDefault: formData.isDefault,
         };
         const newConfig = await llmService.createConfig(request);
-        setSuccess('Configuration created successfully');
+        setSuccess(t('llmConfig.success.created'));
         setTimeout(() => navigate(`/config/llm/${newConfig.id}`), 1500);
       } else {
         const request: UpdateLLMConfigRequest = {
@@ -118,11 +120,11 @@ export function LLMConfigDetailPage() {
           isDefault: formData.isDefault,
         };
         await llmService.updateConfig(id!, request);
-        setSuccess('Configuration updated successfully');
+        setSuccess(t('llmConfig.success.updated'));
         await loadConfig();
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save configuration');
+      setError(err.response?.data?.error || t('llmConfig.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -173,12 +175,12 @@ export function LLMConfigDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">
-            {isNew ? 'Add LLM Configuration' : 'Edit LLM Configuration'}
+            {isNew ? t('llmConfig.detail.addTitle') : t('llmConfig.detail.editTitle')}
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             {isNew
-              ? 'Configure a new large language model provider'
-              : 'Update LLM provider configuration'}
+              ? t('llmConfig.detail.addDescription')
+              : t('llmConfig.detail.editDescription')}
           </p>
         </div>
       </div>
@@ -197,19 +199,19 @@ export function LLMConfigDetailPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('llmConfig.detail.basicInfo')}</h2>
           <div className="space-y-4">
             <Input
-              label="Configuration Name"
+              label={t('llmConfig.detail.configName')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              placeholder="My OpenAI Config"
+              placeholder={t('llmConfig.detail.configNamePlaceholder')}
             />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Provider
+                {t('llmConfig.detail.provider')}
               </label>
               <select
                 value={formData.provider}
@@ -223,7 +225,7 @@ export function LLMConfigDetailPage() {
               </select>
               {!isNew && (
                 <p className="mt-1 text-xs text-gray-500">
-                  Provider cannot be changed after creation
+                  {t('llmConfig.detail.providerCannotChange')}
                 </p>
               )}
             </div>
@@ -235,47 +237,47 @@ export function LLMConfigDetailPage() {
                 onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="ml-2 text-sm text-gray-700">Set as default configuration</span>
+              <span className="ml-2 text-sm text-gray-700">{t('llmConfig.detail.setAsDefault')}</span>
             </label>
           </div>
         </Card>
 
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Connection Settings</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('llmConfig.detail.connectionSettings')}</h2>
           <div className="space-y-4">
             <Input
-              label="API URL"
+              label={t('llmConfig.detail.apiUrl')}
               type="url"
               value={formData.apiUrl}
               onChange={(e) => setFormData({ ...formData, apiUrl: e.target.value })}
-              placeholder="https://api.openai.com/v1"
+              placeholder={t('llmConfig.detail.apiUrlPlaceholder')}
             />
 
             <Input
-              label="API Key"
+              label={t('llmConfig.detail.apiKey')}
               type="password"
               value={formData.apiKey}
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              placeholder="sk-..."
+              placeholder={t('llmConfig.detail.apiKeyPlaceholder')}
               required={formData.provider !== 'local'}
             />
 
             <Input
-              label="Model"
+              label={t('llmConfig.detail.model')}
               value={formData.model}
               onChange={(e) => setFormData({ ...formData, model: e.target.value })}
               required
-              placeholder="gpt-4"
+              placeholder={t('llmConfig.detail.modelPlaceholder')}
             />
           </div>
         </Card>
 
         <Card>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Model Parameters</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">{t('llmConfig.detail.modelParameters')}</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temperature: {formData.temperature}
+                {t('llmConfig.detail.temperature', { value: formData.temperature })}
               </label>
               <input
                 type="range"
@@ -289,12 +291,12 @@ export function LLMConfigDetailPage() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Controls randomness. Lower is more focused, higher is more creative.
+                {t('llmConfig.detail.temperatureHelp')}
               </p>
             </div>
 
             <Input
-              label="Max Tokens"
+              label={t('llmConfig.detail.maxTokens')}
               type="number"
               value={formData.maxTokens}
               onChange={(e) =>
@@ -306,7 +308,7 @@ export function LLMConfigDetailPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Top P: {formData.topP}
+                {t('llmConfig.detail.topP', { value: formData.topP })}
               </label>
               <input
                 type="range"
@@ -320,13 +322,13 @@ export function LLMConfigDetailPage() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Nucleus sampling. Alternative to temperature.
+                {t('llmConfig.detail.topPHelp')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Frequency Penalty: {formData.frequencyPenalty}
+                {t('llmConfig.detail.frequencyPenalty', { value: formData.frequencyPenalty })}
               </label>
               <input
                 type="range"
@@ -340,13 +342,13 @@ export function LLMConfigDetailPage() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Reduces repetition of token sequences.
+                {t('llmConfig.detail.frequencyPenaltyHelp')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Presence Penalty: {formData.presencePenalty}
+                {t('llmConfig.detail.presencePenalty', { value: formData.presencePenalty })}
               </label>
               <input
                 type="range"
@@ -360,7 +362,7 @@ export function LLMConfigDetailPage() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Encourages talking about new topics.
+                {t('llmConfig.detail.presencePenaltyHelp')}
               </p>
             </div>
           </div>
@@ -368,14 +370,14 @@ export function LLMConfigDetailPage() {
 
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : isNew ? 'Create Configuration' : 'Update Configuration'}
+            {saving ? t('llmConfig.detail.saving') : isNew ? t('llmConfig.detail.createConfig') : t('llmConfig.detail.updateConfig')}
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={() => navigate('/config/llm')}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </form>

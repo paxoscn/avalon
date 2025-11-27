@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import yaml from 'js-yaml';
 import { flowService } from '../services/flow.service';
 import type { Flow, ValidationResult } from '../types';
 import { Button, Card, Alert, Input } from '../components/common';
 
 export const FlowImportPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [flowName, setFlowName] = useState('');
   const [dslContent, setDslContent] = useState('');
@@ -34,12 +36,12 @@ export const FlowImportPage = () => {
 
   const handleValidate = async () => {
     if (!dslContent.trim()) {
-      setError('Please provide DSL content');
+      setError(t('flows.import.provideDSL'));
       return;
     }
 
     if (!flowName.trim()) {
-      setError('Please provide a flow name');
+      setError(t('flows.import.provideFlowName'));
       return;
     }
 
@@ -53,7 +55,7 @@ export const FlowImportPage = () => {
       try {
         parsedDsl = yaml.load(dslContent);
       } catch (e: any) {
-        setError(`Invalid YAML format: ${e.message}`);
+        setError(t('flows.import.invalidYAML', { message: e.message }));
         return;
       }
 
@@ -86,7 +88,7 @@ export const FlowImportPage = () => {
       setValidation(validationResult);
       setPreviewMode(true);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to validate DSL');
+      setError(err.response?.data?.error || t('flows.import.validateFailed'));
     } finally {
       setValidating(false);
     }
@@ -94,7 +96,7 @@ export const FlowImportPage = () => {
 
   const handleImport = async () => {
     if (!dslContent.trim() || !flowName.trim()) {
-      setError('Please provide both flow name and DSL content');
+      setError(t('flows.import.provideBoth'));
       return;
     }
 
@@ -116,7 +118,7 @@ export const FlowImportPage = () => {
         }, 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to import DSL');
+      setError(err.response?.data?.error || t('flows.import.importFailed'));
     } finally {
       setImporting(false);
     }
@@ -137,16 +139,16 @@ export const FlowImportPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <Button variant="secondary" size="sm" onClick={() => navigate('/flows')}>
-            ← Back to Flows
+            {t('flows.import.backToFlows')}
           </Button>
-          <h1 className="text-2xl font-semibold text-gray-900 mt-2">Import Dify DSL</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mt-2">{t('flows.import.title')}</h1>
           <p className="text-gray-600 mt-1">
-            Upload or paste a Dify DSL file to create a new flow
+            {t('flows.import.description')}
           </p>
         </div>
         {(validation || importedFlow) && (
           <Button variant="secondary" onClick={handleReset}>
-            Reset
+            {t('flows.import.reset')}
           </Button>
         )}
       </div>
@@ -159,26 +161,26 @@ export const FlowImportPage = () => {
 
       {importedFlow && validation?.is_valid && (
         <Alert type="success">
-          Flow imported successfully! Redirecting to flow details...
+          {t('flows.import.importSuccess')}
         </Alert>
       )}
 
       {!previewMode ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Flow Information</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('flows.import.flowInfo')}</h2>
             <div className="space-y-4">
               <Input
-                label="Flow Name"
+                label={t('flows.import.flowName')}
                 value={flowName}
                 onChange={(e) => setFlowName(e.target.value)}
-                placeholder="Enter flow name"
+                placeholder={t('flows.import.flowNamePlaceholder')}
                 required
               />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload DSL File
+                  {t('flows.import.uploadDSL')}
                 </label>
                 <input
                   type="file"
@@ -187,19 +189,19 @@ export const FlowImportPage = () => {
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
                 {file && (
-                  <p className="mt-2 text-sm text-gray-600">Selected: {file.name}</p>
+                  <p className="mt-2 text-sm text-gray-600">{t('flows.import.selectedFile', { filename: file.name })}</p>
                 )}
               </div>
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">DSL Content</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('flows.import.dslContent')}</h2>
             <textarea
               value={dslContent}
               onChange={(e) => setDslContent(e.target.value)}
               className="w-full h-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              placeholder='Paste your Dify DSL here or upload a file...'
+              placeholder={t('flows.import.dslContentPlaceholder')}
             />
             <div className="mt-4 flex gap-3">
               <Button
@@ -207,7 +209,7 @@ export const FlowImportPage = () => {
                 disabled={validating || !dslContent.trim() || !flowName.trim()}
                 className="flex-1"
               >
-                {validating ? 'Validating...' : 'Validate & Preview'}
+                {validating ? t('flows.import.validating') : t('flows.import.validatePreview')}
               </Button>
             </div>
           </Card>
@@ -216,7 +218,7 @@ export const FlowImportPage = () => {
         <div className="space-y-6">
           {validation && (
             <Card>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Validation Results</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('flows.import.validationResults')}</h2>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div
@@ -224,13 +226,13 @@ export const FlowImportPage = () => {
                       }`}
                   />
                   <span className="font-medium">
-                    {validation.is_valid ? 'Valid DSL' : 'Invalid DSL'}
+                    {validation.is_valid ? t('flows.import.validDSL') : t('flows.import.invalidDSL')}
                   </span>
                 </div>
 
                 {validation.errors && validation.errors.length > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-red-800 mb-2">Errors:</h3>
+                    <h3 className="text-sm font-semibold text-red-800 mb-2">{t('flows.import.errors')}</h3>
                     <ul className="list-disc list-inside space-y-1">
                       {validation.errors.map((err, idx) => (
                         <li key={idx} className="text-sm text-red-700">
@@ -243,7 +245,7 @@ export const FlowImportPage = () => {
 
                 {validation.warnings && validation.warnings.length > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-yellow-800 mb-2">Warnings:</h3>
+                    <h3 className="text-sm font-semibold text-yellow-800 mb-2">{t('flows.import.warnings')}</h3>
                     <ul className="list-disc list-inside space-y-1">
                       {validation.warnings.map((warn, idx) => (
                         <li key={idx} className="text-sm text-yellow-700">
@@ -257,7 +259,7 @@ export const FlowImportPage = () => {
                 {validation.is_valid && !validation.warnings && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <p className="text-sm text-green-700">
-                      ✓ DSL is valid and ready to import
+                      {t('flows.import.readyToImport')}
                     </p>
                   </div>
                 )}
@@ -266,15 +268,15 @@ export const FlowImportPage = () => {
           )}
 
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Flow Preview</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('flows.import.flowPreview')}</h2>
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Flow Name</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('flows.import.flowName')}</h3>
                 <p className="text-gray-900">{flowName}</p>
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">DSL Structure</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">{t('flows.import.dslStructure')}</h3>
                 <pre className="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs max-h-96">
                   {JSON.stringify(yaml.load(dslContent), null, 2)}
                 </pre>
@@ -287,7 +289,7 @@ export const FlowImportPage = () => {
                     disabled={importing || !validation.is_valid}
                     className="w-full"
                   >
-                    {importing ? 'Importing...' : 'Import Flow'}
+                    {importing ? t('flows.import.importing') : t('flows.import.importFlow')}
                   </Button>
                 </div>
               )}
@@ -297,25 +299,26 @@ export const FlowImportPage = () => {
       )}
 
       <Card>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Import Guidelines</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('flows.import.guidelines')}</h2>
         <div className="space-y-3 text-sm text-gray-700">
           <div>
-            <h3 className="font-medium text-gray-900 mb-1">Supported Format</h3>
-            <p>The DSL must be in valid YAML format following the Dify DSL specification.</p>
+            <h3 className="font-medium text-gray-900 mb-1">{t('flows.import.supportedFormat')}</h3>
+            <p>{t('flows.import.supportedFormatDesc')}</p>
           </div>
           <div>
-            <h3 className="font-medium text-gray-900 mb-1">Required Fields</h3>
+            <h3 className="font-medium text-gray-900 mb-1">{t('flows.import.requiredFields')}</h3>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>nodes: Array of flow nodes</li>
-              <li>edges: Array of connections between nodes (recommended)</li>
+              {t('flows.import.requiredFieldsList').split('\n').map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
           <div>
-            <h3 className="font-medium text-gray-900 mb-1">Common Issues</h3>
+            <h3 className="font-medium text-gray-900 mb-1">{t('flows.import.commonIssues')}</h3>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Invalid YAML syntax - ensure proper formatting and indentation</li>
-              <li>Missing required fields - check the DSL structure</li>
-              <li>Unsupported node types - verify node compatibility</li>
+              {t('flows.import.commonIssuesList').split('\n').map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
