@@ -1,5 +1,8 @@
 use crate::domain::value_objects::{AgentId, TenantId};
 use chrono::{DateTime, NaiveDate, Utc};
+use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::prelude::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -15,7 +18,7 @@ pub struct AgentDailyStats {
     pub session_count: i64,
     pub message_count: i64,
     pub token_count: i64,
-    pub revenue: f64,
+    pub revenue: Decimal,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -35,7 +38,7 @@ impl AgentDailyStats {
             session_count: 0,
             message_count: 0,
             token_count: 0,
-            revenue: 0.0,
+            revenue: Decimal::ZERO,
             created_at: now,
             updated_at: now,
         }
@@ -71,7 +74,7 @@ impl AgentDailyStats {
         self.updated_at = Utc::now();
     }
 
-    pub fn add_revenue(&mut self, amount: f64) {
+    pub fn add_revenue(&mut self, amount: Decimal) {
         self.revenue += amount;
         self.updated_at = Utc::now();
     }
@@ -108,6 +111,6 @@ impl AgentDailyStats {
         if self.session_count == 0 {
             return 0.0;
         }
-        self.revenue / self.session_count as f64
+        (self.revenue / Decimal::from_i64(self.session_count).unwrap_or(Decimal::ZERO)).to_f64().unwrap_or(0.0)
     }
 }

@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use sea_orm::PaginatorTrait;
+use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
+use tokio::sync::Mutex;
 
 use crate::{
     application::dto::agent_dto::*,
@@ -1446,6 +1449,9 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         // Add user message
         messages.push(ChatMessage::new_user_message(message));
 
+        // Get model name for metadata
+        let model_name = llm_config.model_config.model_name.clone();
+
         // Call LLM streaming
         let stream = llm_service
             .stream_chat_completion(
@@ -1465,38 +1471,48 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let tenant_id_clone = tenant_id;
         let user_id_clone = user_id;
         let stats_service = self.stats_service.clone();
+        let agent_price = agent.price;
 
-        let mut accumulated_content = String::new();
-        let mut total_tokens = 0u32;
-        let mut model_used = String::new();
-        let mut reply_message_id: Option<crate::domain::value_objects::MessageId> = None;
+        // Use Arc<Mutex<>> to allow mutation across async closures
+        let accumulated_content = Arc::new(Mutex::new(String::new()));
+        let total_tokens = Arc::new(Mutex::new(0u32));
+        let reply_message_id = Arc::new(Mutex::new(None::<crate::domain::value_objects::MessageId>));
 
         let transformed_stream = stream.then(move |chunk_result| {
             let session_service = session_service_clone.clone();
             let agent_name = agent_name.clone();
             let stats_service = stats_service.clone();
-            let mut accumulated_content = accumulated_content.clone();
-            let mut model_used = model_used.clone();
+            let accumulated_content = accumulated_content.clone();
+            let total_tokens = total_tokens.clone();
+            let reply_message_id = reply_message_id.clone();
+            let model_name = model_name.clone();
             
             async move {
                 match chunk_result {
                     Ok(chunk) => {
+                        println!("chunk = {:?}", chunk);
                         // Accumulate content
                         if let Some(content) = &chunk.content {
-                            accumulated_content.push_str(content);
+                            let mut acc = accumulated_content.lock().await;
+                            acc.push_str(content);
                         }
 
                         // Update usage info
                         if let Some(usage) = &chunk.usage {
-                            total_tokens = usage.total_tokens;
+                            let mut tokens = total_tokens.lock().await;
+                            *tokens = usage.total_tokens;
                         }
 
                         // Check if this is the final chunk
                         if let Some(finish_reason) = &chunk.finish_reason {
+                            // Get final accumulated values
+                            let final_content = accumulated_content.lock().await.clone();
+                            let final_tokens = *total_tokens.lock().await;
+
                             // Save the complete assistant message
                             let assistant_metadata = MessageMetadata {
-                                model_used: Some(model_used.clone()),
-                                tokens_used: Some(total_tokens),
+                                model_used: Some(model_name.clone()),
+                                tokens_used: Some(final_tokens),
                                 response_time_ms: None,
                                 tool_calls: None,
                                 custom_data: std::collections::HashMap::from([
@@ -1507,50 +1523,62 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
                             let assistant_chat_message = ChatMessage {
                                 role: MessageRole::Assistant,
-                                content: crate::domain::value_objects::chat_message::MessageContent::Text(accumulated_content.clone()),
+                                content: crate::domain::value_objects::chat_message::MessageContent::Text(final_content),
                                 metadata: Some(assistant_metadata),
                                 timestamp: chrono::Utc::now(),
                             };
 
-                            if let Ok(assistant_message) = session_service
+                            match session_service
                                 .add_message(&session_id_clone, &tenant_id_clone, &user_id_clone, assistant_chat_message)
                                 .await
                             {
-                                reply_message_id = Some(assistant_message.id);
+                                Ok(assistant_message) => {
+                                    let mut reply_id = reply_message_id.lock().await;
+                                    *reply_id = Some(assistant_message.id);
 
-                                // Record statistics
-                                if let Some(stats_svc) = &stats_service {
-                                    let _ = stats_svc.record_messages(agent_id_clone, tenant_id_clone, 2).await;
-                                    let _ = stats_svc.record_tokens(agent_id_clone, tenant_id_clone, total_tokens as i64).await;
+                                    // Record statistics
+                                    if let Some(stats_svc) = &stats_service {
+                                        let _ = stats_svc.record_messages(agent_id_clone, tenant_id_clone, 2).await;
+                                        let _ = stats_svc.record_tokens(agent_id_clone, tenant_id_clone, final_tokens as i64).await;
+                                        let _ = stats_svc.record_revenue(
+                                            agent_id_clone,
+                                            tenant_id_clone,
+                                            agent_price.unwrap_or(Decimal::ZERO) * Decimal::from_u32(final_tokens).unwrap_or(Decimal::ZERO)
+                                        ).await;
+                                    }
+
+                                    // // Return final chunk with all IDs
+                                    // return Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
+                                    //     chunk_type: "done".to_string(),
+                                    //     content: None,
+                                    //     reasoning_content: None,
+                                    //     session_id: Some(session_id_clone.0),
+                                    //     message_id: Some(user_message_id.0),
+                                    //     reply_id: Some(assistant_message.id.0),
+                                    //     metadata: Some(serde_json::json!({
+                                    //         "model": model_name,
+                                    //         "tokens_used": final_tokens,
+                                    //         "finish_reason": format!("{:?}", finish_reason),
+                                    //     })),
+                                    //     finish_reason: Some(format!("{:?}", finish_reason)),
+                                    //     error: None,
+                                    // });
+                                },
+                                Err(e) => {
+                                    log::warn!("add_message failed: {:?}", e);
                                 }
-
-                                // Return final chunk with all IDs
-                                return Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
-                                    chunk_type: "done".to_string(),
-                                    content: None,
-                                    reasoning_content: None,
-                                    session_id: Some(session_id_clone.0),
-                                    message_id: Some(user_message_id.0),
-                                    reply_id: Some(assistant_message.id.0),
-                                    metadata: Some(serde_json::json!({
-                                        "model": model_used,
-                                        "tokens_used": total_tokens,
-                                        "finish_reason": format!("{:?}", finish_reason),
-                                    })),
-                                    finish_reason: Some(format!("{:?}", finish_reason)),
-                                    error: None,
-                                });
                             }
                         }
 
                         // Return content chunk
+                        let reply_id = *reply_message_id.lock().await;
                         Ok(crate::application::dto::agent_dto::AgentChatStreamChunk {
                             chunk_type: "content".to_string(),
                             content: chunk.content,
                             reasoning_content: chunk.reasoning_content,
                             session_id: Some(session_id_clone.0),
                             message_id: Some(user_message_id.0),
-                            reply_id: reply_message_id.map(|id| id.0),
+                            reply_id: reply_id.map(|id| id.0),
                             metadata: None,
                             finish_reason: None,
                             error: None,

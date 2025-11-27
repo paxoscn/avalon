@@ -30,7 +30,7 @@ impl AgentDailyStatsRepositoryImpl {
             session_count: entity.session_count,
             message_count: entity.message_count,
             token_count: entity.token_count,
-            revenue: entity.revenue.to_string().parse::<f64>().unwrap_or(0.0),
+            revenue: entity.revenue,
             created_at: entity.created_at,
             updated_at: entity.updated_at,
         }
@@ -48,7 +48,7 @@ impl AgentDailyStatsRepositoryImpl {
             session_count: Set(stats.session_count),
             message_count: Set(stats.message_count),
             token_count: Set(stats.token_count),
-            revenue: Set(Decimal::try_from(stats.revenue).unwrap_or(Decimal::ZERO)),
+            revenue: Set(stats.revenue),
             created_at: Set(stats.created_at),
             updated_at: Set(stats.updated_at),
         }

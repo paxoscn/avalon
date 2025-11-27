@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use chrono::Utc;
+use rust_decimal::Decimal;
 use crate::domain::repositories::AgentDailyStatsRepository;
 use crate::domain::value_objects::{AgentId, TenantId};
 use crate::error::Result;
@@ -81,7 +82,7 @@ impl AgentStatsService {
     }
 
     /// Record revenue
-    pub async fn record_revenue(&self, agent_id: AgentId, tenant_id: TenantId, amount: f64) -> Result<()> {
+    pub async fn record_revenue(&self, agent_id: AgentId, tenant_id: TenantId, amount: Decimal) -> Result<()> {
         let today = Utc::now().date_naive();
         let mut stats = self.stats_repo.get_or_create(&agent_id, &tenant_id, today).await?;
         
