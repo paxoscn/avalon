@@ -196,6 +196,7 @@
       "preview": "实时预览",
       "previewDescription": "与数字人进行对话测试",
       "history": "面试历史",
+      "historyDescription": "查看所有历史面试记录和评价",
       "noHistory": "暂无面试记录",
       "score": "评分",
       "completedAt": "完成时间",

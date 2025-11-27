@@ -73,8 +73,13 @@ export function AgentInterviewPage() {
       setSubmitting(true);
       setError(null);
       
-      // 保存面试结果
-      await agentService.completeInterview(agent.id, passed);
+      // Calculate average score
+      const avgScore = Math.round(
+        Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
+      );
+      
+      // 保存面试结果（包含评分和评语）
+      await agentService.completeInterview(agent.id, passed, avgScore, feedback || undefined);
       
       if (passed) {
         setSuccess(t('agents.interview.passSuccess'));
@@ -100,8 +105,13 @@ export function AgentInterviewPage() {
       setSubmitting(true);
       setError(null);
       
-      // 先标记面试通过
-      await agentService.completeInterview(agent.id, true);
+      // Calculate average score
+      const avgScore = Math.round(
+        Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
+      );
+      
+      // 先标记面试通过（包含评分和评语）
+      await agentService.completeInterview(agent.id, true, avgScore, feedback || undefined);
       
       // 然后雇佣
       await agentService.employAgent(agent.id);
@@ -171,11 +181,14 @@ export function AgentInterviewPage() {
       {/* 左侧区域 - 分为两列 */}
       <div className="flex-1 flex gap-6">
         {/* 左子列 - 面试历史 */}
-        <div className="w-80 space-y-6">
+        <div className="flex-1 space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-1">
               {t('agents.interview.history')}
             </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('agents.interview.historyDescription')}
+            </p>
             
             {loadingRecords ? (
               <div className="flex items-center justify-center py-8">
@@ -188,31 +201,39 @@ export function AgentInterviewPage() {
                 </div>
               </Card>
             ) : (
-              <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
                 {interviewRecords.map((record) => (
                   <Card key={record.id} className="hover:shadow-md transition-shadow">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      {/* 头部：时间和状态 */}
+                      <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                         <span className="text-xs text-gray-500">
                           {new Date(record.created_at).toLocaleString()}
                         </span>
                         {getStatusBadge(record.status)}
                       </div>
                       
+                      {/* 评分 */}
                       {record.score !== undefined && record.score !== null && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">{t('agents.interview.score')}:</span>
-                          <span className="text-lg font-semibold text-blue-600">{record.score}</span>
+                        <div className="bg-blue-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">{t('agents.interview.score')}</span>
+                            <span className="text-3xl font-bold text-blue-600">{record.score}</span>
+                          </div>
                         </div>
                       )}
                       
+                      {/* 评语 */}
                       {record.feedback && (
-                        <div className="mt-2">
-                          <p className="text-xs text-gray-500 mb-1">{t('agents.interview.feedback')}:</p>
-                          <p className="text-sm text-gray-700 line-clamp-3">{record.feedback}</p>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-2">{t('agents.interview.feedback')}</p>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{record.feedback}</p>
+                          </div>
                         </div>
                       )}
                       
+                      {/* 完成时间 */}
                       {record.completed_at && (
                         <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
                           {t('agents.interview.completedAt')}: {new Date(record.completed_at).toLocaleString()}

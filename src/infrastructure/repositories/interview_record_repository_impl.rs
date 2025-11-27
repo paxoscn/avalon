@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, Set, ActiveModelTrait};
 use sea_orm::PaginatorTrait;
+use sea_orm::QueryOrder;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -113,6 +114,7 @@ impl InterviewRecordRepository for InterviewRecordRepositoryImpl {
     async fn find_by_agent(&self, agent_id: &AgentId) -> Result<Vec<InterviewRecord>> {
         let records = entities::interview_record::Entity::find()
             .filter(entities::interview_record::Column::AgentId.eq(agent_id.0))
+            .order_by_desc(entities::interview_record::Column::CompletedAt)
             .all(self.db.as_ref())
             .await?;
 

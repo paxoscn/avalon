@@ -131,8 +131,8 @@ class AgentService {
     await apiClient.post(`/agents/${id}/interview/start`);
   }
 
-  async completeInterview(id: string, passed: boolean): Promise<void> {
-    await apiClient.post(`/agents/${id}/interview/complete`, { passed });
+  async completeInterview(id: string, passed: boolean, score?: number, feedback?: string): Promise<void> {
+    await apiClient.post(`/agents/${id}/interview/complete`, { passed, score, feedback });
   }
 
   async publishAgent(id: string): Promise<void> {

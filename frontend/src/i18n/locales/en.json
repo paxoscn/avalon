@@ -196,6 +196,7 @@
       "preview": "Live Preview",
       "previewDescription": "Test conversation with the agent",
       "history": "Interview History",
+      "historyDescription": "View all previous interview records and evaluations",
       "noHistory": "No interview records",
       "score": "Score",
       "completedAt": "Completed At",

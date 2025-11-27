@@ -411,12 +411,16 @@ pub async fn complete_interview(
     Path(agent_id): Path<Uuid>,
     Json(req): Json<CompleteInterviewRequest>,
 ) -> Result<impl IntoResponse> {
-    service.complete_interview(
-        AgentId::from_uuid(agent_id),
-        user.user_id,
-        user.tenant_id,
-        req.passed,
-    ).await?;
+    service
+        .complete_interview(
+            AgentId::from_uuid(agent_id),
+            user.user_id,
+            user.tenant_id,
+            req.passed,
+            req.score,
+            req.feedback,
+        )
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

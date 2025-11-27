@@ -164,7 +164,15 @@ pub trait AgentApplicationService: Send + Sync {
     async fn start_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId) -> Result<()>;
 
     /// Complete an interview (pass or fail)
-    async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()>;
+    async fn complete_interview(
+        &self,
+        agent_id: AgentId,
+        user_id: UserId,
+        tenant_id: TenantId,
+        passed: bool,
+        score: Option<i32>,
+        feedback: Option<String>,
+    ) -> Result<()>;
 
     /// Get interview records for an agent
     async fn get_interview_records(&self, agent_id: AgentId, user_id: UserId) -> Result<Vec<InterviewRecordDto>>;
@@ -1348,7 +1356,15 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         Ok(())
     }
 
-    async fn complete_interview(&self, agent_id: AgentId, user_id: UserId, tenant_id: TenantId, passed: bool) -> Result<()> {
+    async fn complete_interview(
+        &self,
+        agent_id: AgentId,
+        user_id: UserId,
+        tenant_id: TenantId,
+        passed: bool,
+        score: Option<i32>,
+        feedback: Option<String>,
+    ) -> Result<()> {
         use crate::domain::entities::{InterviewRecord, InterviewStatus};
 
         // Verify agent exists and belongs to the same tenant
@@ -1369,17 +1385,17 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
         // Create and save interview record
         let mut interview_record = InterviewRecord::new(agent_id, tenant_id, Some(user_id));
-        
+
         // Set the status based on passed/failed
         let status = if passed {
             InterviewStatus::Passed
         } else {
             InterviewStatus::Failed
         };
-        
-        // Complete the interview with the status
-        interview_record.complete(status, None, None);
-        
+
+        // Complete the interview with the status, score, and feedback
+        interview_record.complete(status, score, feedback);
+
         // Save to database
         self.interview_record_repo.create(&interview_record).await?;
 

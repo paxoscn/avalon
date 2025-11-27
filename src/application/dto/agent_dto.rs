@@ -320,6 +320,8 @@ pub struct AgentUsageStatsResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompleteInterviewRequest {
     pub passed: bool,
+    pub score: Option<i32>,
+    pub feedback: Option<String>,
 }
 
 /// Interview record DTO
