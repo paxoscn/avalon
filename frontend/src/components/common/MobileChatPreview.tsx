@@ -5,6 +5,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  reasoning?: string;
   timestamp: Date;
 }
 
@@ -34,10 +35,25 @@ export function MobileChatPreview({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [currentResponse, setCurrentResponse] = useState('');
+  const [currentReasoning, setCurrentReasoning] = useState('');
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
+  const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const toggleReasoning = (messageId: string) => {
+    setExpandedReasonings((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,17 +106,8 @@ export function MobileChatPreview({
       } 
       // Use real chat service with SSE streaming if agentId is provided
       else if (agentId) {
-        // Create a temporary message for streaming
-        const tempMessageId = `temp-${Date.now()}`;
-        const assistantMessage: ChatMessage = {
-          id: tempMessageId,
-          role: 'assistant',
-          content: '',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-
         let fullContent = '';
+        let fullReasoning = '';
         
         await chatService.chatStream(
           {
@@ -109,42 +116,65 @@ export function MobileChatPreview({
             sessionId,
           },
           {
-            onContent: (chunk) => {
+            onContent: (replyId, chunk) => {
+              console.log("Content chunk:", chunk, replyId);
+              
               fullContent += chunk;
-              // Update the message content in real-time
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === tempMessageId
-                    ? { ...msg, content: fullContent }
-                    : msg
-                )
-              );
+              setCurrentResponse(fullContent);
+
+              const assistantMessage: ChatMessage = {
+                id: replyId,
+                role: 'assistant',
+                content: fullContent,
+                reasoning: fullReasoning || undefined,
+                timestamp: new Date(),
+              };
+              setMessages((prev) => {
+                if (prev.length > 0 && prev[prev.length - 1].id === replyId) {
+                  prev[prev.length - 1].content = fullContent;
+                  return prev
+                } else {
+                  return [...prev, assistantMessage]
+                }
+              });
+            },
+            onReasoning: (chunk) => {
+              console.log("Reasoning chunk:", chunk);
+              fullReasoning += chunk;
+              // 流式响应时，显示在临时状态中
+              setCurrentReasoning(fullReasoning);
             },
             onDone: (data) => {
+              console.log("???");
               // Update session ID if this is the first message
               if (!sessionId) {
                 setSessionId(data.sessionId);
               }
               
-              // Update the message with final ID
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === tempMessageId
-                    ? { ...msg, id: data.replyId }
-                    : msg
-                )
-              );
+              // 清空临时的思考过程显示
+              setCurrentReasoning('');
+              
+              // 思考过程结束后，添加完整的消息到列表
+              const assistantMessage: ChatMessage = {
+                id: data.replyId,
+                role: 'assistant',
+                content: fullContent,
+                reasoning: fullReasoning || undefined,
+                timestamp: new Date(),
+              };
+              setMessages((prev) => [...prev, assistantMessage]);
             },
             onError: (errorMsg) => {
               setError(errorMsg);
-              // Update the message to show error
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === tempMessageId
-                    ? { ...msg, content: `抱歉，${errorMsg}` }
-                    : msg
-                )
-              );
+              setCurrentReasoning('');
+              // 添加错误消息
+              const errorMessage: ChatMessage = {
+                id: `error-${Date.now()}`,
+                role: 'assistant',
+                content: `抱歉，${errorMsg}`,
+                timestamp: new Date(),
+              };
+              setMessages((prev) => [...prev, errorMessage]);
             },
           }
         );
@@ -294,7 +324,37 @@ export function MobileChatPreview({
                   : 'bg-white text-gray-800 shadow-sm rounded-bl-sm'
               }`}
             >
+              {/* 思考过程按钮 */}
+              {message.reasoning && message.role === 'assistant' && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => toggleReasoning(message.id)}
+                    className="flex items-center space-x-1 text-xs text-amber-700 hover:text-amber-800 font-medium transition-colors"
+                  >
+                    <svg 
+                      className={`w-3 h-3 transition-transform ${expandedReasonings.has(message.id) ? 'rotate-90' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span>💭 思考过程</span>
+                  </button>
+                  
+                  {/* 展开的思考过程 */}
+                  {expandedReasonings.has(message.id) && (
+                    <div className="mt-2 p-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-900 whitespace-pre-wrap break-words leading-relaxed">
+                        {message.reasoning}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+              
               <p
                 className={`text-xs mt-1 ${
                   message.role === 'user' ? 'text-white/70' : 'text-gray-400'
@@ -309,7 +369,26 @@ export function MobileChatPreview({
           </div>
         ))}
 
-        {isTyping && (
+        {/* 流式响应时的思考过程 */}
+        {isTyping && currentReasoning && (
+          <div className="flex justify-start">
+            <div className="max-w-[75%] bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
+              <div className="flex items-center space-x-1 mb-1">
+                <svg className="w-3 h-3 text-amber-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-xs font-semibold text-amber-700">💭 思考中</span>
+              </div>
+              <p className="text-xs text-amber-900 whitespace-pre-wrap break-words leading-relaxed">
+                {currentReasoning}
+                <span className="inline-block w-0.5 h-3 bg-amber-600 animate-pulse ml-0.5 align-middle"></span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isTyping && !currentReasoning && (
           <div className="flex justify-start">
             <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               <div className="flex gap-1">

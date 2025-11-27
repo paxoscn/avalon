@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 export interface ChatStreamChunk {
   type: 'content' | 'done' | 'error';
   content?: string;
+  reasoning_content?: string;
   session_id?: string;
   message_id?: string;
   reply_id?: string;
@@ -19,6 +20,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  reasoning?: string;
   timestamp: Date;
   metadata?: any;
 }
@@ -40,12 +42,14 @@ export function useAgentChatStream({
 }: UseAgentChatStreamOptions) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentResponse, setCurrentResponse] = useState('');
+  const [currentReasoning, setCurrentReasoning] = useState('');
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback(
     async (message: string) => {
+      console.log('???');
       if (isStreaming) {
         console.warn('Already streaming, please wait...');
         return;
@@ -53,6 +57,7 @@ export function useAgentChatStream({
 
       setIsStreaming(true);
       setCurrentResponse('');
+      setCurrentReasoning('');
 
       // 添加用户消息到列表
       const userMessage: ChatMessage = {
@@ -95,8 +100,7 @@ export function useAgentChatStream({
         const decoder = new TextDecoder();
         let buffer = '';
         let accumulatedContent = '';
-        let assistantMessageId: string | undefined;
-        let replyId: string | undefined;
+        let accumulatedReasoning = '';
 
         while (true) {
           const { done, value } = await reader.read();
@@ -119,12 +123,17 @@ export function useAgentChatStream({
                   setSessionId(data.session_id);
                 }
 
-                if (data.type === 'content' && data.content) {
-                  accumulatedContent += data.content;
-                  setCurrentResponse(accumulatedContent);
+                if (data.type === 'content') {
+                  if (data.content) {
+                    accumulatedContent += data.content;
+                    setCurrentResponse(accumulatedContent);
+                    console.log('Content update:', data.content);
+                  }
                   
-                  if (data.message_id) {
-                    assistantMessageId = data.message_id;
+                  if (data.reasoning_content) {
+                    accumulatedReasoning += data.reasoning_content;
+                    setCurrentReasoning(accumulatedReasoning);
+                    console.log('Reasoning update:', data.reasoning_content);
                   }
                 } else if (data.type === 'done') {
                   // 完成
@@ -132,6 +141,7 @@ export function useAgentChatStream({
                     id: data.reply_id || crypto.randomUUID(),
                     role: 'assistant',
                     content: accumulatedContent,
+                    reasoning: accumulatedReasoning || undefined,
                     timestamp: new Date(),
                     metadata: data.metadata,
                   };
@@ -140,15 +150,13 @@ export function useAgentChatStream({
                   onComplete?.(assistantMessage);
                   setIsStreaming(false);
                   setCurrentResponse('');
-                  
-                  if (data.reply_id) {
-                    replyId = data.reply_id;
-                  }
+                  setCurrentReasoning('');
                 } else if (data.type === 'error') {
                   const errorMessage = data.error || 'Unknown error';
                   onError?.(errorMessage);
                   setIsStreaming(false);
                   setCurrentResponse('');
+                  setCurrentReasoning('');
                 }
               } catch (e) {
                 console.error('Failed to parse SSE data:', e);
@@ -168,6 +176,7 @@ export function useAgentChatStream({
         }
         setIsStreaming(false);
         setCurrentResponse('');
+        setCurrentReasoning('');
       } finally {
         abortControllerRef.current = null;
       }
@@ -180,18 +189,21 @@ export function useAgentChatStream({
       abortControllerRef.current.abort();
       setIsStreaming(false);
       setCurrentResponse('');
+      setCurrentReasoning('');
     }
   }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setCurrentResponse('');
+    setCurrentReasoning('');
     setSessionId(undefined);
   }, []);
 
   return {
     messages,
     currentResponse,
+    currentReasoning,
     isStreaming,
     sessionId,
     sendMessage,

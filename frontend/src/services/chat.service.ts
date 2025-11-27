@@ -43,6 +43,7 @@ export interface ChatResponse {
 export interface ChatStreamChunk {
   type: 'content' | 'done' | 'error';
   content?: string;
+  reasoning_content?: string;
   session_id?: string;
   message_id?: string;
   reply_id?: string;
@@ -52,7 +53,8 @@ export interface ChatStreamChunk {
 }
 
 export interface ChatStreamCallbacks {
-  onContent?: (content: string) => void;
+  onContent?: (replyId: string, content: string) => void;
+  onReasoning?: (reasoning: string) => void;
   onDone?: (data: { sessionId: string; messageId: string; replyId: string; metadata?: Record<string, any> }) => void;
   onError?: (error: string) => void;
 }
@@ -185,8 +187,13 @@ class ChatService {
             try {
               const data: ChatStreamChunk = JSON.parse(line.slice(6));
               
-              if (data.type === 'content' && data.content) {
-                callbacks.onContent?.(data.content);
+              if (data.type === 'content') {
+                if (data.content) {
+                  callbacks.onContent?.(data.message_id!, data.content);
+                }
+                if (data.reasoning_content) {
+                  callbacks.onReasoning?.(data.reasoning_content);
+                }
               } else if (data.type === 'done') {
                 callbacks.onDone?.({
                   sessionId: data.session_id!,
