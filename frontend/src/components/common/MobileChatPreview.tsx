@@ -223,7 +223,7 @@ export function MobileChatPreview({
   const filteredPresetQuestions = presetQuestions.filter((q) => q.trim() !== '');
 
   return (
-    <div className={`flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden ${className}`}>
+    <div className={`flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden h-[max(600px,80vh)] ${className}`}>
       {/* 手机顶部状态栏 */}
       <div className="bg-gray-900 text-white px-4 py-2 flex items-center justify-between text-xs">
         <span>9:41</span>
@@ -271,7 +271,7 @@ export function MobileChatPreview({
       </div>
 
       {/* 聊天消息区域 */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-4" style={{ maxHeight: '500px' }}>
+      <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-4">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
             <p className="text-sm text-red-600">{error}</p>
