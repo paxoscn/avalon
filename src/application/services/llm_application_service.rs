@@ -340,6 +340,12 @@ impl LLMApplicationService for LLMApplicationServiceImpl {
                 presence_penalty: config.model_config.parameters.presence_penalty,
                 stop_sequences: config.model_config.parameters.stop_sequences.clone(),
                 stream: false,
+                stream_options: Some(
+                    crate::domain::services::llm_service::StreamOptions {
+                        include_obfuscation: true,
+                        include_usage: true,
+                    }
+                ),
                 tenant_id: tenant_id.0,
                 response_format: None,
             };

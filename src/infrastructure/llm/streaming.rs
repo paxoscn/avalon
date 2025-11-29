@@ -100,6 +100,25 @@ impl LLMStream {
                     finish_reason,
                     usage,
                 }));
+            } else {
+                let usage = json.get("usage").and_then(|u| {
+                    let prompt_tokens = u.get("prompt_tokens")?.as_u64()? as u32;
+                    let completion_tokens = u.get("completion_tokens")?.as_u64()? as u32;
+                    Some(TokenUsage {
+                        prompt_tokens,
+                        completion_tokens,
+                        total_tokens: prompt_tokens + completion_tokens,
+                    })
+                });
+
+                if usage.is_some() {
+                    return Ok(Some(ChatStreamChunk {
+                        content: None,
+                        reasoning_content: None,
+                        finish_reason: None,
+                        usage,
+                    }));
+                }
             }
         }
 
@@ -165,7 +184,9 @@ impl Stream for LLMStream {
                     
                     match Self::parse_sse_chunk(&event_data) {
                         Ok(Some(chunk)) => {
-                            if chunk.finish_reason.is_some() {
+                            // To collect usage so checking finish_reason is not enough.
+                            // if chunk.finish_reason.is_some() {
+                            if chunk.usage.is_some() {
                                 self.finished = true;
                             }
                             Poll::Ready(Some(Ok(chunk)))
@@ -198,7 +219,9 @@ impl Stream for LLMStream {
                         
                         match Self::parse_sse_chunk(&event_data) {
                             Ok(Some(chunk)) => {
-                                if chunk.finish_reason.is_some() {
+                                // To collect usage so checking finish_reason is not enough.
+                                // if chunk.finish_reason.is_some() {
+                                if chunk.usage.is_some() {
                                     self.finished = true;
                                 }
                                 Poll::Ready(Some(Ok(chunk)))

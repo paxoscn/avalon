@@ -2,6 +2,7 @@ use crate::domain::services::llm_service::{
     LLMProvider, LLMError, ChatRequest, ChatResponse, ChatStreamChunk, ModelInfo, 
     ConnectionTestResult, TokenUsage, FinishReason
 };
+use crate::domain::services::StreamOptions;
 use crate::infrastructure::llm::providers::{
     HttpClient, HttpClientConfig, ProviderConfig, ProviderUtils, StandardChatResponse
 };
@@ -36,6 +37,7 @@ struct OpenAIChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     stop: Option<Vec<String>>,
     stream: bool,
+    stream_options: Option<StreamOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<serde_json::Value>,
 }
@@ -191,6 +193,7 @@ impl OpenAIProvider {
             presence_penalty: request.presence_penalty,
             stop: request.stop_sequences,
             stream: request.stream,
+            stream_options: request.stream_options,
             response_format,
         }
     }
@@ -425,6 +428,7 @@ mod tests {
             presence_penalty: Some(0.0),
             stop_sequences: None,
             stream: false,
+            stream_options: None,
             tenant_id: uuid::Uuid::new_v4(),
             response_format: None,
         };

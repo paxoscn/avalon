@@ -398,6 +398,12 @@ impl LLMDomainService for IntegratedLLMService {
                             presence_penalty: config.parameters.presence_penalty,
                             stop_sequences: config.parameters.stop_sequences,
                             stream: false,
+                            stream_options: Some(
+                                crate::domain::services::llm_service::StreamOptions {
+                                    include_obfuscation: true,
+                                    include_usage: true,
+                                }
+                            ),
                             tenant_id,
                             response_format,
                         };
@@ -461,6 +467,12 @@ impl LLMDomainService for IntegratedLLMService {
                 presence_penalty: config.parameters.presence_penalty,
                 stop_sequences: config.parameters.stop_sequences.clone(),
                 stream: true,
+                stream_options: Some(
+                    crate::domain::services::llm_service::StreamOptions {
+                        include_obfuscation: true,
+                        include_usage: true,
+                    }
+                ),
                 tenant_id,
                 response_format: None,
             };

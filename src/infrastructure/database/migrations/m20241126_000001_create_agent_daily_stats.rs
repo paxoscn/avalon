@@ -58,7 +58,7 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(AgentDailyStats::Revenue)
-                            .decimal_len(20, 6)
+                            .decimal_len(20, 8)
                             .not_null()
                             .default(0.0),
                     )

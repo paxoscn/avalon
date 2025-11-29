@@ -182,9 +182,21 @@ pub struct ChatRequest {
     pub presence_penalty: Option<f32>,
     pub stop_sequences: Option<Vec<String>>,
     pub stream: bool,
+    pub stream_options: Option<StreamOptions>,
     pub tenant_id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_format: Option<ResponseFormat>,
+}
+
+/// 流式响应配置结构体
+/// 
+/// 控制流式响应的输出选项
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StreamOptions {
+    /// 是否包含混淆信息以防止侧信道攻击
+    pub include_obfuscation: bool,
+    /// 是否返回用量信息
+    pub include_usage: bool,
 }
 
 /// Response format for structured outputs
@@ -235,6 +247,12 @@ impl LLMDomainServiceImpl {
             presence_penalty: config.parameters.presence_penalty,
             stop_sequences: config.parameters.stop_sequences.clone(),
             stream,
+            stream_options: Some(
+                crate::domain::services::llm_service::StreamOptions {
+                    include_obfuscation: true,
+                    include_usage: true,
+                }
+            ),
             tenant_id,
             response_format: None,
         }

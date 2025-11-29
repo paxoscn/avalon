@@ -1620,7 +1620,6 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             async move {
                 match chunk_result {
                     Ok(chunk) => {
-                        println!("chunk = {:?}", chunk);
                         // Accumulate content
                         if let Some(content) = &chunk.content {
                             let mut acc = accumulated_content.lock().await;
@@ -1634,7 +1633,9 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                         }
 
                         // Check if this is the final chunk
-                        if let Some(finish_reason) = &chunk.finish_reason {
+                        // To collect usage so checking finish_reason is not enough.
+                        // if let Some(finish_reason) = &chunk.finish_reason {
+                        if let Some(usage) = &chunk.usage {
                             // Get final accumulated values
                             let final_content = accumulated_content.lock().await.clone();
                             let final_tokens = *total_tokens.lock().await;
@@ -1673,7 +1674,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
                                         let _ = stats_svc.record_revenue(
                                             agent_id_clone,
                                             tenant_id_clone,
-                                            agent_price.unwrap_or(Decimal::ZERO) * Decimal::from_u32(final_tokens).unwrap_or(Decimal::ZERO)
+                                            agent_price.unwrap_or(Decimal::ZERO) * Decimal::from_u32(final_tokens).unwrap_or(Decimal::ZERO) / Decimal::from_u32(1000).unwrap_or(Decimal::ZERO)
                                         ).await;
                                     }
 
