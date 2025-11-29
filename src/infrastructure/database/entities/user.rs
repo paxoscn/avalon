@@ -23,6 +23,8 @@ pub enum Relation {
         to = "super::tenant::Column::Id"
     )]
     Tenant,
+    #[sea_orm(has_many = "super::user_tenant_relation::Entity")]
+    UserTenantRelations,
     #[sea_orm(has_many = "super::flow::Entity")]
     CreatedFlows,
     #[sea_orm(has_many = "super::flow_version::Entity")]
@@ -84,6 +86,12 @@ impl Related<super::mcp_tool_version::Entity> for Entity {
 impl Related<super::audit_log::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::AuditLogs.def()
+    }
+}
+
+impl Related<super::user_tenant_relation::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserTenantRelations.def()
     }
 }
 

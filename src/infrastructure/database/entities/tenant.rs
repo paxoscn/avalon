@@ -16,6 +16,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::user::Entity")]
     Users,
+    #[sea_orm(has_many = "super::user_tenant_relation::Entity")]
+    UserTenantRelations,
     #[sea_orm(has_many = "super::flow::Entity")]
     Flows,
     #[sea_orm(has_many = "super::flow_execution::Entity")]
@@ -77,6 +79,12 @@ impl Related<super::vector_config::Entity> for Entity {
 impl Related<super::audit_log::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::AuditLogs.def()
+    }
+}
+
+impl Related<super::user_tenant_relation::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserTenantRelations.def()
     }
 }
 

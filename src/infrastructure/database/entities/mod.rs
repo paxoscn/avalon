@@ -1,5 +1,6 @@
 pub mod tenant;
 pub mod user;
+pub mod user_tenant_relation;
 pub mod flow;
 pub mod flow_version;
 pub mod flow_execution;
@@ -19,6 +20,7 @@ pub mod api_key;
 
 pub use tenant::Entity as Tenant;
 pub use user::Entity as User;
+pub use user_tenant_relation::Entity as UserTenantRelation;
 pub use flow::Entity as Flow;
 pub use flow_version::Entity as FlowVersion;
 pub use flow_execution::Entity as FlowExecution;
