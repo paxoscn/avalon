@@ -21,3 +21,4 @@ pub mod m20241126_000001_create_agent_daily_stats;
 pub mod m20241127_000001_add_published_to_agents;
 pub mod m20241127_000002_add_price_to_agents;
 pub mod m20241127_000003_create_interview_records;
+pub mod m20241127_000004_make_timestamp_fields_nullable;

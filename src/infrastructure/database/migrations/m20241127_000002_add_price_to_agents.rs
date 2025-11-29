@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
                 Table::alter()
                     .table(Agents::Table)
                     .add_column(
-                        ColumnDef::new(Agents::PricePer1kTokens)
+                        ColumnDef::new(Agents::Price)
                             .decimal_len(10, 4)
                             .null(),
                     )
@@ -29,7 +29,7 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(Agents::Table)
-                    .drop_column(Agents::PricePer1kTokens)
+                    .drop_column(Agents::Price)
                     .to_owned(),
             )
             .await?;
