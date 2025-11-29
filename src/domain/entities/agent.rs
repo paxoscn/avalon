@@ -10,6 +10,7 @@ pub struct Agent {
     pub name: String,
     pub avatar: Option<String>,
     pub greeting: Option<String>,
+    pub llm_config_id: Option<ConfigId>,
     pub knowledge_base_ids: Vec<ConfigId>,
     pub mcp_tool_ids: Vec<MCPToolId>,
     pub flow_ids: Vec<FlowId>,
@@ -55,6 +56,7 @@ impl Agent {
             name,
             avatar: None,
             greeting: None,
+            llm_config_id: None,
             knowledge_base_ids: Vec::new(),
             mcp_tool_ids: Vec::new(),
             flow_ids: Vec::new(),
@@ -93,6 +95,11 @@ impl Agent {
 
     pub fn update_greeting(&mut self, greeting: Option<String>) {
         self.greeting = greeting;
+        self.updated_at = Utc::now();
+    }
+
+    pub fn update_llm_config(&mut self, llm_config_id: Option<ConfigId>) {
+        self.llm_config_id = llm_config_id;
         self.updated_at = Utc::now();
     }
 
@@ -200,6 +207,7 @@ impl Agent {
             name: self.name.clone(),
             avatar: self.avatar.clone(),
             greeting: self.greeting.clone(),
+            llm_config_id: self.llm_config_id,
             knowledge_base_ids: self.knowledge_base_ids.clone(),
             mcp_tool_ids: self.mcp_tool_ids.clone(),
             flow_ids: self.flow_ids.clone(),
@@ -227,6 +235,7 @@ impl Agent {
             name: self.name.clone(),
             avatar: self.avatar.clone(),
             greeting: self.greeting.clone(),
+            llm_config_id: self.llm_config_id,
             knowledge_base_ids: self.knowledge_base_ids.clone(),
             mcp_tool_ids: self.mcp_tool_ids.clone(),
             flow_ids: self.flow_ids.clone(),

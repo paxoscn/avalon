@@ -11,6 +11,7 @@ pub struct Model {
     pub name: String,
     pub avatar: Option<String>,
     pub greeting: Option<String>,
+    pub llm_config_id: Option<Uuid>,
     pub knowledge_base_ids: Json,
     pub mcp_tool_ids: Json,
     pub flow_ids: Json,

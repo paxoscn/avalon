@@ -274,6 +274,7 @@ impl AgentApplicationServiceImpl {
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
             greeting: agent.greeting.clone(),
+            llm_config_id: agent.llm_config_id.map(|id| id.0),
             system_prompt: agent.system_prompt.clone(),
             additional_settings: agent.additional_settings.clone(),
             preset_questions: agent.preset_questions.clone(),
@@ -426,6 +427,7 @@ impl AgentApplicationServiceImpl {
             name: agent.name.clone(),
             avatar: agent.avatar.clone(),
             greeting: agent.greeting.clone(),
+            llm_config_id: agent.llm_config_id.map(|id| id.0),
             knowledge_bases,
             mcp_tools,
             flows,
@@ -468,6 +470,7 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         // Set optional fields
         agent.update_avatar(dto.avatar);
         agent.update_greeting(dto.greeting);
+        agent.update_llm_config(dto.llm_config_id.map(ConfigId::from_uuid));
         agent.update_additional_settings(dto.additional_settings);
         agent.update_price(dto.price)
             .map_err(|e| PlatformError::AgentValidationError(e))?;
@@ -538,6 +541,10 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
 
         if let Some(greeting) = dto.greeting {
             agent.update_greeting(Some(greeting));
+        }
+
+        if let Some(llm_config_id) = dto.llm_config_id {
+            agent.update_llm_config(Some(ConfigId::from_uuid(llm_config_id)));
         }
 
         if let Some(system_prompt) = dto.system_prompt {
@@ -1099,10 +1106,16 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
         let llm_config_repo = self.llm_config_repo.as_ref()
             .ok_or_else(|| PlatformError::InternalError("LLM config repository not configured".to_string()))?;
 
-        // Get the first available LLM config for the tenant (TODO: allow agent to specify preferred config)
-        let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
-        let llm_config = llm_configs.first()
-            .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?;
+        // Get LLM config - use agent's specified config or fall back to first available
+        let llm_config = if let Some(config_id) = agent.llm_config_id {
+            llm_config_repo.find_by_id(config_id).await?
+                .ok_or_else(|| PlatformError::NotFound(format!("LLM configuration {} not found", config_id.0)))?
+        } else {
+            let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
+            llm_configs.first()
+                .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?
+                .clone()
+        };
 
         // Build conversation history
         let mut messages = vec![
@@ -1542,11 +1555,16 @@ impl AgentApplicationService for AgentApplicationServiceImpl {
             .ok_or_else(|| PlatformError::InternalError("LLM config repository not configured".to_string()))?
             .clone();
 
-        // Get the first available LLM config for the tenant
-        let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
-        let llm_config = llm_configs.first()
-            .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?
-            .clone();
+        // Get LLM config - use agent's specified config or fall back to first available
+        let llm_config = if let Some(config_id) = agent.llm_config_id {
+            llm_config_repo.find_by_id(config_id).await?
+                .ok_or_else(|| PlatformError::NotFound(format!("LLM configuration {} not found", config_id.0)))?
+        } else {
+            let llm_configs = llm_config_repo.find_by_tenant(tenant_id).await?;
+            llm_configs.first()
+                .ok_or_else(|| PlatformError::NotFound("No LLM configuration found for tenant".to_string()))?
+                .clone()
+        };
 
         // Build conversation history
         let mut messages = vec![

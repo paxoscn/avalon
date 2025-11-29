@@ -32,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(migrations::m20241127_000002_add_price_to_agents::Migration),
             Box::new(migrations::m20241127_000003_create_interview_records::Migration),
             Box::new(migrations::m20241127_000004_make_timestamp_fields_nullable::Migration),
+            Box::new(migrations::m20241129_000001_add_llm_config_id_to_agents::Migration),
         ]
     }
 }
