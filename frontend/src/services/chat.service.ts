@@ -5,7 +5,7 @@ export interface CreateSessionRequest {
 }
 
 export interface AddMessageRequest {
-  role: 'user' | 'assistant' | 'system';
+  role: 'User' | 'Assistant' | 'System';
   content: string;
   metadata?: Record<string, any>;
 }
@@ -53,7 +53,7 @@ export interface ChatStreamChunk {
 }
 
 export interface ChatStreamCallbacks {
-  onContent?: (replyId: string, content: string) => void;
+  onContent?: (sessionId: string, replyId: string, content: string) => void;
   onReasoning?: (reasoning: string) => void;
   onDone?: (data: { sessionId: string; messageId: string; replyId: string; metadata?: Record<string, any> }) => void;
   onError?: (error: string) => void;
@@ -75,7 +75,7 @@ class ChatService {
    */
   async addMessage(
     sessionId: string,
-    role: 'user' | 'assistant' | 'system',
+    role: 'User' | 'Assistant' | 'System',
     content: string,
     metadata?: Record<string, any>
   ): Promise<MessageResponse> {
@@ -115,14 +115,14 @@ class ChatService {
       message: {
         id: response.data.message_id,
         session_id: response.data.session_id,
-        role: 'user',
+        role: 'User',
         content: request.message,
         created_at: new Date().toISOString(),
       },
       reply: {
         id: response.data.reply_id,
         session_id: response.data.session_id,
-        role: 'assistant',
+        role: 'Assistant',
         content: response.data.reply,
         metadata: response.data.metadata,
         created_at: new Date().toISOString(),
@@ -189,7 +189,7 @@ class ChatService {
               
               if (data.type === 'content') {
                 if (data.content) {
-                  callbacks.onContent?.(data.message_id!, data.content);
+                  callbacks.onContent?.(data.session_id!, data.message_id!, data.content);
                 }
                 if (data.reasoning_content) {
                   callbacks.onReasoning?.(data.reasoning_content);

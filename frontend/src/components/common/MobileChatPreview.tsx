@@ -3,7 +3,7 @@ import { chatService } from '../../services/chat.service';
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'User' | 'Assistant';
   content: string;
   reasoning?: string;
   timestamp: Date;
@@ -41,6 +41,9 @@ export function MobileChatPreview({
   const [error, setError] = useState<string | null>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [expandedReasonings, setExpandedReasonings] = useState<Set<string>>(new Set());
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionIdInput, setSessionIdInput] = useState('');
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const toggleReasoning = (messageId: string) => {
@@ -79,7 +82,7 @@ export function MobileChatPreview({
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
+      role: 'User',
       content: content.trim(),
       timestamp: new Date(),
     };
@@ -98,7 +101,7 @@ export function MobileChatPreview({
         
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
+          role: 'Assistant',
           content: responseContent,
           timestamp: new Date(),
         };
@@ -116,15 +119,17 @@ export function MobileChatPreview({
             sessionId,
           },
           {
-            onContent: (replyId, chunk) => {
-              console.log("Content chunk:", chunk, replyId);
+            onContent: (sessionId, replyId, chunk) => {
+              console.log("Content chunk:", chunk, replyId, sessionId);
+
+              setSessionId(sessionId);
               
               fullContent += chunk;
               setCurrentResponse(fullContent);
 
               const assistantMessage: ChatMessage = {
                 id: replyId,
-                role: 'assistant',
+                role: 'Assistant',
                 content: fullContent,
                 reasoning: fullReasoning || undefined,
                 timestamp: new Date(),
@@ -157,7 +162,7 @@ export function MobileChatPreview({
               // 思考过程结束后，添加完整的消息到列表
               const assistantMessage: ChatMessage = {
                 id: data.replyId,
-                role: 'assistant',
+                role: 'Assistant',
                 content: fullContent,
                 reasoning: fullReasoning || undefined,
                 timestamp: new Date(),
@@ -170,7 +175,7 @@ export function MobileChatPreview({
               // 添加错误消息
               const error_message: ChatMessage = {
                 id: `error-${Date.now()}`,
-                role: 'assistant',
+                role: 'Assistant',
                 content: `抱歉，${errorMsg}`,
                 timestamp: new Date(),
               };
@@ -186,7 +191,7 @@ export function MobileChatPreview({
         
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
+          role: 'Assistant',
           content: responseContent,
           timestamp: new Date(),
         };
@@ -199,7 +204,7 @@ export function MobileChatPreview({
       
       const error_message: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        role: 'Assistant',
         content: `抱歉，${error_message_str}`,
         timestamp: new Date(),
       };
@@ -211,6 +216,40 @@ export function MobileChatPreview({
 
   const handlePresetQuestionClick = (question: string) => {
     handleSendMessage(question);
+  };
+
+  const handleLoadSession = async () => {
+    if (!sessionIdInput.trim()) {
+      setError('请输入有效的会话ID');
+      return;
+    }
+
+    setIsLoadingHistory(true);
+    setError(null);
+
+    try {
+      const history = await chatService.getSessionMessages(sessionIdInput.trim());
+      
+      // Convert history to ChatMessage format
+      const loadedMessages: ChatMessage[] = history.map((msg) => ({
+        id: msg.id,
+        role: msg.role as 'User' | 'Assistant',
+        content: msg.content,
+        reasoning: msg.metadata?.reasoning as string | undefined,
+        timestamp: new Date(msg.created_at),
+      }));
+
+      setMessages(loadedMessages);
+      setSessionId(sessionIdInput.trim());
+      setShowSessionModal(false);
+      setSessionIdInput('');
+      setIsFirstMessage(false);
+    } catch (error) {
+      console.error('Failed to load session:', error);
+      setError(error instanceof Error ? error.message : '加载会话历史失败');
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -263,7 +302,13 @@ export function MobileChatPreview({
           <h3 className="font-semibold text-base truncate">{agentName}</h3>
           <p className="text-xs text-white/80">在线</p>
         </div>
-        <button className="p-1 hover:bg-white/20 rounded-full transition-colors">
+        <button 
+          onClick={() => {
+            setSessionIdInput(sessionId || '');
+            setShowSessionModal(true);
+          }}
+          className="p-1 hover:bg-white/20 rounded-full transition-colors"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
           </svg>
@@ -315,17 +360,17 @@ export function MobileChatPreview({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.role === 'User' ? 'justify-end' : 'justify-start'}`}
           >
             <div
               className={`max-w-[75%] rounded-2xl px-4 py-2 ${
-                message.role === 'user'
+                message.role === 'User'
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-sm'
                   : 'bg-white text-gray-800 shadow-sm rounded-bl-sm'
               }`}
             >
               {/* 思考过程按钮 */}
-              {message.reasoning && message.role === 'assistant' && (
+              {message.reasoning && message.role === 'Assistant' && (
                 <div className="mt-2">
                   <button
                     onClick={() => toggleReasoning(message.id)}
@@ -357,7 +402,7 @@ export function MobileChatPreview({
               
               <p
                 className={`text-xs mt-1 ${
-                  message.role === 'user' ? 'text-white/70' : 'text-gray-400'
+                  message.role === 'User' ? 'text-white/70' : 'text-gray-400'
                 }`}
               >
                 {message.timestamp.toLocaleTimeString('zh-CN', {
@@ -443,6 +488,79 @@ export function MobileChatPreview({
       <div className="bg-white h-5 flex items-center justify-center">
         <div className="w-32 h-1 bg-gray-300 rounded-full"></div>
       </div>
+
+      {/* Session ID Modal */}
+      {showSessionModal && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">加载会话历史</h3>
+              <button
+                onClick={() => {
+                  setShowSessionModal(false);
+                  setSessionIdInput('');
+                  setError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                会话 ID
+              </label>
+              <input
+                type="text"
+                value={sessionIdInput}
+                onChange={(e) => setSessionIdInput(e.target.value)}
+                placeholder="输入会话ID..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                disabled={isLoadingHistory}
+              />
+              {sessionId && (
+                <p className="mt-2 text-xs text-gray-500">
+                  当前会话: {sessionId}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowSessionModal(false);
+                  setSessionIdInput('');
+                  setError(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                disabled={isLoadingHistory}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleLoadSession}
+                disabled={!sessionIdInput.trim() || isLoadingHistory}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                {isLoadingHistory ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    加载中...
+                  </span>
+                ) : (
+                  '加载'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

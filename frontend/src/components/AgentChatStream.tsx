@@ -110,22 +110,22 @@ export const AgentChatStream: React.FC<AgentChatStreamProps> = ({
           <div
             key={message.id}
             className={`flex items-start space-x-3 ${
-              message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+              message.role === 'User' ? 'flex-row-reverse space-x-reverse' : ''
             }`}
           >
             <div
               className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold shadow-md ${
-                message.role === 'user' 
+                message.role === 'User' 
                   ? 'bg-gradient-to-br from-green-400 to-green-600' 
                   : 'bg-gradient-to-br from-blue-400 to-blue-600'
               }`}
             >
-              {message.role === 'user' ? '👤' : '🤖'}
+              {message.role === 'User' ? '👤' : '🤖'}
             </div>
             <div className="flex-1">
               <div
                 className={`rounded-lg shadow-sm p-4 border ${
-                  message.role === 'user'
+                  message.role === 'User'
                     ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 text-gray-800'
                     : 'bg-white border-gray-100 text-gray-800'
                 }`}
@@ -133,7 +133,7 @@ export const AgentChatStream: React.FC<AgentChatStreamProps> = ({
                 <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                 
                 {/* 思考过程按钮 */}
-                {message.reasoning && message.role === 'assistant' && (
+                {message.reasoning && message.role === 'Assistant' && (
                   <div className="mt-3">
                     <button
                       onClick={() => toggleReasoning(message.id)}

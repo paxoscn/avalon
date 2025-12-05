@@ -206,7 +206,7 @@ export interface ChatSession {
 export interface ChatMessage {
   id: string;
   sessionId: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'User' | 'Assistant' | 'System';
   content: string;
   metadata?: Record<string, any>;
   created_at: string;

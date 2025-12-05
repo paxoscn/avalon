@@ -18,7 +18,7 @@ export interface ChatStreamChunk {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'User' | 'Assistant';
   content: string;
   reasoning?: string;
   timestamp: Date;
@@ -62,7 +62,7 @@ export function useAgentChatStream({
       // 添加用户消息到列表
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
-        role: 'user',
+        role: 'User',
         content: message,
         timestamp: new Date(),
       };
@@ -139,7 +139,7 @@ export function useAgentChatStream({
                   // 完成
                   const assistantMessage: ChatMessage = {
                     id: data.reply_id || crypto.randomUUID(),
-                    role: 'assistant',
+                    role: 'Assistant',
                     content: accumulatedContent,
                     reasoning: accumulatedReasoning || undefined,
                     timestamp: new Date(),

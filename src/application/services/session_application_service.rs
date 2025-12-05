@@ -166,6 +166,20 @@ impl SessionApplicationService {
             .get_session_context(&session, key))
     }
 
+    /// Get all messages from a session
+    pub async fn get_session_messages(
+        &self,
+        session_id: &SessionId,
+        tenant_id: &TenantId,
+        user_id: &UserId,
+    ) -> Result<Vec<Message>> {
+        // Validate access first
+        let _session = self.get_session(session_id, tenant_id, user_id).await?;
+
+        // Get all messages for the session
+        self.message_repo.find_by_session(session_id).await
+    }
+
     /// Update session summary for context compression
     pub async fn update_session_summary(
         &self,

@@ -297,6 +297,20 @@ pub async fn get_context(
     Ok(Json(serde_json::json!({ "value": value })))
 }
 
+pub async fn get_session_messages(
+    State(service): State<Arc<SessionApplicationService>>,
+    user: AuthenticatedUser,
+    Path(session_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    let messages = service.get_session_messages(&SessionId(session_id), &user.tenant_id, &user.user_id).await?;
+    
+    let response = serde_json::json!({
+        "messages": messages.iter().map(message_to_response).collect::<Vec<_>>(),
+    });
+    
+    Ok(Json(response))
+}
+
 // Audit Handlers
 pub async fn query_audit_logs(
     State(service): State<Arc<AuditApplicationService>>,

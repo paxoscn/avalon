@@ -67,11 +67,11 @@ export function SessionDetailPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'user':
+      case 'User':
         return 'bg-blue-100 text-blue-800';
-      case 'assistant':
+      case 'Assistant':
         return 'bg-green-100 text-green-800';
-      case 'system':
+      case 'System':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -80,11 +80,11 @@ export function SessionDetailPage() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'user':
+      case 'User':
         return '👤';
-      case 'assistant':
+      case 'Assistant':
         return '🤖';
-      case 'system':
+      case 'System':
         return '⚙️';
       default:
         return '💬';
@@ -209,13 +209,13 @@ export function SessionDetailPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.role === 'User' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-3xl ${
-                      message.role === 'user'
+                      message.role === 'User'
                         ? 'bg-blue-50 border-blue-200'
-                        : message.role === 'assistant'
+                        : message.role === 'Assistant'
                         ? 'bg-green-50 border-green-200'
                         : 'bg-gray-50 border-gray-200'
                     } border rounded-lg p-4`}
@@ -265,13 +265,13 @@ export function SessionDetailPage() {
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-500">User Messages</p>
               <p className="text-2xl font-semibold text-blue-600 mt-1">
-                {messages.filter(m => m.role === 'user').length}
+                {messages.filter(m => m.role === 'User').length}
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-500">Assistant Messages</p>
               <p className="text-2xl font-semibold text-green-600 mt-1">
-                {messages.filter(m => m.role === 'assistant').length}
+                {messages.filter(m => m.role === 'Assistant').length}
               </p>
             </div>
           </div>
